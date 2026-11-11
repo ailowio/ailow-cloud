@@ -1,4 +1,0 @@
-# Mídia bruta e transcrições contêm PII de terceiros (nome de cliente, recibo de cartão, voz).
-# Não versionar (SEC / AUD). Versionar só o resumo sanitizado em discovery/*.md
-bruto/
-transcricoes/

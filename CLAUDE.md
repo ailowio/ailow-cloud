@@ -22,7 +22,7 @@ Este app herda `D:\apps\harness`. Antes de qualquer trabalho:
 - Dinheiro em centavos inteiros (RN-01); nome que identifica algo nunca é truncado na UI (D23).
 
 ## Fora do escopo / áreas protegidas
-- `acervo/**/bruto/` e `acervo/**/transcricoes/` têm PII do cliente: não ler, copiar nem commitar.
+- `acervo/` (discovery e material do cliente) é só local, ignorado pelo git e **o repositório é público**: nunca versionar, copiar nem citar trechos dele em arquivos versionados. `bruto/` e `transcricoes/` têm PII: não ler.
 - Não aplicar migração, fazer deploy ou mexer na VPS sem pedido explícito (portão da S14).
 
 ## Segurança
