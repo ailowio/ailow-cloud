@@ -35,10 +35,10 @@ export function Valor({ centavos, destaque }: { centavos: number; destaque?: boo
   );
 }
 
-/** ok (neutro) | baixo (âmbar) | zerado (vermelho). */
+/** ok (neutro) | baixo (âmbar) | zerado (vermelho). "Baixo" = ABAIXO do mínimo, como o aviso da tela inicial (RF-PRO-05). */
 export function SeloEstoque({ atual, minimo }: { atual: number; minimo: number }) {
   if (atual <= 0) return <Badge color="red">Zerado</Badge>;
-  if (atual <= minimo) return <Badge color="ambar">Baixo · {atual}</Badge>;
+  if (atual < minimo) return <Badge color="ambar">Baixo · {atual}</Badge>;
   return <Badge color="gray" variant="light">{atual} em estoque</Badge>;
 }
 

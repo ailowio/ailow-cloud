@@ -8,6 +8,14 @@ export function formatarReais(centavos: number): string {
   return formatador.format(centavos / 100);
 }
 
+/** Caminho de volta de `reaisParaCentavos`: 8990 -> "89,90", 5 -> "0,05". Só aritmética inteira (RN-01). */
+export function centavosParaTexto(centavos: number): string {
+  if (!Number.isInteger(centavos) || centavos < 0) {
+    throw new Error('Valor deve ser inteiro em centavos, não negativo');
+  }
+  return `${Math.floor(centavos / 100)},${String(centavos % 100).padStart(2, '0')}`;
+}
+
 const MAX_DIGITOS_INTEIROS = 9; // até 999.999.999 reais: o produto de 100 continua inteiro seguro
 
 /**

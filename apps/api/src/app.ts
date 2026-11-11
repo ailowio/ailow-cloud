@@ -19,6 +19,7 @@ import { criarHasher } from './acesso/senhas.js';
 import { registrarRotasAdmin } from './admin/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
+import { registrarRotasProdutos } from './produtos/rotas.js';
 
 export interface AppDeps {
   pool: pg.Pool;
@@ -66,13 +67,14 @@ export async function buildApp({
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Ailow Cloud API', version: '0.5.1' },
+      info: { title: 'Ailow Cloud API', version: '0.6.0' },
       tags: [
         { name: 'acesso', description: 'Entrar, aparelho vinculado, PIN e sessão' },
         { name: 'usuarios', description: 'Gestão de usuários da empresa (somente Dono)' },
         { name: 'admin', description: 'Administração da plataforma (Admin com TOTP)' },
         { name: 'configuracoes', description: 'Dados da empresa, markup, logo e categorias (somente Dono; GET logo com sessão)' },
         { name: 'financeiro', description: 'Despesas, contas a pagar, estorno e relatórios (somente Dono)' },
+        { name: 'produtos', description: 'Produtos, SKUs, busca e estoque (o Vendedor só consulta, sem custo)' },
       ],
       // Autenticação por cookie de sessão no servidor (ADR 004); nenhum token é exposto ao JavaScript.
       components: {
@@ -143,6 +145,7 @@ export async function buildApp({
   await registrarRotasAdmin(app, deps, guardas);
   await registrarRotasConfiguracoes(app, deps, guardas);
   await registrarRotasFinanceiro(app, deps, guardas);
+  await registrarRotasProdutos(app, deps, guardas);
 
   app.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

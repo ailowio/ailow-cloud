@@ -22,12 +22,14 @@ describe('migrações', () => {
       log: () => {},
     });
 
+  const TABELAS = ['categorias', 'empresas', 'lancamentos', 'movimentos_estoque', 'produtos', 'skus'];
+
   const tabelas = async () => {
     const c = new pg.Client({ connectionString: url.toString() });
     await c.connect();
     try {
       const r = await c.query(
-        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos') ORDER BY 1",
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos','produtos','skus','movimentos_estoque') ORDER BY 1",
       );
       return r.rows.map((x) => x.tablename);
     } finally {
@@ -45,12 +47,12 @@ describe('migrações', () => {
     await admin.query(`CREATE DATABASE ${nome}`);
 
     await rodar('up');
-    expect(await tabelas()).toEqual(['categorias', 'empresas', 'lancamentos']);
+    expect(await tabelas()).toEqual(TABELAS);
 
     await rodar('down');
     expect(await tabelas()).toEqual([]);
 
     await rodar('up');
-    expect(await tabelas()).toEqual(['categorias', 'empresas', 'lancamentos']);
+    expect(await tabelas()).toEqual(TABELAS);
   });
 });

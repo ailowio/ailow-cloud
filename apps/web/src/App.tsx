@@ -14,6 +14,7 @@ import { PinTela } from './telas/PinTela';
 import { QuemUsa } from './telas/QuemUsa';
 import { Configuracoes } from './telas/config/Configuracoes';
 import { Financeiro } from './telas/financeiro/Financeiro';
+import { Produtos } from './telas/produtos/Produtos';
 
 // Um estado por tela. `inicio` guarda a sessão aberta e o limite de inatividade vindo do servidor.
 type Estado =
@@ -190,6 +191,10 @@ function Logado(props: {
   // Enquanto a pessoa usa o app sem chamar a API, avisa o servidor (senão a sessão expira por baixo dela).
   useTravaInatividade(props.inatividade, props.aoTravar, () => void props.api.eu().catch(() => {}));
 
+  // Produtos abre para o Dono e para o Vendedor; a tela e a API cuidam do que cada um vê (RF-PRO-07).
+  if (props.modulo === 'produtos') {
+    return <Produtos api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
+  }
   if (props.modulo === 'financeiro' && props.usuario.perfil === 'dono') {
     return <Financeiro api={props.api} aoVoltar={() => props.aoAbrir(null)} />;
   }
@@ -203,5 +208,5 @@ function Logado(props: {
       />
     );
   }
-  return <Inicio usuario={props.usuario} aoAbrir={props.aoAbrir} aoTrocar={props.aoTrocar} />;
+  return <Inicio usuario={props.usuario} api={props.api} aoAbrir={props.aoAbrir} aoTrocar={props.aoTrocar} />;
 }

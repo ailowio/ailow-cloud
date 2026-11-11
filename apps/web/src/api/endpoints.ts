@@ -1,10 +1,15 @@
 import type {
+  AjusteEstoque,
+  AlertaEstoque,
   Categoria,
   ContaAPagar,
   DespesaEntrada,
   Empresa,
   FormaPagamento,
   Lancamento,
+  Movimento,
+  Produto,
+  ProdutoNovo,
   Relatorio,
   TipoCategoria,
   UsuarioPublico,
@@ -59,6 +64,16 @@ export function criarApi(c: Cliente) {
     extrato: (data: string) => p<{ data: string; lancamentos: Lancamento[] }>('GET', `/financeiro/extrato?data=${data}`),
     relatorio: (periodo: 'dia' | 'mes', data: string) =>
       p<Relatorio>('GET', `/financeiro/relatorio?periodo=${periodo}&data=${data}`),
+    // --- produtos e estoque (S07). Listar é do Dono e do Vendedor (sem custo); o resto é só do Dono.
+    produtos: (q?: string) => {
+      const busca = q?.trim() ?? '';
+      return p<{ produtos: Produto[]; truncado: boolean }>('GET', busca === '' ? '/produtos' : `/produtos?q=${encodeURIComponent(busca)}`);
+    },
+    criarProduto: (n: ProdutoNovo) =>
+      p<{ id: string; numero: number; skus: { id: string; codigo: string }[] }>('POST', '/produtos', n),
+    ajustarEstoque: (skuId: string, a: AjusteEstoque) => p<{ estoque: number }>('POST', `/skus/${skuId}/estoque`, a),
+    movimentos: (skuId: string) => p<{ movimentos: Movimento[] }>('GET', `/skus/${skuId}/movimentos`),
+    alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),
   };
 }
 

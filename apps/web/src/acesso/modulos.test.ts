@@ -20,8 +20,13 @@ describe('módulos da tela inicial por perfil', () => {
     expect(new Set(rotulos).size).toBe(rotulos.length);
   });
 
-  it('nesta fase só Financeiro e Configurações estão prontos; o resto avisa "em breve" em vez de fingir que abre', () => {
+  it('nesta fase Produtos, Financeiro e Configurações estão prontos; o resto avisa "em breve" em vez de fingir que abre', () => {
     const prontos = modulosPara('dono').filter((m) => m.pronto).map((m) => m.id);
-    expect(prontos).toEqual(['financeiro', 'configuracoes']);
+    expect(prontos).toEqual(['produtos', 'financeiro', 'configuracoes']);
+  });
+
+  it('o Vendedor abre Produtos (consulta de produto, preço e estoque, RF-PRO-07)', () => {
+    const produtos = modulosPara('vendedor').find((m) => m.id === 'produtos');
+    expect(produtos?.pronto).toBe(true);
   });
 });
