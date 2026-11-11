@@ -77,6 +77,27 @@ Não fazer: código, scaffold, migrações, ADR final, Design System.
 Ao terminar: atualize o Diário e diga "aguardando portão do Pedro (validar P1)"; o prompt da S02 só vale após o ok.
 ```
 
+## Prompt da S06 (colável)
+
+```text
+Sessão S06 de 14 — Financeiro (núcleo) (plano "Ailow Cloud v1").
+Plano e diário: D:\apps\ailow-cloud\docs\plano-execucao.md
+PRD: D:\apps\ailow-cloud\docs\prd\PRD-ailow-cloud-v1.md
+Repo: D:\apps\ailow-cloud (remoto https://github.com/ailowio/ailow-cloud, PÚBLICO). Protocolo git completo autorizado (branch curta + PR; humano aprova e mergeia). A main está protegida (ruleset proteger-main): PR obrigatório + 6 checks (verify, seguranca-segredos, seguranca-sast, seguranca-sca, imagem, compose).
+Leia o plano inteiro, principalmente a S06, o "Contrato de toda sessão", as últimas entradas do Diário (S05, S05b) e "Pendências transversais". Cumpra o gate do harness (D:\apps\harness\PROTOCOLO.md §1). Lições ativas valem (item 1: código e regex só por Write/Edit, nunca por node -e/heredoc/sed; L-0006 mutação/canário; L-0007 copiar para fora do repo antes de integrar remoção de arquivos rastreados; L-0008 testes de integração nunca contam linhas globais). O guard do harness bloqueia qualquer comando que cite o arquivo de ambiente real: não tente contorná-lo.
+Skills/regras desta sessão: superpowers:test-driven-development, karpathy-guidelines, frontend-design e playwright-skill (viewport 360×640, 2 temas) se houver tela.
+
+Escopo desta sessão:
+1. Lançamentos (RF-FIN-01): interface pública para os módulos (Vendas, Compras…) gerarem lançamentos; tipo entrada/saída, origem (venda, compra, despesa, estorno + id), categoria, valor em centavos inteiros (RN-01), forma de pagamento, vencimento, pago em, status (aberto/pago/estornado). Migração nova reversível + RLS forçada + GRANT + teste de isolamento entre 2 empresas + OpenAPI, test-first.
+2. Nova despesa (RF-FIN-02), contas a pagar (RF-FIN-03), marcar pago, estorno (RN-06: nada é apagado), relatório do dia/mês por forma de pagamento e categoria (RF-FIN-05). Só Dono (RN-10); Vendedor nunca acessa Financeiro.
+3. Tela do módulo Financeiro (hoje "em breve" na grade, `apps/web/src/acesso/modulos.ts`) no Design System existente, 360×640, alvos ≥ 48 px, nomes nunca truncados.
+
+Contexto herdado: S05 e S05b na main (PRs #6 e #7): PWA, fluxo Entrar→PIN→grade, Configurações (usuários, empresa, markup em bps, categorias), logo placeholder em apps/web/public/logo.svg. Texto de 13–14 px aceito pelo Pedro por ora (aprovação visual dele depois). Testes: API 202, web 62, shared 22. Dev sem Docker: npm run dev:db → dev:seed → dev:api → dev:web (README; dono@loja.dev / senha-de-desenvolvimento, vendedor "Ana Vendedora" PIN 1357; o Dono do seed já definiu PIN 2468 se o .dev-data/ ainda existir). Pendências do Pedro (não são desta sessão): arquivo de ambiente real para D:\apps\ailow-cloud\; reescrita do histórico do Git (acervo) aguardando ele — NÃO force-push nem altere o ruleset; Docker/WSL2 pós-reinício; logo definitiva e envio de logo por empresa (RF-CFG-02, exige armazenamento de arquivo) em aberto; ADR 004 segue "proposto".
+Pronto quando: RF-FIN-01…06 e RN-01/RN-06 com testes; fluxo no navegador 360×640 nos 2 temas (sem overflow nem texto cortado); verify e CI verdes no PR.
+Não fazer: Vendas, Compras, Produtos, deploy, mexer no ruleset ou no histórico.
+Ao terminar: atualize o Diário e diga "aguardando portão do Pedro (mergear o PR)"; o prompt da S07 só vale após o ok.
+```
+
 ## Diário de execução
 
 <!-- Acrescentar entradas sem apagar as anteriores. Template:
@@ -215,3 +236,9 @@ Verificação: `npm run verify` exit 0 (202 + 62 + 22 testes); Playwright 360×6
 - [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
 - [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
 - [ ] Docker Desktop 4.99.0 instalado via winget; WSL2 instalado e **aguardando reinício do Windows**; depois abrir o Docker Desktop, aceitar os termos e rodar `docker compose up --build` no ailow-cloud.
+
+### Estado de retomada — 2026-11-11 (handoff, a sessão do terminal será perdida no reinício)
+- **Git:** S05 (PR #6) e S05b (logo, PR #7) **mergeados**; `main` limpa. Próximo passo: S06 — o prompt colável está na seção "Prompt da S06" acima.
+- **Ao reiniciar o Windows:** os servidores de dev (`dev:db`, `dev:api`, `dev:web`, preview) caem sozinhos; os dados do banco de dev ficam em `.dev-data/` (ignorado pelo git; apague a pasta para recomeçar). Para voltar a usar o app: `npm run dev:db`, `npm run dev:api`, `npm run dev:web` (o `dev:seed` só na 1ª vez).
+- **Fazer depois do reinício (Pedro):** abrir o Docker Desktop e aceitar os termos; mover o arquivo de ambiente real para `D:\apps\ailow-cloud\`; então `docker compose up --build`. Abrir a próxima sessão numa conversa nova e colar o prompt da S06.
+- **Em aberto:** logo definitiva (trocar `apps/web/public/logo.svg`) e envio da logo por empresa; aprovação visual do texto de 13–14 px; reescrita do histórico (acervo).
