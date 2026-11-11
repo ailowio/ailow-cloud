@@ -154,3 +154,9 @@ Pendências para a próxima / riscos honestos:
 Verificação: `npm run verify` (exit 0; 25+4+3 testes); `gh pr checks 2` -> 6/6 pass; `node harness/scripts/check-harness.mjs` -> Harness OK.
 
 **Aguardando portão do Pedro (assinar ADR 001/002, ativar branch protection, mergear PRs).** O prompt da S04 só vale após o ok.
+
+### S03 — Fundação (fechamento do portão) — 2026-11-11 — Claude Sonnet 5.5
+Feito (PRs #2–#4 mergeados pelo Pedro): fundação mergeada; ADR 001 e ADR 002 **aceitos** (PR #4); proteção da `main` **ativa** via ruleset `proteger-main` (PR obrigatório com 0 aprovações exigidas — EX-01 —, branch atualizada, sem force-push nem exclusão, 6 checks: verify, seguranca-segredos, seguranca-sast, seguranca-sca, imagem, compose); repositório agora **público**; `acervo/` removido do git e ignorado (PR #3).
+Pendência de decisão do Pedro: o **histórico** do Git ainda contém os 3 arquivos do discovery (o PR #3 só os tirou do estado atual). Reescrever histórico (ex.: `git filter-repo` + force-push) é irreversível e só com pedido explícito; enquanto isso, tratar o conteúdo como já público.
+Incidente: o merge do PR #3 apagou do disco as cópias locais dos arquivos recém-ignorados → lição L-0007 (item 7 das lições ativas). Cópias hoje presentes em `acervo/marcant/discovery/`.
+Verificação: `gh pr list --state all` -> #1–#4 MERGED; `gh repo view` -> PUBLIC; `gh api repos/ailowio/ailow-cloud/rules/branches/main` -> pull_request, required_status_checks (6, strict), deletion, non_fast_forward (a API clássica de branch protection devolve 404 porque a regra é um ruleset); `git check-ignore -v acervo` -> `.gitignore:23`.
