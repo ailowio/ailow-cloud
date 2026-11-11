@@ -70,3 +70,36 @@ h1, h2, h3, h4 {
   .ailow-bloco { transition: none; }
   .ailow-bloco:active { transform: none; }
 }
+
+/* Bloco que ainda não existe nesta versão: visível (a grade mantém o formato), mas apagado e sem ação. */
+.ailow-bloco[data-em-breve='true'] { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+.ailow-bloco[data-em-breve='true']:hover { border-color: var(--ailow-borda); }
+.ailow-bloco[data-em-breve='true']:active { transform: none; }
+
+/* Topo fixo de todas as telas */
+.ailow-topo {
+  background: var(--ailow-topo);
+  border-bottom: 1px solid var(--ailow-borda);
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Link "Ir para o conteúdo": invisível até receber o foco do teclado */
+.ailow-pular {
+  position: absolute;
+  left: 8px;
+  top: -64px;
+  z-index: 1000;
+  padding: 12px 16px;
+  background: var(--mantine-color-azul-6);
+  color: #fff;
+  border-radius: var(--mantine-radius-md);
+}
+.ailow-pular:focus { top: 8px; }
+
+/* Botão de mostrar/ocultar senha: alvo de toque de 48 px (o padrão do Mantine tem 32 px). */
+.mantine-PasswordInput-visibilityToggle.mantine-ActionIcon-root {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+}

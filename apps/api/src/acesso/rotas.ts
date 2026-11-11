@@ -5,6 +5,7 @@ import {
   entrarBodySchema,
   entrarResponseSchema,
   erroSchema,
+  euResponseSchema,
   pinBodySchema,
   quemUsaResponseSchema,
   sessaoResponseSchema,
@@ -258,12 +259,15 @@ export async function registrarRotasAcesso(app: FastifyInstance, deps: Deps, g: 
         tags: ['acesso'],
         summary: 'Quem sou eu (usuário da sessão atual)',
         security: sessaoCookie,
-        response: { 200: sessaoResponseSchema, 401: erroSchema },
+        response: { 200: euResponseSchema, 401: erroSchema },
       },
     },
     async (request) => {
       const s = sessaoDe(request);
-      return { usuario: { id: s.usuarioId, nome: s.nome, perfil: s.perfil } };
+      return {
+        usuario: { id: s.usuarioId, nome: s.nome, perfil: s.perfil },
+        inatividade_minutos: s.inatividadeMinutos,
+      };
     },
   );
 

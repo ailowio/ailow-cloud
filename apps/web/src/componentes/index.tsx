@@ -6,14 +6,15 @@ import { IconBackspace } from '@tabler/icons-react';
 import { formatarReais } from '../lib/dinheiro';
 
 /** Quadrado da tela inicial: 1 palavra, ícone grande, selo de alerta opcional. */
-export function BlocoAcao(props: { rotulo: string; icone: ReactNode; destaque?: boolean; alerta?: number; onClick?: () => void }) {
-  const { rotulo, icone, destaque, alerta, onClick } = props;
+export function BlocoAcao(props: { rotulo: string; icone: ReactNode; destaque?: boolean; alerta?: number; emBreve?: boolean; onClick?: () => void }) {
+  const { rotulo, icone, destaque, alerta, emBreve, onClick } = props;
   return (
     <Indicator label={alerta} disabled={!alerta} color="red" size={22} offset={10} zIndex={2}>
-      <UnstyledButton className="ailow-bloco" data-destaque={destaque ? 'true' : 'false'} onClick={onClick} mih={104} w="100%" p="sm">
+      <UnstyledButton className="ailow-bloco" data-destaque={destaque ? 'true' : 'false'} data-em-breve={emBreve ? 'true' : 'false'} disabled={emBreve} onClick={onClick} mih={104} w="100%" py="sm" px={6}>
         <Stack align="center" gap={10}>
           <Box c={destaque ? '#fff' : 'var(--ailow-primario-texto)'} lh={0}>{icone}</Box>
-          <Text fw={650} size="sm">{rotulo}</Text>
+          <Text fw={650} fz={13} ta="center" lang="pt-BR" style={{ hyphens: 'auto', overflowWrap: 'break-word' }}>{rotulo}</Text>
+          {emBreve && <Text size="xs" c="dimmed">em breve</Text>}
         </Stack>
       </UnstyledButton>
     </Indicator>
@@ -53,9 +54,10 @@ export function EstadoVazio(props: { titulo: string; texto: string; acao?: strin
 }
 
 /** Teclado numérico do PIN: 4 pontos de progresso em laranja (destaque), teclas de 64 px. */
-export function TecladoPin({ onCompleto }: { onCompleto: (pin: string) => void }) {
+export function TecladoPin({ onCompleto, desabilitado }: { onCompleto: (pin: string) => void; desabilitado?: boolean }) {
   const [pin, setPin] = useState('');
   const tecla = (k: string) => {
+    if (desabilitado) return;
     const novo = pin + k;
     if (novo.length > 4) return;
     if (novo.length === 4) { setPin(''); onCompleto(novo); return; }
@@ -81,11 +83,11 @@ export function TecladoPin({ onCompleto }: { onCompleto: (pin: string) => void }
       <SimpleGrid cols={3} spacing="sm" w="100%" maw={320}>
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '<'].map((k) =>
           k === '' ? <span key="vazio" /> : k === '<' ? (
-            <ActionIcon key={k} h={64} w="100%" variant="default" className="ailow-bloco" aria-label="Apagar" onClick={() => setPin(pin.slice(0, -1))}>
+            <ActionIcon key={k} h={64} w="100%" variant="default" className="ailow-bloco" aria-label="Apagar" disabled={desabilitado} onClick={() => setPin(pin.slice(0, -1))}>
               <IconBackspace />
             </ActionIcon>
           ) : (
-            <Button key={k} h={64} variant="default" className="ailow-bloco" fz={24} fw={600} onClick={() => tecla(k)}>{k}</Button>
+            <Button key={k} h={64} variant="default" className="ailow-bloco" fz={24} fw={600} disabled={desabilitado} onClick={() => tecla(k)}>{k}</Button>
           ),
         )}
       </SimpleGrid>

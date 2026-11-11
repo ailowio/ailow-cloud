@@ -14,6 +14,10 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 - Acesso (S04): empresas e usuários Dono/Vendedor; login do Dono (e-mail + senha, argon2id + pepper), aparelho vinculado, "Quem está usando?" + PIN de 4 dígitos com bloqueio após 5 erros, sessão no servidor (cookie httpOnly/Secure/SameSite=Strict, inatividade por empresa e validade de 12 h), sair/derrubar/desativar, trilha de auditoria; Admin da plataforma com TOTP (criar empresa + Dono, redefinir senha do Dono). Migração `20261111120000_acesso` (reversível), ADR 004, testes de isolamento 2 empresas × 2 perfis.
 
+- Shell PWA (S05): app instalável (manifest, ícones, service worker mínimo que só guarda a casca estática e nunca a API); fluxo Entrar → "Quem está usando?" → PIN → tela inicial 3×N filtrada por perfil, tratamento de PIN errado (tentativas restantes), usuário bloqueado e sessão expirada; trava por inatividade alinhada ao limite do servidor (`GET /acesso/eu` agora informa `inatividade_minutos`).
+- Configurações (S05, só Dono): usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar, trocar o próprio PIN), dados da empresa, trava por inatividade, markup padrão (em pontos-base, inteiro) e categorias com atributos. API: `GET/PUT /empresa`, `GET/POST /categorias`, `PUT /categorias/{id}` (OpenAPI 0.3.0). Migração reversível `20261111180000_configuracoes` (colunas novas em `empresas` e `categorias`; RLS e GRANT já existentes cobrem).
+- Desenvolvimento sem Docker: `npm run dev:db` (Postgres embutido persistente, banco separado dos testes), `dev:seed`, `dev:api` (COOKIE_SECURE=false só no dev) e `dev:web` (proxy do Vite para a API, mesma origem).
+
 ### Alterado
 - Nova variável obrigatória `AUTH_PEPPER` (e opcional `COOKIE_SECURE`) na API, no Compose e no CI.
 - Lockfile único na raiz (removido o `package-lock.json` de `apps/web`).

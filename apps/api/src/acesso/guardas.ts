@@ -11,6 +11,7 @@ export interface SessaoAtiva {
   aparelhoId: string;
   perfil: Perfil;
   nome: string;
+  inatividadeMinutos: number;
 }
 export interface AparelhoAtivo {
   id: string;
@@ -47,11 +48,19 @@ export function criarGuardas({ pool, agora }: Deps) {
             AND u.empresa_id = s.empresa_id AND u.id = s.usuario_id AND u.ativo
             AND e.id = s.empresa_id
             AND s.ultimo_uso_em + make_interval(mins => e.inatividade_minutos) > $2::timestamptz
-        RETURNING s.id, s.empresa_id, s.usuario_id, s.aparelho_id, u.perfil, u.nome`,
+        RETURNING s.id, s.empresa_id, s.usuario_id, s.aparelho_id, u.perfil, u.nome, e.inatividade_minutos`,
         [lido.hash, now],
       );
       return r.rows[0] as
-        | { id: string; empresa_id: string; usuario_id: string; aparelho_id: string; perfil: Perfil; nome: string }
+        | {
+            id: string;
+            empresa_id: string;
+            usuario_id: string;
+            aparelho_id: string;
+            perfil: Perfil;
+            nome: string;
+            inatividade_minutos: number;
+          }
         | undefined;
     });
     if (!sessao) return naoAutenticado(reply);
@@ -62,6 +71,7 @@ export function criarGuardas({ pool, agora }: Deps) {
       aparelhoId: sessao.aparelho_id,
       perfil: sessao.perfil,
       nome: sessao.nome,
+      inatividadeMinutos: sessao.inatividade_minutos,
     };
   }
 

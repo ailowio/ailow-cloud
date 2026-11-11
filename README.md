@@ -2,13 +2,13 @@
 
 ERP mobile multi-tenant para lojistas pequenos: vender pelo celular com QR code, estoque e financeiro integrados, botões grandes para quem não é da tecnologia. Primeiro cliente e caso de uso: Marcant Moda Íntima (`acervo/marcant/`).
 
-**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** fundação em construção (sessão S03 de 14).
+**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (sessão S05 de 14: acesso e Configurações no ar; os demais módulos vêm nas próximas sessões).
 
 ## Estrutura
 
 ```
 apps/api         API Node/TS (Fastify + Zod → OpenAPI 3.1), migrações SQL, testes com Postgres real
-apps/web         PWA Vite + React + Mantine (hoje: catálogo do Design System)
+apps/web         PWA Vite + React + Mantine (acesso, tela inicial e Configurações; catálogo do DS em /?catalogo só em dev)
 packages/shared  schemas Zod compartilhados entre API e web
 compose.yaml     Postgres 18 + migração + API (local)
 ```
@@ -20,8 +20,25 @@ Requisitos: Node 22+. Docker só é necessário para o Compose.
 ```bash
 npm ci
 npm run verify              # lint + tipos + testes + build (api, web e shared)
-npm run dev -w @ailow/web   # catálogo do Design System em http://localhost:5173
 ```
+
+### Desenvolver o app completo SEM Docker
+
+Para ver e usar o app inteiro na sua máquina (sem Docker/WSL), use o Postgres embutido. São 4 janelas de terminal, todas na raiz do repositório:
+
+```bash
+npm run dev:db     # 1) Postgres 18 persistente em 127.0.0.1:54329 + migrações. Deixe aberta; Ctrl+C para.
+npm run dev:seed   # 2) (uma vez) cria uma empresa de exemplo e mostra e-mail/senha do Dono e o PIN do Vendedor
+npm run dev:api    # 3) API em http://127.0.0.1:3000 (COOKIE_SECURE=false só aqui, porque o dev usa http)
+npm run dev:web    # 4) app em http://localhost:5173 (o proxy do Vite leva a API para a MESMA origem)
+```
+
+- Os dados e os segredos de dev (senha do banco, `AUTH_PEPPER`) ficam em `.dev-data/` (ignorado pelo git), gerados na primeira execução. Apague a pasta para recomeçar do zero.
+- O banco de dev (`ailow_dev`) é separado do banco temporário dos testes (ENV-13). Estes scripts recusam rodar com `NODE_ENV=production`.
+- O proxy mantém navegador e API na mesma origem, então o cookie de sessão (httpOnly, `SameSite=Strict`) funciona sem CORS e **nenhum token passa pelo JavaScript**. Se a API estiver em outra porta, use `API_URL=http://127.0.0.1:PORTA npm run dev:web`.
+- O catálogo do Design System fica em `http://localhost:5173/?catalogo` (só em desenvolvimento).
+- O service worker só é registrado no build de produção (`npm run build` + `npx vite preview` em `apps/web`), para não guardar arquivos velhos durante o desenvolvimento.
+- O Compose (abaixo) segue como caminho oficial e o da VPS; `dev:db` é só conveniência local.
 
 Os testes da API usam um **Postgres real**: sem `DATABASE_URL_TEST`, sobem um Postgres 18 temporário (`embedded-postgres`, nada para instalar); com a variável, usam o banco informado (**descartável!**, como no CI).
 

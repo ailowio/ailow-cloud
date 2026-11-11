@@ -21,3 +21,6 @@ Thumbs.db
 
 # Acervo do cliente (inspiração/discovery, PII): fica só na máquina do autor, nunca no repositório público.
 acervo/
+
+# Ambiente de desenvolvimento sem Docker (banco e segredos locais gerados por npm run dev:db)
+.dev-data/
