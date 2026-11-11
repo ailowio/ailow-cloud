@@ -1,0 +1,68 @@
+/*
+ * Camadas de superfície (o modo claro não pode ser "um fundo só").
+ * Mantine marca o <html> com data-mantine-color-scheme = light | dark.
+ */
+:root[data-mantine-color-scheme='light'] {
+  --mantine-color-body: #eef0f7;          /* fundo da página: slate frio bem claro */
+  --ailow-superficie: #ffffff;            /* cartões e blocos */
+  --ailow-superficie-2: #f6f7fb;          /* campos, áreas internas */
+  --ailow-borda: #dde1ee;
+  --ailow-sombra: 0 1px 2px rgb(17 24 50 / 6%), 0 4px 14px rgb(17 24 50 / 6%);
+  --ailow-brilho: 0 6px 20px rgb(146 0 255 / 28%);
+  --ailow-topo: #ffffff;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --mantine-color-body: #0b1126;          /* navy profundo */
+  --ailow-superficie: #151c36;            /* slate escuro */
+  --ailow-superficie-2: #1b2340;
+  --ailow-borda: #2b3454;
+  --ailow-sombra: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
+  --ailow-brilho: 0 0 0 1px rgb(146 0 255 / 55%), 0 8px 28px rgb(146 0 255 / 35%);
+  --ailow-topo: #111832;
+}
+
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3, h4 {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+/* Superfície padrão do Ailow para cartões */
+.ailow-cartao {
+  background: var(--ailow-superficie);
+  border: 1px solid var(--ailow-borda);
+  border-radius: var(--mantine-radius-md);
+  box-shadow: var(--ailow-sombra);
+}
+
+/* Bloco da tela inicial */
+.ailow-bloco {
+  background: var(--ailow-superficie);
+  border: 1px solid var(--ailow-borda);
+  border-radius: var(--mantine-radius-lg);
+  box-shadow: var(--ailow-sombra);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.ailow-bloco:hover { border-color: var(--mantine-color-violeta-4); }
+.ailow-bloco:active { transform: scale(0.97); }
+.ailow-bloco[data-destaque='true'] {
+  background: var(--mantine-color-violeta-6);
+  border-color: var(--mantine-color-violeta-6);
+  color: #fff;
+  box-shadow: var(--ailow-brilho);
+}
+
+/* Tabela só no computador; no celular a lista vira cartões (princípio 6). */
+.so-desktop { display: none; }
+@media (min-width: 48em) {
+  .so-desktop { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ailow-bloco { transition: none; }
+  .ailow-bloco:active { transform: none; }
+}

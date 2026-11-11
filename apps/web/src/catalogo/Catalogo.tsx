@@ -1,43 +1,55 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
-  ActionIcon, Alert, Badge, Button, Card, Container, Group, SimpleGrid, Stack, Text, TextInput, Title,
-  useMantineColorScheme,
+  ActionIcon, Badge, Box, Button, Container, Group, SimpleGrid, Stack, Text, TextInput, Title, useMantineColorScheme,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { DataTable } from 'mantine-datatable';
 import {
-  IconBuildingStore, IconClock, IconCoin, IconMoon, IconPackage, IconPlus, IconSettings, IconSun, IconTruckDelivery, IconUsers,
+  IconCircleCheck, IconClock, IconCoin, IconMoon, IconPackage, IconPlus, IconSettings, IconSun, IconTruckDelivery, IconUsers,
 } from '@tabler/icons-react';
-import { marca, ouro } from '../tema/tema';
+import { ambar, azul, ciano, coral, navy, violeta } from '../tema/tema';
 import {
   BlocoAcao, Carrinho, EstadoVazio, Etapas, GradeModulos, SeloEstoque, TecladoPin, Valor, type ItemCarrinho,
 } from '../componentes';
 
+// Dados de exemplo (não são do cliente)
 const SKUS = [
   { codigo: '0042-46-CHO', nome: 'Tomara que caia Essência', tam: '46', cor: 'Chocolate', preco: 8900, estoque: 3, minimo: 2 },
   { codigo: '0042-48-CHO', nome: 'Tomara que caia Essência', tam: '48', cor: 'Chocolate', preco: 8900, estoque: 0, minimo: 2 },
   { codigo: '0107-M-PRE', nome: 'Calcinha Bombom', tam: 'M', cor: 'Preto', preco: 2900, estoque: 12, minimo: 4 },
 ];
 
-function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+const PALETAS = [
+  { nome: 'violeta', papel: 'Marca, ação primária', cores: violeta, tom: 6 },
+  { nome: 'azul', papel: 'Secundária, informação', cores: azul, tom: 6 },
+  { nome: 'ciano', papel: 'Detalhes luminosos, foco', cores: ciano, tom: 5 },
+  { nome: 'coral', papel: 'Perigo (com moderação)', cores: coral, tom: 5 },
+  { nome: 'ambar', papel: 'Alerta (com moderação)', cores: ambar, tom: 5 },
+  { nome: 'navy', papel: 'Base neutra do tema escuro', cores: navy, tom: 7 },
+];
+
+function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
-    <Stack gap="sm">
-      <Title order={3}>{titulo}</Title>
+    <Stack gap="sm" component="section">
+      <Title order={3} fz="lg">{titulo}</Title>
       {children}
     </Stack>
   );
 }
 
-function Paleta({ nome, cores }: { nome: string; cores: readonly string[] }) {
+function Paleta({ nome, papel, cores, tom }: (typeof PALETAS)[number]) {
   return (
-    <div>
-      <Text fw={600} mb={4}>{nome}</Text>
-      <Group gap={0} wrap="nowrap">
+    <Box>
+      <Group justify="space-between" gap="xs" mb={6}>
+        <Text fw={650} size="sm">{nome}</Text>
+        <Text size="xs" c="dimmed">{papel} · {cores[tom]}</Text>
+      </Group>
+      <Group gap={0} wrap="nowrap" style={{ borderRadius: 8, overflow: 'hidden' }}>
         {cores.map((c, i) => (
-          <div key={c} title={`${nome}.${i} ${c}`} style={{ background: c, flex: 1, height: 36 }} />
+          <Box key={c} title={`${nome}.${i} ${c}`} h={i === tom ? 40 : 32} bg={c} style={{ flex: 1, alignSelf: 'end' }} />
         ))}
       </Group>
-    </div>
+    </Box>
   );
 }
 
@@ -45,109 +57,111 @@ export function Catalogo() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [itens, setItens] = useState<ItemCarrinho[]>([
     { codigo: SKUS[0].codigo, nome: SKUS[0].nome, detalhe: `${SKUS[0].tam} · ${SKUS[0].cor}`, precoCentavos: SKUS[0].preco, qtd: 1 },
+    { codigo: SKUS[2].codigo, nome: SKUS[2].nome, detalhe: `${SKUS[2].tam} · ${SKUS[2].cor}`, precoCentavos: SKUS[2].preco, qtd: 2 },
   ]);
   const mudar = (codigo: string, delta: number) =>
     setItens((l) => l.map((i) => (i.codigo === codigo ? { ...i, qtd: i.qtd + delta } : i)).filter((i) => i.qtd > 0));
 
   return (
-    <Container size="sm" py="md">
-      <Stack gap="xl">
-        <Group justify="space-between">
-          <Title order={1}>Design System</Title>
-          <ActionIcon variant="default" size={48} onClick={toggleColorScheme} aria-label="Trocar tema">
-            {colorScheme === 'dark' ? <IconSun /> : <IconMoon />}
-          </ActionIcon>
-        </Group>
-        <Alert color="gray" title="Catálogo">
-          Mantine 9.7.3 + mantine-datatable. Tema em duas camadas: Ailow (fixa) e empresa (exemplo: Marcant). Dados de exemplo.
-        </Alert>
-
-        <Secao titulo="Cores">
-          <Paleta nome="marca" cores={marca} />
-          <Paleta nome="ouro" cores={ouro} />
-          <Group gap="xs">
-            <Badge color="green">Sucesso</Badge><Badge color="yellow" c="dark">Alerta</Badge>
-            <Badge color="red">Perigo</Badge><Badge color="blue">Info</Badge>
+    <>
+      <Box component="header" style={{ background: 'var(--ailow-topo)', borderBottom: '1px solid var(--ailow-borda)' }}>
+        <Container size="sm" py="sm">
+          <Group justify="space-between">
+            <Group gap="xs">
+              <Box w={10} h={10} bg="violeta.6" style={{ borderRadius: 3, boxShadow: '0 0 12px var(--mantine-color-violeta-6)' }} />
+              <Title order={1} fz="xl">Ailow Cloud</Title>
+              <Badge variant="light" color="azul">Design System</Badge>
+            </Group>
+            <ActionIcon variant="default" size={48} onClick={toggleColorScheme} aria-label="Trocar tema claro/escuro">
+              {colorScheme === 'dark' ? <IconSun /> : <IconMoon />}
+            </ActionIcon>
           </Group>
-        </Secao>
+        </Container>
+      </Box>
 
-        <Secao titulo="Tela inicial: GradeModulos + BlocoAcao">
-          <GradeModulos>
-            <BlocoAcao destaque rotulo="Vendas" icone={<IconPlus size={32} />} />
-            <BlocoAcao rotulo="Produtos" icone={<IconPackage size={32} />} alerta={2} />
-            <BlocoAcao rotulo="Compras" icone={<IconTruckDelivery size={32} />} />
-            <BlocoAcao rotulo="Clientes" icone={<IconUsers size={32} />} />
-            <BlocoAcao rotulo="Financeiro" icone={<IconCoin size={32} />} />
-            <BlocoAcao rotulo="Pessoas" icone={<IconClock size={32} />} />
-            <BlocoAcao rotulo="Config." icone={<IconSettings size={32} />} />
-          </GradeModulos>
-        </Secao>
+      <Container size="sm" py="lg">
+        <Stack gap={36}>
+          <Secao titulo="Cores">
+            <Stack gap="md" p="md" className="ailow-cartao">
+              {PALETAS.map((p) => <Paleta key={p.nome} {...p} />)}
+            </Stack>
+          </Secao>
 
-        <Secao titulo="PIN: TecladoPin">
-          <TecladoPin onCompleto={(pin) => notifications.show({ message: `PIN digitado (${pin.length} dígitos)`, color: 'green' })} />
-        </Secao>
+          <Secao titulo="Tela inicial">
+            <GradeModulos>
+              <BlocoAcao destaque rotulo="Vendas" icone={<IconPlus size={32} stroke={1.75} />} />
+              <BlocoAcao rotulo="Produtos" icone={<IconPackage size={32} stroke={1.75} />} alerta={2} />
+              <BlocoAcao rotulo="Compras" icone={<IconTruckDelivery size={32} stroke={1.75} />} />
+              <BlocoAcao rotulo="Clientes" icone={<IconUsers size={32} stroke={1.75} />} />
+              <BlocoAcao rotulo="Financeiro" icone={<IconCoin size={32} stroke={1.75} />} />
+              <BlocoAcao rotulo="Pessoas" icone={<IconClock size={32} stroke={1.75} />} />
+              <BlocoAcao rotulo="Config." icone={<IconSettings size={32} stroke={1.75} />} />
+            </GradeModulos>
+          </Secao>
 
-        <Secao titulo="Carrinho + Valor">
-          <Carrinho itens={itens} onMudar={mudar} />
-          <Button onClick={() => setItens([{ codigo: SKUS[2].codigo, nome: SKUS[2].nome, detalhe: `${SKUS[2].tam} · ${SKUS[2].cor}`, precoCentavos: SKUS[2].preco, qtd: 1 }])}>
-            Trocar item
-          </Button>
-          <Button variant="default" onClick={() => setItens([])}>Esvaziar (mostra o estado vazio)</Button>
-        </Secao>
+          <Secao titulo="Entrada por PIN">
+            <Box p="md" className="ailow-cartao">
+              <TecladoPin onCompleto={(pin) => notifications.show({ message: `PIN com ${pin.length} dígitos recebido.`, color: 'ciano' })} />
+            </Box>
+          </Secao>
 
-        <Secao titulo="Etapas (cadastro de produto / fechamento)">
-          <Etapas
-            passos={[
-              { titulo: 'Categoria', conteudo: <Text py="md">Sutiã · Calcinha · Baby doll · Modelador…</Text> },
-              { titulo: 'Tamanhos', conteudo: <Text py="md">Marque os tamanhos que você tem.</Text> },
-              { titulo: 'Preço', conteudo: <TextInput py="md" label="Preço de venda" placeholder="89,00" /> },
-            ]}
-          />
-        </Secao>
+          <Secao titulo="Carrinho">
+            <Carrinho itens={itens} onMudar={mudar} />
+            <Button variant="default" onClick={() => setItens([])}>Esvaziar carrinho</Button>
+          </Secao>
 
-        <Secao titulo="Lista: cartões no celular, tabela no computador">
-          <Stack gap="sm" hiddenFrom="sm">
-            {SKUS.map((s) => (
-              <Card key={s.codigo} withBorder>
-                <Group justify="space-between" wrap="nowrap">
-                  <div style={{ minWidth: 0 }}>
-                    <Text truncate>{s.nome}</Text>
-                    <Text size="sm" c="dimmed">{s.tam} · {s.cor} · {s.codigo}</Text>
-                  </div>
-                  <Stack gap={4} align="flex-end"><Valor centavos={s.preco} /><SeloEstoque atual={s.estoque} minimo={s.minimo} /></Stack>
-                </Group>
-              </Card>
-            ))}
-          </Stack>
-          <div style={{ display: 'none' }} className="so-desktop">
-            <DataTable
-              withTableBorder
-              records={SKUS}
-              idAccessor="codigo"
-              columns={[
-                { accessor: 'codigo', title: 'Código' },
-                { accessor: 'nome', title: 'Modelo' },
-                { accessor: 'tam', title: 'Tam.' },
-                { accessor: 'cor', title: 'Cor' },
-                { accessor: 'preco', title: 'Preço', render: (s) => <Valor centavos={s.preco} /> },
-                { accessor: 'estoque', title: 'Estoque', render: (s) => <SeloEstoque atual={s.estoque} minimo={s.minimo} /> },
+          <Secao titulo="Passo a passo">
+            <Etapas
+              passos={[
+                { titulo: 'Categoria', conteudo: <Text c="dimmed">Sutiã · Calcinha · Baby doll · Modelador</Text> },
+                { titulo: 'Tamanhos', conteudo: <Text c="dimmed">Marque os tamanhos que você tem.</Text> },
+                { titulo: 'Preço', conteudo: <TextInput label="Preço de venda" placeholder="89,00" inputMode="decimal" size="lg" /> },
               ]}
             />
-          </div>
-          <EstadoVazio titulo="Nenhum produto ainda" texto="Quando você cadastrar uma peça, ela aparece aqui." acao="Novo produto" />
-        </Secao>
+          </Secao>
 
-        <Secao titulo="Avisos">
-          <SimpleGrid cols={2}>
-            <Button color="green" leftSection={<IconBuildingStore size={18} />} onClick={() => notifications.show({ message: 'Venda 1827 finalizada.', color: 'green', autoClose: 3000 })}>
-              Sucesso
-            </Button>
-            <Button color="red" onClick={() => notifications.show({ title: 'Peça sem estoque', message: 'Chame o Dono.', color: 'red', autoClose: false })}>
-              Erro
-            </Button>
-          </SimpleGrid>
-        </Secao>
-      </Stack>
-    </Container>
+          <Secao titulo="Lista de produtos">
+            <Stack gap="sm" hiddenFrom="sm">
+              {SKUS.map((s) => (
+                <Group key={s.codigo} justify="space-between" wrap="nowrap" p="md" className="ailow-cartao">
+                  <Box miw={0}>
+                    <Text truncate fw={550}>{s.nome}</Text>
+                    <Text size="sm" c="dimmed">{s.tam} · {s.cor} · {s.codigo}</Text>
+                  </Box>
+                  <Stack gap={4} align="flex-end"><Valor centavos={s.preco} /><SeloEstoque atual={s.estoque} minimo={s.minimo} /></Stack>
+                </Group>
+              ))}
+            </Stack>
+            <Box className="so-desktop ailow-cartao" p="xs">
+              <DataTable
+                records={SKUS}
+                idAccessor="codigo"
+                highlightOnHover
+                columns={[
+                  { accessor: 'codigo', title: 'Código' },
+                  { accessor: 'nome', title: 'Modelo' },
+                  { accessor: 'tam', title: 'Tam.' },
+                  { accessor: 'cor', title: 'Cor' },
+                  { accessor: 'preco', title: 'Preço', textAlign: 'right', render: (s) => <Valor centavos={s.preco} /> },
+                  { accessor: 'estoque', title: 'Estoque', render: (s) => <SeloEstoque atual={s.estoque} minimo={s.minimo} /> },
+                ]}
+              />
+            </Box>
+            <EstadoVazio titulo="Nenhum produto ainda" texto="Quando você cadastrar uma peça, ela aparece aqui." acao="Novo produto" />
+          </Secao>
+
+          <Secao titulo="Avisos">
+            <SimpleGrid cols={2}>
+              <Button color="violeta" leftSection={<IconCircleCheck size={20} />} onClick={() => notifications.show({ message: 'Venda 1827 finalizada.', color: 'violeta', autoClose: 3000 })}>
+                Sucesso
+              </Button>
+              <Button color="coral" onClick={() => notifications.show({ title: 'Peça sem estoque', message: 'Chame o Dono.', color: 'coral', autoClose: false })}>
+                Erro
+              </Button>
+            </SimpleGrid>
+          </Secao>
+        </Stack>
+      </Container>
+    </>
   );
 }
