@@ -48,6 +48,10 @@ export const quemUsaResponseSchema = z.object({ usuarios: z.array(quemUsaItemSch
 
 export const pinBodySchema = z.object({ usuario_id: z.uuid(), pin: pinSchema });
 export const sessaoResponseSchema = z.object({ usuario: usuarioPublicoSchema });
+// GET /acesso/eu também informa a trava por inatividade da empresa (RF-ACE-04): o app trava na mesma hora do servidor.
+export const euResponseSchema = sessaoResponseSchema.extend({
+  inatividade_minutos: z.number().int().min(1).max(120),
+});
 
 export const definirMeuPinBodySchema = z.object({ senha: z.string().min(1).max(128), pin: pinSchema });
 
