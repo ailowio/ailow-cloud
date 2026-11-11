@@ -13,6 +13,7 @@ import { Moldura } from './telas/Moldura';
 import { PinTela } from './telas/PinTela';
 import { QuemUsa } from './telas/QuemUsa';
 import { Configuracoes } from './telas/config/Configuracoes';
+import { Financeiro } from './telas/financeiro/Financeiro';
 
 // Um estado por tela. `inicio` guarda a sessão aberta e o limite de inatividade vindo do servidor.
 type Estado =
@@ -189,6 +190,9 @@ function Logado(props: {
   // Enquanto a pessoa usa o app sem chamar a API, avisa o servidor (senão a sessão expira por baixo dela).
   useTravaInatividade(props.inatividade, props.aoTravar, () => void props.api.eu().catch(() => {}));
 
+  if (props.modulo === 'financeiro' && props.usuario.perfil === 'dono') {
+    return <Financeiro api={props.api} aoVoltar={() => props.aoAbrir(null)} />;
+  }
   if (props.modulo === 'configuracoes' && props.usuario.perfil === 'dono') {
     return (
       <Configuracoes

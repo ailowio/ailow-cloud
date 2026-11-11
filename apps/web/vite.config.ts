@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react';
 // Em produção o proxy HTTPS faz o mesmo papel (S14). API_URL permite apontar para outra porta/host local.
 const alvo = process.env.API_URL ?? 'http://127.0.0.1:3000';
 const proxy = {
-  '^/(acesso|usuarios|empresa|categorias|admin|health|openapi\\.json)(/|$)': { target: alvo, changeOrigin: false },
+  '^/(acesso|usuarios|empresa|categorias|financeiro|admin|health|openapi\\.json)(/|$)': { target: alvo, changeOrigin: false },
 };
 
 export default defineConfig({
