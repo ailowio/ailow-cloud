@@ -30,7 +30,7 @@ Depois de alterar `packages/shared`, rode `npm run build:shared` (API e web cons
 ### Subir tudo com Docker Compose
 
 ```bash
-cp .env.example .env        # preencha POSTGRES_PASSWORD (instrução no próprio arquivo)
+cp .env.example .env        # preencha POSTGRES_PASSWORD e AUTH_PEPPER (instrução no próprio arquivo)
 docker compose up --build   # db saudável → migração → api saudável
 curl http://127.0.0.1:3000/health        # {"status":"ok","db":"ok"}
 curl http://127.0.0.1:3000/openapi.json  # contrato OpenAPI 3.1
@@ -41,16 +41,27 @@ docker compose down         # NÃO use -v se quiser manter os dados do banco
 
 ### Variáveis de ambiente
 
-Só nomes em `.env.example`. A API falha ao iniciar, citando o nome da variável, se `DATABASE_URL` faltar ou for inválida.
+Só nomes em `.env.example`. A API falha ao iniciar, citando o nome da variável, se `DATABASE_URL` ou `AUTH_PEPPER` (≥ 32 caracteres) faltarem ou forem inválidas. `COOKIE_SECURE=false` só em desenvolvimento sem HTTPS.
+
+### Criar o Admin da plataforma (acesso privilegiado, com TOTP)
+
+Fora da API, por pessoa autorizada; a senha vai por variável de ambiente (nunca por argumento) e a URI do TOTP é mostrada **uma única vez** (cadastre no app autenticador; não cole em chat/log):
+
+```bash
+ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA=... npm run admin:criar -w @ailow/api   # precisa de DATABASE_URL e AUTH_PEPPER
+```
+
+Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` (empresa + Dono). Contrato completo em `/openapi.json`.
 
 ## Documentação
 
 | Doc | Onde |
 |---|---|
 | PRD | `docs/prd/PRD-ailow-cloud-v1.md` |
-| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS) |
+| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP) |
 | Instruções para agentes de IA | `CLAUDE.md` / `AGENTS.md` |
 | Como contribuir | `CONTRIBUTORS.md`, `.github/pull_request_template.md` |
+| Matriz de acessos (auditoria) | `docs/auditoria/matriz-acessos.md` |
 | Plano de execução e diário | `docs/plano-execucao.md` |
 | Design System | `docs/design-system/README.md` |
 | Pesquisas (produto, etiqueta QR, Instagram) | `docs/pesquisa/` |

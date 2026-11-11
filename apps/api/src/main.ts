@@ -11,7 +11,12 @@ try {
   process.exit(1);
 }
 const pool = createPool(config.DATABASE_URL);
-const app = await buildApp({ pool, logger: { level: config.LOG_LEVEL } });
+const app = await buildApp({
+  pool,
+  logger: { level: config.LOG_LEVEL },
+  authPepper: config.AUTH_PEPPER,
+  cookieSecure: config.COOKIE_SECURE,
+});
 
 // Encerramento limpo (SIGTERM do Docker): para de aceitar conexões e fecha o pool.
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

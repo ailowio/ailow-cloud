@@ -17,6 +17,7 @@ Este app herda `D:\apps\harness`. Antes de qualquer trabalho:
 - Schemas de contrato compartilhados ficam em `packages/shared` (Zod); a API gera o OpenAPI 3.1 deles.
 - Config só por variável de ambiente, validada em `apps/api/src/config.ts` (falha cedo, citando o nome da variável).
 - Logs: JSON no stdout com `request_id`; nunca segredo/PII (`authorization` e `cookie` já são redigidos).
+- Testes de integração rodam em paralelo no MESMO Postgres: nunca conte nem compare linhas globais; assevere só sobre ids/nomes criados no próprio teste (L-0008).
 - Testes: `*.test.ts` ao lado do código (`src/`) ou em `apps/api/test/` (integração com Postgres real). Nome descreve a regra.
 - Não adicionar dependência sem verificar existência/versão na doc oficial; versões de runtime fixadas exatas.
 - Dinheiro em centavos inteiros (RN-01); nome que identifica algo nunca é truncado na UI (D23).

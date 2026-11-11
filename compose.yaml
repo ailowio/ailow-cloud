@@ -52,6 +52,9 @@ services:
     environment:
       DATABASE_URL: postgresql://ailow:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo de ambiente}@db:5432/ailow
       PORT: "3000"
+      # Segredo do servidor misturado aos hashes de senha/PIN (ADR 004). Falha cedo se faltar (ENV-04/05).
+      AUTH_PEPPER: ${AUTH_PEPPER:?defina AUTH_PEPPER no arquivo de ambiente}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
       - "127.0.0.1:${API_PORT:-3000}:3000"

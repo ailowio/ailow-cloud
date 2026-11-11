@@ -1,0 +1,35 @@
+# Matriz de acessos — Ailow Cloud   (AUD-01/03/06/09)
+
+- **Dono do sistema:** Pedro · **Dono dos dados:** cada empresa cliente (a plataforma é operadora) · **Classificação dos dados:** pessoais (nome, e-mail, clientes finais nas próximas sessões) e financeiros (S06+) · **Última atualização:** 2026-11-11 (S04)
+- Estado: **construído na S04, ainda sem produção.** Inventários de rotinas e interfaces nascem na S14 (deploy). Itens "a decidir" dependem do Pedro.
+
+## 1. Perfis (papéis) e o que cada um pode fazer
+| Perfil | Descrição / função | Dados e telas acessíveis | Pode alterar? | Privilegiado? | Justificativa (menor privilégio) |
+|---|---|---|---|---|---|
+| `vendedor` | quem atende no balcão | só a própria sessão (`/acesso/eu`); módulos de venda nas próximas sessões; **nunca** Financeiro, Compras, Configurações nem custo (RN-10) | não gere usuários | não | precisa vender, não administrar |
+| `dono` | proprietário da empresa | todos os dados **da própria empresa**; gestão de usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar) | sim, na própria empresa | sim (dentro da empresa) | decide quem usa o sistema |
+| `admin` (plataforma) | operador da plataforma | criar empresa + Dono; redefinir senha do Dono. **Não** acessa dados de negócio por estas rotas | sim | **sim** | suporte do produto; exige senha + TOTP |
+| `ailow_app` (papel de banco) | runtime da API para dados de negócio | tabelas de negócio via RLS (ADR 002); `eventos_acesso` só leitura/inserção; **sem acesso** a `admins`, `admin_sessoes`, `diretorio_login` | conforme GRANT | não | ver ADR 002/004 |
+
+Enforcement: `exigirSessao` + `exigirPerfil('dono')` (`apps/api/src/acesso/guardas.ts`), RLS por `empresa_id`; provado em `apps/api/test/autorizacao.test.ts` (2 empresas × 2 perfis) e `rls-acesso.test.ts`.
+
+## 2. Quem tem qual perfil
+| Pessoa | Função | Perfil(is) | Concedido em | Solicitado por | Aprovado por (dono) | MFA? | Próxima revisão |
+|---|---|---|---|---|---|---|---|
+| (nenhuma conta real criada nesta sessão) | — | — | — | — | — | Admin: TOTP obrigatório por construção | definir na S14 |
+
+Joiner/leaver (AUD-04): o Dono cria o Vendedor (`usuario_criado`), desativa o desligado (`usuario_desativado`, derruba as sessões) — ambos na trilha `eventos_acesso`. Prazo de remoção: imediato, executado pelo Dono. **Revisão periódica de acessos (AUD-05): a definir (sugestão: trimestral, relatório de `GET /usuarios`).**
+
+## 3. Contas privilegiadas e de serviço (AUD-06/09)
+| Conta / credencial | Tipo | Dono | Escopo | Criada em | Rotação (prazo/última) | Onde é guardada |
+|---|---|---|---|---|---|---|
+| Conta Admin da plataforma | admin (senha argon2id + TOTP) | Pedro | rotas `/admin/*` | sob demanda, via `npm run admin:criar` (CLI, fora da API) | a definir na S14 | senha: gerenciador de senhas do Pedro; TOTP: app autenticador; hash e segredo TOTP no Postgres |
+| `AUTH_PEPPER` | segredo de aplicação | Pedro | hashes de senha/PIN | S04 | trocar invalida todas as senhas e PINs (exige redefinição geral) — **procedimento a escrever (S13/S14)** | arquivo de ambiente local gitignored; na VPS, a definir (S14) |
+| Conexão da API ao Postgres | usuário dono do schema (superusuário na imagem) | Pedro | todo o banco | S03 | — | `DATABASE_URL` no ambiente. **Risco aceito até a S14** (ADR 002): criar papel de login dedicado |
+| Cookies `sessao`, `aparelho`, `admin_sessao` | credenciais de usuário final | o titular | uma pessoa/aparelho | por login | sessão: 12 h absolutas + inatividade; aparelho: 365 dias; Admin: 15 min de inatividade / 8 h | navegador (httpOnly); servidor guarda só o SHA-256 |
+
+## 4. Regras
+- Conta nominal; sem compartilhamento: Dono e Admin têm e-mail próprio; Vendedor tem nome e PIN próprios.
+- Concessão de acesso privilegiado (Admin) só com pedido explícito do Pedro; o agente de IA não cria contas.
+- Acesso de emergência ao banco: fora do escopo da S04 (a definir na S14).
+- Lacunas conhecidas (ADR 004): sem limite de tentativas de senha, segredo TOTP sem cifra em repouso, sem revogação de aparelho.

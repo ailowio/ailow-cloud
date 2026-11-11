@@ -1,0 +1,5 @@
+# Exceção local (harness §7 / SEC-05): falso positivo da regra generic-api-key.
+# É o pepper FICTÍCIO de teste (apps/api/src/config.test.ts), sem valor fora da suíte.
+# Motivo: chave "AUTH_PEPPER" + literal de teste. Risco aceito: nenhum (não protege dado algum).
+# Revisar em: 2026-12-10 (revisão mensal) — remover se o commit sair do histórico.
+3a1161dbc69c7f5dfc25294e33ff5a4532ed8b63:apps/api/src/config.test.ts:generic-api-key:6
