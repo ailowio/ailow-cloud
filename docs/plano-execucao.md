@@ -180,3 +180,8 @@ Pendências / riscos honestos:
 Verificação: `npm run verify` (exit 0); `node harness/scripts/check-harness.mjs` -> Harness OK.
 
 **Aguardando portão do Pedro (mergear o PR #5).** O prompt da S05 só vale após o ok.
+
+### Pendências transversais (fora de sessão) — 2026-11-11
+- [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
+- [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
+- [ ] Docker Desktop 4.99.0 instalado via winget; WSL2 instalado e **aguardando reinício do Windows**; depois abrir o Docker Desktop, aceitar os termos e rodar `docker compose up --build` no ailow-cloud.
