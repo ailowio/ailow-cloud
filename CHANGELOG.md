@@ -5,6 +5,8 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 ## [Não lançado]
 
 ### Adicionado
+- Logo da empresa via UI (RF-CFG-02): `PUT/DELETE/GET /empresa/logo` (PNG/JPEG/WebP ≤ 512 KiB, bytea + MIME em `empresas`, sem SVG); Configurações > Empresa envia/troca/remove; placeholder do app quando não há logo. OpenAPI 0.5.1; `@fastify/multipart` 10.1.8.
+- `npm run dev:parar` — encerra Postgres embutido e libera portas 54329/3000/5173 (L-0012).
 - Monorepo com npm workspaces: `apps/api`, `apps/web`, `packages/shared`; `npm run verify` único na raiz (lint, tipos, testes e build).
 - API Fastify 5 + Zod 4 com `GET /health`, `GET /openapi.json` (OpenAPI 3.1), logs JSON com `request_id` e configuração validada por variável de ambiente (falha cedo).
 - PostgreSQL 18 com migrações SQL reversíveis; tabelas `empresas` e `categorias` com RLS forçada por `empresa_id` e o papel de runtime `ailow_app`; teste de integração de isolamento entre empresas.
@@ -16,7 +18,7 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 - Shell PWA (S05): app instalável (manifest, ícones, service worker mínimo que só guarda a casca estática e nunca a API); fluxo Entrar → "Quem está usando?" → PIN → tela inicial 3×N filtrada por perfil, tratamento de PIN errado (tentativas restantes), usuário bloqueado e sessão expirada; trava por inatividade alinhada ao limite do servidor (`GET /acesso/eu` agora informa `inatividade_minutos`).
 - Configurações (S05, só Dono): usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar, trocar o próprio PIN), dados da empresa, trava por inatividade, markup padrão (em pontos-base, inteiro) e categorias com atributos. API: `GET/PUT /empresa`, `GET/POST /categorias`, `PUT /categorias/{id}` (OpenAPI 0.3.0). Migração reversível `20261111180000_configuracoes` (colunas novas em `empresas` e `categorias`; RLS e GRANT já existentes cobrem).
-- Logo placeholder (S05): `apps/web/public/logo.svg` aparece no topo de todas as telas e em Configurações > Empresa; para usar a logo definitiva basta substituir o arquivo (teste garante SVG seguro e fora do cache do service worker). O envio da logo por empresa (RF-CFG-02) segue pendente.
+- Logo placeholder (S05): `apps/web/public/logo.svg` no topo quando a empresa ainda não enviou logo própria (RF-CFG-02 completo depois — ver item no topo deste changelog).
 - Financeiro (S06, só Dono): lançamentos imutáveis (RF-FIN-01) com tipo entrada/saída, origem (venda, compra, despesa, estorno + id), categoria, valor em centavos inteiros, forma de pagamento, vencimento, pago em e status; **interface pública em processo** (`registrarLancamento`, `estornarLancamento`, `pagarLancamento` em `apps/api/src/financeiro/lancamentos.ts`) que Vendas/Compras chamarão dentro da própria transação (RF-FIN-06, ADR 005, teste de fronteira); nova despesa em aberto ou já paga, contas a pagar por situação (vencidas, hoje, próximos 7 dias), marcar como pago, estorno com motivo (RN-06: sem DELETE e sem UPDATE de valor nem para o papel de runtime, provado no banco) e relatório do dia/mês por forma de pagamento e por categoria no fuso de São Paulo. API: `POST /financeiro/despesas`, `GET /financeiro/contas-a-pagar`, `POST /financeiro/lancamentos/{id}/pagar|estornar`, `GET /financeiro/extrato|relatorio` (OpenAPI 0.4.0). Migração reversível `20261111200000_financeiro` (tabela `lancamentos`, RLS forçada, GRANT por coluna). Telas no app (360×640, dois temas): menu Financeiro, Nova despesa, Contas a pagar e Relatório com extrato do dia e estorno.
 - Financeiro, ajustes da revisão do ADR 005 (OpenAPI 0.5.0, migração reversível `20261112120000_categorias-tipo-e-sem-boleto`): **duas listas de categorias**, de produto e financeiras (`categorias.tipo`; `GET /categorias?tipo=`, `POST /categorias` aceita `tipo`, sem tipo = produto; financeira não tem atributos; empresa nova recebe as financeiras padrão; abas Produtos/Financeiras em Configurações); a despesa só aceita categoria financeira ativa (`400 categoria_invalida`) e o seletor da tela lista só essas; **estornar uma venda inteira** (RN-08): `estornarOrigem` na interface pública e `POST /financeiro/vendas/{id}/estornar`, com botão "Estornar venda" no extrato (todos os pagamentos de uma vez, sem estorno em dobro); limite do nome da categoria no lançamento passa de 40 para 60 caracteres (o nome da categoria já aceitava 60).
 - Teste que liga as rotas da API à lista de prefixos do proxy do app web (uma rota nova sem entrada no proxy dava 404 no navegador com tudo verde).
@@ -27,9 +29,11 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 - Forma de pagamento `boleto` (contrato, banco e telas): o v1 usa dinheiro, Pix, débito e crédito.
 
 ### Corrigido
+- Teste SEC-16 do PIN nos logs: asserção imune a coincidência em `time`/UUID (L-0011).
 - Proxy do app web (dev): `/categorias?tipo=…` não era repassado à API (o padrão só aceitava `/` ou o fim depois do prefixo; agora aceita `?`), e um teste confere o padrão contra URLs reais, com query string.
 - Relatório do Financeiro: depois de um estorno, os totais do topo (Entrou, Saiu, Saldo, por forma e por categoria) agora são recarregados junto com a lista; antes só a lista mudava.
 
 ### Alterado
+- ADR 004 (acesso/sessão/PIN/TOTP) **aceito** (2026-11-12).
 - Nova variável obrigatória `AUTH_PEPPER` (e opcional `COOKIE_SECURE`) na API, no Compose e no CI.
 - Lockfile único na raiz (removido o `package-lock.json` de `apps/web`).

@@ -29,6 +29,8 @@ export function Moldura(props: {
   subtitulo?: string;
   voltar?: { rotulo: string; aoVoltar: () => void };
   acaoTopo?: { rotulo: string; aoClicar: () => void };
+  /** Com sessão aberta: tenta a logo da empresa no topo. */
+  logoEmpresa?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -38,8 +40,8 @@ export function Moldura(props: {
         <Container size={560} px="md">
           <Group justify="space-between" wrap="nowrap" h={64}>
             <Group gap="xs" wrap="nowrap">
-              <Logo altura={36} alt="" />
-              {/* Nome ao lado da marca. Quando a logo definitiva já trouxer o nome, remova este texto. */}
+              <Logo altura={36} alt="" empresa={props.logoEmpresa === true} />
+              {/* Nome Ailow ao lado da marca (produto); a logo da empresa é só o ícone. */}
               <Text ff="var(--mantine-font-family-headings)" fw={700} fz={22} c="var(--ailow-primario-texto)">
                 Ailow
               </Text>

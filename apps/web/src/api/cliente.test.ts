@@ -101,7 +101,8 @@ describe('endpoints: método, caminho e corpo de cada chamada', () => {
     ['empresa', (a) => a.empresa(), 'GET', '/empresa', undefined],
     [
       'salvarEmpresa',
-      (a) => a.salvarEmpresa({ nome: 'M', telefone: null, endereco: null, markup_bps: 100, inatividade_minutos: 5 }),
+      (a) =>
+        a.salvarEmpresa({ nome: 'M', telefone: null, endereco: null, markup_bps: 100, inatividade_minutos: 5 }),
       'PUT',
       '/empresa',
       { nome: 'M', telefone: null, endereco: null, markup_bps: 100, inatividade_minutos: 5 },

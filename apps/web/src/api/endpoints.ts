@@ -42,9 +42,11 @@ export function criarApi(c: Cliente) {
     desbloquear: (id: string) => p('POST', `/usuarios/${id}/desbloquear`),
     derrubarSessoes: (id: string) => p('POST', `/usuarios/${id}/derrubar-sessoes`),
     desativar: (id: string) => p('POST', `/usuarios/${id}/desativar`),
-    // --- empresa + markup (RF-CFG-02/03)
+    // --- empresa + markup + logo (RF-CFG-02/03)
     empresa: () => p<Empresa>('GET', '/empresa'),
-    salvarEmpresa: (e: Empresa) => p<Empresa>('PUT', '/empresa', e),
+    salvarEmpresa: (e: Omit<Empresa, 'tem_logo'>) => p<Empresa>('PUT', '/empresa', e),
+    enviarLogo: (arquivo: File) => c.enviarArquivo<Empresa>('/empresa/logo', arquivo),
+    removerLogo: () => p<Empresa>('DELETE', '/empresa/logo'),
     // --- categorias (RF-CFG-04)
     categorias: (tipo?: TipoCategoria) =>
       p<{ categorias: Categoria[] }>('GET', tipo ? `/categorias?tipo=${tipo}` : '/categorias'),

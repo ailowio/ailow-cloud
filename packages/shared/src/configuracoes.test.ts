@@ -8,7 +8,14 @@ import {
   empresaSchema,
 } from './configuracoes.js';
 
-const base = { nome: 'Marcant', telefone: null, endereco: null, markup_bps: 0, inatividade_minutos: 5 };
+const base = {
+  nome: 'Marcant',
+  telefone: null,
+  endereco: null,
+  markup_bps: 0,
+  inatividade_minutos: 5,
+  tem_logo: false,
+};
 
 describe('contrato de Configurações', () => {
   it('a entrada normaliza o telefone para dígitos; a resposta exige dígitos', () => {

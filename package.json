@@ -18,7 +18,8 @@
     "dev:db": "npm run dev:db -w @ailow/api",
     "dev:seed": "npm run dev:seed -w @ailow/api",
     "dev:api": "npm run dev:api -w @ailow/api",
-    "dev:web": "npm run dev -w @ailow/web"
+    "dev:web": "npm run dev -w @ailow/web",
+    "dev:parar": "node scripts/dev-parar.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6"

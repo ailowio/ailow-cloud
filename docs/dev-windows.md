@@ -46,11 +46,11 @@ Entrar com **F2** (ou Del). Alterar **só**:
 
 Salvar: **F10 → Yes**. Não mexer em Secure Boot, boot order, SATA, senhas.
 
-Aviso conhecido e **não bloqueante** depois do install:
+Aviso conhecido e **não bloqueante** depois do install (limitação **aceita**):
 
 `wsl: Falha ao detectar suporte à virtualização aninhada, erro: ERROR_INVALID_DATA`
 
-Nested virt importa para VM-dentro-de-WSL. WSL2 + Ubuntu + Docker Desktop no dia a dia do Ailow Cloud funcionam sem isso.
+Nested virt importa para VM-dentro-de-WSL. WSL2 + Ubuntu + Docker Desktop no dia a dia do Ailow Cloud funcionam sem isso — não exige correção de firmware.
 
 ## WSL2 — estado esperado
 

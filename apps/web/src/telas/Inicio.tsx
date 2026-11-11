@@ -72,6 +72,7 @@ export function Inicio(props: {
       titulo={`Olá, ${props.usuario.nome}`}
       subtitulo="O que vamos fazer?"
       acaoTopo={{ rotulo: 'Trocar', aoClicar: props.aoTrocar }}
+      logoEmpresa
     >
       <Stack gap="md">
         {alertas && total > 0 && (

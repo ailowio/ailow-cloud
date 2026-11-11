@@ -355,15 +355,23 @@ Verificação: `npm run verify` exit 0; mutação 17/17; Playwright 360×640 nos
 
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [x] **Mover o arquivo de ambiente real para a pasta do app.** Feito 2026-11-12: `D:\apps\.env` → `D:\apps\ailow-cloud\.env`; `git check-ignore -v .env` ok; removida linha duplicada vazia `AUTH_PEPPER=` que quebrava o Compose (last-wins). Não ler/colar conteúdo (SEC-01).
-- [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
-- [x] **WSL2 + Docker Desktop + Compose local.** Feito 2026-11-12: WSL 3.0.5 + Ubuntu (WSL2); Docker engine ok; `docker compose up --build` → `/health` `{"status":"ok","db":"ok"}`, `/openapi.json` 200. Guia: `docs/dev-windows.md`. Aviso não bloqueante: nested virt `ERROR_INVALID_DATA`. Lição L-0013.
+- [ ] Decidir a reescrita do histórico do Git (acervo): **adiada** (Pedro 2026-11-12: não limpar ainda). Sem force-push/ruleset neste ciclo.
+- [x] **WSL2 + Docker Desktop + Compose local.** Feito 2026-11-12. Nested virt `ERROR_INVALID_DATA` = limitação aceita (`docs/dev-windows.md`).
 
-### Estado de retomada — 2026-11-12 (pós-WSL/Docker; pronto para S07)
-- **Git:** S06 (PR #9) e S06b (PR #10) **mergeados** na `main` (`c6168a2`). `git rev-parse --show-toplevel` = `D:/apps/ailow-cloud`.
-- **Ambiente Windows:** WSL2 + Ubuntu; Docker Desktop (backend WSL2); autostart Docker **desligado**. Compose **saudável** em `127.0.0.1:3000`. Dev sem Docker (`dev:db`/`dev:api`/`dev:web`) continua válido — se for usar os dois, não colidir na porta 3000 (`docker compose down` antes do `dev:api`, ou o contrário).
-- **Docs:** `docs/dev-windows.md` (BIOS SVM, freeze, gate rápido, `.env`). README atualizado.
-- **Próximo passo:** conversa nova + colar o **Prompt da S07**. Branch a partir da `main` atualizada. Conferir portas 54329/3000/5173 (L-0012); Compose pode estar na 3000.
-- **Em aberto (não bloqueiam a S07):** ADR 004 "proposto"; logo definitiva e envio por empresa (RF-CFG-02); reescrita do histórico (acervo); L-0011; `dev:parar` (L-0012); proxy HTTPS S14; texto 13–14 px; Safari/iOS.
+### Limpeza de pendências (pós-plano; paralelo à S07 no Claude Code) — 2026-11-12 — Composer
+Gate: feature logo + bugfix PIN + tooling + docs, **tier B**. Branch `chore/limpeza-pendencias-pos-s07` (worktree; S07 ainda WIP fora desta branch).
+Feito:
+- **ADR 004 aceito** (código já na main desde S04).
+- **RF-CFG-02 logo via UI:** migração `logo_bytes`/`logo_mime` (PNG/JPEG/WebP ≤ 512 KiB, sem SVG); `PUT/DELETE/GET /empresa/logo`; Configurações > Empresa envia/troca/remove; OpenAPI 0.5.1; `@fastify/multipart`.
+- **L-0011:** asserção SEC-16 parseia JSON do log (não substring solta em `time`/UUID).
+- **`npm run dev:parar`** (L-0012 ação 3).
+- **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS → S14; Safari/iOS → só Chromium por ora; texto 13–14 px aceito; nested virt aceito.
+Verificação: `npm run verify` (ver PR).
+
+### Estado de retomada — 2026-11-12 (pronto para S07; sanado)
+- **Git:** PRs #9–#12 mergeados na main de base desta limpeza. S07 segue no Claude Code (`feature/s07-produtos`) — mergear limpeza e S07 com cuidado (proxy/modulos).
+- **Ambiente / docs:** `.env` ok; WSL/Docker ok; `docs/dev-windows.md`; `dev:parar` disponível.
+- **Em aberto (adiados):** reescrita histórico acervo; proxy HTTPS S14; Safari/iOS; polish visual 13–14 px (aceito).
 
 ### Estado de retomada — 2026-11-11 (histórico)
 - **Git:** S05 (PR #6) e S05b (PR #7) mergeados; handoff apontava para S06. Superado pelos estados e PRs #9/#10 acima.
