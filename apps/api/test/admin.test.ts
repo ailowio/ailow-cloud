@@ -180,14 +180,14 @@ describe('Admin da plataforma', () => {
 
     it('e-mail já usado em qualquer empresa: 409 e nada é criado', async () => {
       const e = await criarEmpresaPelaApi(adminCli, 'Loja Dona do Email');
-      const antes = await owner.query('SELECT count(*)::int AS n FROM empresas');
       const res = await adminCli.post('/admin/empresas', {
         nome: 'Loja Repetida',
         dono: { nome: 'Outro', email: e.email.toUpperCase(), senha: 'senha-longa-123' },
       });
       expect(res.statusCode).toBe(409);
-      const depois = await owner.query('SELECT count(*)::int AS n FROM empresas');
-      expect(depois.rows[0].n).toBe(antes.rows[0].n);
+      // Filtra pelo nome: outros arquivos de teste criam empresas em paralelo no mesmo banco.
+      const residuo = await owner.query("SELECT count(*)::int AS n FROM empresas WHERE nome = 'Loja Repetida'");
+      expect(residuo.rows[0].n).toBe(0);
     });
 
     it.each([
