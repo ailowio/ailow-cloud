@@ -1,6 +1,6 @@
 # ADR 001: Monólito modular em Node/TypeScript com Fastify, Zod e PostgreSQL
 
-- **Status:** proposto (aguarda assinatura do Pedro)
+- **Status:** aceito (assinado pelo Pedro ao mergear o PR que altera este status, 2026-11-10)
 - **Data:** 2026-11-10
 - **Decisores:** Pedro (dono do produto); proposta redigida com apoio de IA
 - **Tier do app:** B
