@@ -1,15 +1,24 @@
 {
   "name": "ailow-cloud",
   "private": true,
-  "engines": { "node": ">=22" },
-  "workspaces": ["apps/*", "packages/*"],
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build:shared": "npm run build -w @ailow/shared",
     "lint": "biome lint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build:shared && npm run build -w @ailow/api && npm run build -w @ailow/web",
-    "verify": "npm run build:shared && npm run lint && npm run typecheck && npm run test && npm run build"
+    "verify": "npm run build:shared && npm run lint && npm run typecheck && npm run test && npm run build",
+    "dev:db": "npm run dev:db -w @ailow/api",
+    "dev:seed": "npm run dev:seed -w @ailow/api",
+    "dev:api": "npm run dev:api -w @ailow/api",
+    "dev:web": "npm run dev -w @ailow/web"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.6"
