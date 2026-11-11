@@ -13,7 +13,7 @@ const ITENS: { id: Exclude<Secao, 'menu'>; titulo: string; texto: string; icone:
   { id: 'usuarios', titulo: 'Usuários', texto: 'Vendedores, PINs e acessos', icone: <IconUsers aria-hidden /> },
   { id: 'empresa', titulo: 'Empresa', texto: 'Nome, telefone, endereço e trava do app', icone: <IconBuildingStore aria-hidden /> },
   { id: 'markup', titulo: 'Markup', texto: 'Percentual para sugerir o preço', icone: <IconPercentage aria-hidden /> },
-  { id: 'categorias', titulo: 'Categorias', texto: 'Tipos de produto e seus atributos', icone: <IconCategory aria-hidden /> },
+  { id: 'categorias', titulo: 'Categorias', texto: 'De produto e financeiras', icone: <IconCategory aria-hidden /> },
 ];
 
 /** Configurações (só Dono, RN-10): menu de 4 áreas, uma decisão por tela. */

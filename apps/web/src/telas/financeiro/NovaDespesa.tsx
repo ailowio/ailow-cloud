@@ -1,20 +1,38 @@
 import { useState } from 'react';
-import { Alert, Autocomplete, Button, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Select, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import type { FormaPagamento } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
+import { EstadoVazio } from '../../componentes';
 import { formatarReais, reaisParaCentavos } from '../../lib/dinheiro';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { useAcao } from '../config/comum';
+import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { EscolhaForma } from './Modais';
 import { mensagemFinanceiro } from './rotulos';
 
-// Sugestões de categoria: a categoria é texto livre (ADR 005); estas só evitam digitar o comum.
-const SUGESTOES = ['Aluguel', 'Água', 'Luz', 'Internet', 'Condomínio', 'Sacolas', 'Salários', 'Impostos', 'Outros'];
 const VALOR_MAXIMO = 2_000_000_000;
 
 /** RF-FIN-02: nova despesa (descrição, categoria, valor, vencimento); pode já nascer paga. */
 export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void }) {
+  // A categoria é uma das categorias FINANCEIRAS ativas da empresa (Configurações › Categorias).
+  const { carga, tentarDeNovo } = useCarregar(() =>
+    props.api.categorias('financeira').then((r) => r.categorias.filter((c) => c.ativa).map((c) => c.nome)),
+  );
+  if (carga.fase === 'carregando') return <Carregando linhas={3} />;
+  if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
+  if (carga.dados.length === 0) {
+    return (
+      <EstadoVazio
+        titulo="Nenhuma categoria financeira"
+        texto="Para lançar uma despesa, cadastre antes uma categoria em Configurações › Categorias › Financeiras."
+      />
+    );
+  }
+  return <FormDespesa api={props.api} categorias={carga.dados} aoSalvar={props.aoSalvar} />;
+}
+
+function FormDespesa(props: { api: Api; categorias: string[]; aoSalvar: (paga: boolean) => void }) {
   const [descricao, setDescricao] = useState('');
   const [categoria, setCategoria] = useState('');
   const [valorTexto, setValorTexto] = useState('');
@@ -57,16 +75,17 @@ export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void
         value={descricao}
         onChange={(e) => setDescricao(e.currentTarget.value)}
       />
-      <Autocomplete
+      <Select
         label="Categoria"
-        description="Escolha uma sugestão ou escreva a sua."
+        placeholder="Escolha uma categoria"
         required
         size="lg"
-        maxLength={40}
-        data={SUGESTOES}
+        allowDeselect={false}
+        data={props.categorias}
         classNames={{ option: 'ailow-opcao' }}
-        value={categoria}
-        onChange={setCategoria}
+        comboboxProps={{ withinPortal: true }}
+        value={categoria || null}
+        onChange={(v) => setCategoria(v ?? '')}
       />
       <TextInput
         label="Valor"

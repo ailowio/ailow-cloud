@@ -88,22 +88,28 @@ export function PagarModal(props: {
   );
 }
 
-/** RF-FIN-04: estornar exige motivo e explica que nada é apagado (RN-06). */
+/**
+ * RF-FIN-04: estornar exige motivo e explica que nada é apagado (RN-06).
+ * Com `venda`, estorna a VENDA INTEIRA (todos os pagamentos dela de uma vez, RN-08): `alvo.valor_centavos` é a soma
+ * dos pagamentos que serão estornados e `venda.pagamentos` diz quantos são.
+ */
 export function EstornarModal(props: {
   api: Api;
   titulo: string;
   alvo: { id: string; descricao: string; valor_centavos: number };
+  venda?: { id: string; pagamentos: number };
   aoFechar: () => void;
   aoEstornado: () => void;
 }) {
-  const { alvo } = props;
+  const { alvo, venda } = props;
   const [motivo, setMotivo] = useState('');
   const { pendente, erro, rodar } = useAcao(mensagemFinanceiro);
   const valido = motivo.trim().length >= 3;
 
   async function confirmar() {
     if (!valido) return;
-    if (await rodar(() => props.api.estornar(alvo.id, motivo.trim()), 'Estorno feito')) props.aoEstornado();
+    const enviar = () => (venda ? props.api.estornarVenda(venda.id, motivo.trim()) : props.api.estornar(alvo.id, motivo.trim()));
+    if (await rodar(enviar, venda ? 'Venda estornada' : 'Estorno feito')) props.aoEstornado();
   }
 
   return (
@@ -117,6 +123,13 @@ export function EstornarModal(props: {
             <Valor centavos={alvo.valor_centavos} destaque />
           </Text>
         </Stack>
+        {venda && (
+          <Text size="sm" fw={600}>
+            {venda.pagamentos > 1
+              ? `Esta venda foi paga em ${venda.pagamentos} formas. Todas serão estornadas de uma vez, no valor total acima.`
+              : 'O pagamento desta venda será estornado.'}
+          </Text>
+        )}
         <Text size="sm" c="dimmed">
           Nada é apagado: o lançamento fica no histórico e é criado um lançamento inverso, com o seu motivo.
         </Text>
@@ -133,7 +146,7 @@ export function EstornarModal(props: {
         />
         {erro && <Erro texto={erro} />}
         <Button h={48} color="red" onClick={() => void confirmar()} loading={pendente} disabled={!valido}>
-          Estornar
+          {venda ? 'Estornar venda' : 'Estornar'}
         </Button>
         <Button h={48} variant="default" onClick={props.aoFechar} disabled={pendente}>
           Voltar

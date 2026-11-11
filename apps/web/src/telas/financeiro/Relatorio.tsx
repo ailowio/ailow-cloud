@@ -8,13 +8,15 @@ import { type Periodo, deslocarPeriodo, hojeEmSaoPaulo, horaEmSaoPaulo, rotuloDo
 import { formatarReais } from '../../lib/dinheiro';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { EstornarModal } from './Modais';
-import { rotuloForma, tituloLancamento } from './rotulos';
+import { pagamentosDaVenda, rotuloForma, tituloLancamento } from './rotulos';
 
 /** RF-FIN-05: entradas × saídas do dia ou do mês, por forma de pagamento e por categoria; no dia, o extrato com estorno. */
 export function Relatorio({ api }: { api: Api }) {
   const hoje = useMemo(() => hojeEmSaoPaulo(), []);
   const [periodo, setPeriodo] = useState<Periodo>('dia');
   const [data, setData] = useState(hoje);
+  // Sobe a cada estorno para o relatório (totais, por forma, por categoria) buscar tudo de novo.
+  const [versao, setVersao] = useState(0);
 
   const proximo = deslocarPeriodo(periodo, data, 1);
   const noFuturo = periodo === 'dia' ? proximo > hoje : proximo.slice(0, 7) > hoje.slice(0, 7);
@@ -68,13 +70,21 @@ export function Relatorio({ api }: { api: Api }) {
         </Button>
       )}
 
-      {/* key: ao trocar de período ou de data o conteúdo é remontado e busca de novo (com esqueleto). */}
-      <ConteudoRelatorio key={`${periodo}-${data}`} api={api} periodo={periodo} data={data} />
+      {/* key: ao trocar de período ou de data — ou depois de um estorno — o conteúdo é remontado e busca de novo:
+          os totais do topo mudam junto com a lista. */}
+      <ConteudoRelatorio
+        key={`${periodo}-${data}-${versao}`}
+        api={api}
+        periodo={periodo}
+        data={data}
+        aoEstornar={() => setVersao((v) => v + 1)}
+      />
     </Stack>
   );
 }
 
-function ConteudoRelatorio({ api, periodo, data }: { api: Api; periodo: Periodo; data: string }) {
+function ConteudoRelatorio(props: { api: Api; periodo: Periodo; data: string; aoEstornar: () => void }) {
+  const { api, periodo, data } = props;
   const { carga, tentarDeNovo } = useCarregar(() => api.relatorio(periodo, data));
   if (carga.fase === 'carregando') return <Carregando linhas={3} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
@@ -96,7 +106,7 @@ function ConteudoRelatorio({ api, periodo, data }: { api: Api; periodo: Periodo;
           <Quebra titulo="Por categoria" linhas={r.por_categoria.map((c) => ({ nome: c.categoria, ...c }))} />
         </>
       )}
-      {periodo === 'dia' && <ExtratoDoDia api={api} data={data} />}
+      {periodo === 'dia' && <ExtratoDoDia api={api} data={data} aoEstornar={props.aoEstornar} />}
     </Stack>
   );
 }
@@ -161,8 +171,28 @@ function Quebra(props: {
   );
 }
 
-function ExtratoDoDia({ api, data }: { api: Api; data: string }) {
-  const { carga, recarregar, tentarDeNovo } = useCarregar(() => api.extrato(data));
+// O que o modal de estorno mostra: uma venda é estornada inteira (todos os pagamentos dela); o resto, um a um.
+function alvoDoEstorno(l: Lancamento, lancamentos: Lancamento[]) {
+  if (l.origem_tipo === 'venda' && l.origem_id) {
+    const pagamentos = pagamentosDaVenda(lancamentos, l.origem_id);
+    return {
+      titulo: 'Estornar esta venda?',
+      alvo: {
+        id: l.id,
+        descricao: 'Venda',
+        valor_centavos: pagamentos.reduce((total, p) => total + p.valor_centavos, 0),
+      },
+      venda: { id: l.origem_id, pagamentos: pagamentos.length },
+    };
+  }
+  return {
+    titulo: 'Estornar este lançamento?',
+    alvo: { id: l.id, descricao: tituloLancamento(l), valor_centavos: l.valor_centavos },
+  };
+}
+
+function ExtratoDoDia({ api, data, aoEstornar }: { api: Api; data: string; aoEstornar: () => void }) {
+  const { carga, tentarDeNovo } = useCarregar(() => api.extrato(data));
   const [estornando, setEstornando] = useState<Lancamento | null>(null);
 
   if (carga.fase === 'carregando') return <Carregando linhas={2} />;
@@ -205,8 +235,14 @@ function ExtratoDoDia({ api, data }: { api: Api; data: string }) {
               </Badge>
             )}
             {podeEstornar && (
-              <Button h={48} variant="default" onClick={() => setEstornando(l)} aria-label={`Estornar ${tituloLancamento(l)}`}>
-                Estornar
+              <Button
+                h={48}
+                variant="default"
+                onClick={() => setEstornando(l)}
+                aria-label={`${l.origem_tipo === 'venda' ? 'Estornar venda' : 'Estornar'} ${tituloLancamento(l)}`}
+              >
+                {/* Uma venda se estorna inteira (RN-08): o botão diz isso. */}
+                {l.origem_tipo === 'venda' ? 'Estornar venda' : 'Estornar'}
               </Button>
             )}
           </Stack>
@@ -215,12 +251,11 @@ function ExtratoDoDia({ api, data }: { api: Api; data: string }) {
       {estornando && (
         <EstornarModal
           api={api}
-          titulo="Estornar este lançamento?"
-          alvo={{ id: estornando.id, descricao: tituloLancamento(estornando), valor_centavos: estornando.valor_centavos }}
+          {...alvoDoEstorno(estornando, lancamentos)}
           aoFechar={() => setEstornando(null)}
           aoEstornado={() => {
             setEstornando(null);
-            void recarregar();
+            aoEstornar();
           }}
         />
       )}
