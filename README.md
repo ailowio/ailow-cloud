@@ -84,7 +84,7 @@ Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` 
 | Instruções para agentes de IA | `CLAUDE.md` / `AGENTS.md` |
 | Como contribuir | `CONTRIBUTORS.md`, `.github/pull_request_template.md` |
 | Matriz de acessos (auditoria) | `docs/auditoria/matriz-acessos.md` |
-| Plano de execução e diário | `docs/plano-execucao.md` |
+| Plano de execução e diário | `docs/plano-execucao.md` (plano enxuto) · `docs/diario/ATUAL.md` (diário ativo) · `docs/diario/ARQUIVO-S00-S06.md` (arquivo) |
 | Windows: WSL2 + Docker Desktop | `docs/dev-windows.md` |
 | Design System | `docs/design-system/README.md` |
 | Pesquisas (produto, etiqueta QR, Instagram) | `docs/pesquisa/` |
