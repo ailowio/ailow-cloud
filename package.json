@@ -1,0 +1,8 @@
+{
+  "name": "ailow-cloud",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "verify": "npm run verify -w apps/web"
+  }
+}
