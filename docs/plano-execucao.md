@@ -98,6 +98,33 @@ Não fazer: Vendas, Compras, Produtos, deploy, mexer no ruleset ou no histórico
 Ao terminar: atualize o Diário e diga "aguardando portão do Pedro (mergear o PR)"; o prompt da S07 só vale após o ok.
 ```
 
+## Prompt da S07 (colável)
+
+```text
+Sessão S07 de 14 — Produtos (plano "Ailow Cloud v1").
+Plano e diário: D:\apps\ailow-cloud\docs\plano-execucao.md
+PRD: D:\apps\ailow-cloud\docs\prd\PRD-ailow-cloud-v1.md
+Repo: D:\apps\ailow-cloud (remoto https://github.com/ailowio/ailow-cloud, PÚBLICO). Protocolo git completo autorizado (branch curta + PR; humano aprova e mergeia). A main está protegida (ruleset proteger-main): PR obrigatório + 6 checks (verify, seguranca-segredos, seguranca-sast, seguranca-sca, imagem, compose).
+
+ANTES DE TUDO: `git rev-parse --show-toplevel` (D:/apps/ailow-cloud) e `git status` (L-0010). PR #10 já está MERGED; `git checkout main && git pull --ff-only` e crie a branch da S07. Conferir portas 54329, 3000 e 5173 (L-0012): o Compose pode estar saudável em :3000 — se for usar `dev:api`, `docker compose down` antes (ou o contrário). Guia Windows: docs/dev-windows.md (L-0013).
+
+Leia o plano inteiro, principalmente a S07, o "Contrato de toda sessão", as últimas entradas do Diário (S06, S06b, Prep ambiente Windows) e "Pendências transversais". Leia também docs/pesquisa/P1-modelagem-produto.md e o ADR 005. Cumpra o gate do harness (D:\apps\harness\PROTOCOLO.md §1). Lições ativas valem (item 1: código/regex só por Write/Edit; L-0006 mutação; L-0007; L-0008; L-0009 proxy Vite + teste proxy-web; L-0013 Docker/WSL/.env). O guard do harness bloqueia comando que cite o arquivo de ambiente real: não contorne.
+Skills/regras desta sessão: superpowers:test-driven-development, karpathy-guidelines, frontend-design e playwright-skill (viewport 360×640, 2 temas, medir rolagem horizontal, texto cortado e alvos < 48 px).
+
+Escopo desta sessão (RF-PRO-01…05 e 07; RN-03 e RN-05):
+1. Modelo de dados: produtos, SKUs (produto + tamanho + cor) e movimentos de estoque, migração nova reversível, RLS forçada, política isolamento_empresa, GRANT explícito e teste de isolamento entre 2 empresas (ADR 002). Dinheiro em centavos (RN-01). Estoque de SKU nunca negativo (RN-03). Movimentos imutáveis (sem DELETE/UPDATE no runtime) com autor, motivo, quantidade com sinal e origem quando de venda (S10/RN-08). ADR 006 proposto (003 reservado para S08 etiquetas). No ADR: fornecedor texto vs tabela mínima; preço sugerido = custo × (1 + markup_bps/10000) em centavos, sempre editável (RN-05).
+2. Novo produto passo a passo (RF-PRO-01): categoria (só tipo produto: GET /categorias?tipo=produto) → porte Slim/Plus → atributos → tamanhos/cores (grade P1) → custo/preço → fornecedor → estoque inicial e mínimo por SKU. Código curto e QR por SKU (RF-PRO-02); PDF de etiquetas NÃO é desta sessão.
+3. Lista/busca por nome, código e preço (RF-PRO-03). Vendedor vê produto/preço/estoque, NUNCA custo (RF-PRO-07); API não envia custo ao Vendedor (teste 2 empresas × 2 perfis).
+4. Entrada/ajuste de estoque com motivo e autor (RF-PRO-04); só Dono ajusta.
+5. Aviso vermelho na tela inicial do Dono com SKUs abaixo do mínimo (RF-PRO-05); Produtos deixa de ser "em breve" (modulos.ts + teste).
+6. Telas no DS, 360×640, alvos ≥ 48 px, nomes nunca truncados (D23). Categoria em uso não é apagada (desativa).
+
+Contexto herdado: S06/S06b na main (PRs #9/#10). Testes ao final da S06b: API 386, web 128, shared 59; OpenAPI 0.5.0; 5 migrações. Ambiente: .env em D:\apps\ailow-cloud\; WSL2+Docker ok. Dev sem Docker: npm run dev:db → dev:seed (1ª vez) → dev:api → dev:web (dono@loja.dev / senha-de-desenvolvimento; Ana Vendedora PIN 1357; Dono PIN 2468 se .dev-data/ existir). Pendências fora desta sessão: reescrita do histórico (acervo) — NÃO force-push/ruleset; logo/RF-CFG-02; ADR 004 proposto; texto 13–14 px.
+Pronto quando: RF-PRO-01…05/07 e RN-03/RN-05 com testes (saldo 0 não baixa; concorrência no limite; custo ausente para Vendedor); mutação ≥ 8 defeitos (L-0006); navegador 360×640 2 temas; verify+CI verdes; ADR 006 proposto no PR.
+Não fazer: Etiquetas/PDF (S08), Vendas, Compras, Clientes, deploy, mexer no Financeiro, ruleset ou histórico.
+Ao terminar: atualize o Diário e diga "aguardando portão do Pedro (mergear o PR)"; o prompt da S08 só vale após o ok.
+```
+
 ## Diário de execução
 
 <!-- Acrescentar entradas sem apagar as anteriores. Template:
@@ -284,15 +311,26 @@ Decisões e limites:
 Aprendizado: L-0012 (servidores de dev órfãos, lição ativa 9), L-0009 e L-0002 com recorrência; `check-harness` OK (12 lições).
 Pendências / riscos: ADR 004 segue "proposto"; L-0011 (teste instável do PIN nos logs) sem PR; `dev:parar` (ação da L-0012); S14 (proxy HTTPS com `?` e todos os prefixos); sem paginação (500 linhas); `<input type="date">` só testado no Chromium.
 
-**Aguardando portão do Pedro (mergear o PR desta branch).** O prompt da S07 só vale após o ok.
+**PR #10 mergeado pelo Pedro em 2026-11-11 (portão da S06b cumprido).** `main` em `c6168a2`.
+
+### Prep ambiente Windows (WSL2/Docker/.env) — 2026-11-12 — Composer
+Gate: docs + infra local, **tier B**; DOC, ENV-04/05, SEC-01, MC (L-0013). Sem feature de produto.
+Feito: WSL 3.0.5 + Ubuntu WSL2; Docker Desktop sem autostart no login; `.env` movido para a pasta do app; removida chave `AUTH_PEPPER` vazia duplicada; `docker compose up --build` com `/health` ok e OpenAPI 200; `docs/dev-windows.md` + README; diário/pendências atualizados; PR #10 confirmado MERGED; `main` em `c6168a2`.
+Verificação: `wsl -l -v` → Ubuntu VERSION 2; `docker info` ok; `curl /health` → `{"status":"ok","db":"ok"}`; `git check-ignore -v .env`; `gh pr view 10` → MERGED.
+Pronto para: colar o Prompt da S07 numa conversa nova.
 
 ### Pendências transversais (fora de sessão) — 2026-11-11
-- [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
+- [x] **Mover o arquivo de ambiente real para a pasta do app.** Feito 2026-11-12: `D:\apps\.env` → `D:\apps\ailow-cloud\.env`; `git check-ignore -v .env` ok; removida linha duplicada vazia `AUTH_PEPPER=` que quebrava o Compose (last-wins). Não ler/colar conteúdo (SEC-01).
 - [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
-- [ ] Docker Desktop 4.99.0 instalado via winget; WSL2 instalado e **aguardando reinício do Windows**; depois abrir o Docker Desktop, aceitar os termos e rodar `docker compose up --build` no ailow-cloud.
+- [x] **WSL2 + Docker Desktop + Compose local.** Feito 2026-11-12: WSL 3.0.5 + Ubuntu (WSL2); Docker engine ok; `docker compose up --build` → `/health` `{"status":"ok","db":"ok"}`, `/openapi.json` 200. Guia: `docs/dev-windows.md`. Aviso não bloqueante: nested virt `ERROR_INVALID_DATA`. Lição L-0013.
 
-### Estado de retomada — 2026-11-11 (handoff, a sessão do terminal será perdida no reinício)
-- **Git:** S05 (PR #6) e S05b (logo, PR #7) **mergeados**; `main` limpa. Próximo passo: S06 — o prompt colável está na seção "Prompt da S06" acima.
-- **Ao reiniciar o Windows:** os servidores de dev (`dev:db`, `dev:api`, `dev:web`, preview) caem sozinhos; os dados do banco de dev ficam em `.dev-data/` (ignorado pelo git; apague a pasta para recomeçar). Para voltar a usar o app: `npm run dev:db`, `npm run dev:api`, `npm run dev:web` (o `dev:seed` só na 1ª vez).
-- **Fazer depois do reinício (Pedro):** abrir o Docker Desktop e aceitar os termos; mover o arquivo de ambiente real para `D:\apps\ailow-cloud\`; então `docker compose up --build`. Abrir a próxima sessão numa conversa nova e colar o prompt da S06.
-- **Em aberto:** logo definitiva (trocar `apps/web/public/logo.svg`) e envio da logo por empresa; aprovação visual do texto de 13–14 px; reescrita do histórico (acervo).
+### Estado de retomada — 2026-11-12 (pós-WSL/Docker; pronto para S07)
+- **Git:** S06 (PR #9) e S06b (PR #10) **mergeados** na `main` (`c6168a2`). `git rev-parse --show-toplevel` = `D:/apps/ailow-cloud`.
+- **Ambiente Windows:** WSL2 + Ubuntu; Docker Desktop (backend WSL2); autostart Docker **desligado**. Compose **saudável** em `127.0.0.1:3000`. Dev sem Docker (`dev:db`/`dev:api`/`dev:web`) continua válido — se for usar os dois, não colidir na porta 3000 (`docker compose down` antes do `dev:api`, ou o contrário).
+- **Docs:** `docs/dev-windows.md` (BIOS SVM, freeze, gate rápido, `.env`). README atualizado.
+- **Próximo passo:** conversa nova + colar o **Prompt da S07**. Branch a partir da `main` atualizada. Conferir portas 54329/3000/5173 (L-0012); Compose pode estar na 3000.
+- **Em aberto (não bloqueiam a S07):** ADR 004 "proposto"; logo definitiva e envio por empresa (RF-CFG-02); reescrita do histórico (acervo); L-0011; `dev:parar` (L-0012); proxy HTTPS S14; texto 13–14 px; Safari/iOS.
+
+### Estado de retomada — 2026-11-11 (histórico)
+- **Git:** S05 (PR #6) e S05b (PR #7) mergeados; handoff apontava para S06. Superado pelos estados e PRs #9/#10 acima.
+- **Fazer depois do reinício:** Docker/WSL, mover `.env`, `compose up`. **Cumprido** no estado de 2026-11-12 pós-WSL/Docker.
