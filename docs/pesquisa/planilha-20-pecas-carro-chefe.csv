@@ -1,0 +1,4 @@
+categoria;porte;nome_do_modelo;fornecedor;ref_fornecedor;bojo;aro;renda;compressao;alca_removivel;tamanho;cor;custo_rs;preco_venda_rs;quantidade_hoje;estoque_minimo
+Sutiã;Plus;EXEMPLO Tomara que caia Essência;Fina Paixão;3110202;sim;nao;nao;nao;sim;46;Chocolate;;89,00;3;2
+Sutiã;Plus;EXEMPLO Tomara que caia Essência;Fina Paixão;3110202;sim;nao;nao;nao;sim;48;Chocolate;;89,00;2;2
+Calcinha;Slim;EXEMPLO Calcinha Bombom;;;nao;nao;nao;nao;nao;M;Preto;;29,00;5;3
