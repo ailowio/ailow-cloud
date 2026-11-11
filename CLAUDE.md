@@ -37,6 +37,7 @@ Conventional Commits · branch curta + PR pequena com template · CI verde (`ver
 ## Ambiente de desenvolvimento
 - `npm ci && npm run verify` roda tudo; os testes da API sobem um Postgres embutido temporário (ou usam `DATABASE_URL_TEST`).
 - Depois de mexer em `packages/shared`, rode `npm run build:shared` (a API e o web consomem o `dist`).
+- App completo sem Docker: `npm run dev:db` → `dev:seed` (1ª vez) → `dev:api` → `dev:web` (README); segredos de dev ficam em `.dev-data/` (gitignored).
 - `docker compose up --build` (precisa de `POSTGRES_PASSWORD` no arquivo de ambiente local) — ver README.
 
 ## Handoff

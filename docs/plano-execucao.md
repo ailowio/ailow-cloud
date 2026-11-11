@@ -181,6 +181,32 @@ Verificação: `npm run verify` (exit 0); `node harness/scripts/check-harness.mj
 
 **Aguardando portão do Pedro (mergear o PR #5).** O prompt da S05 só vale após o ok.
 
+### S05 — Shell PWA + Configurações — 2026-11-11 — Claude Sonnet 5.5
+Gate declarado: feature com UI + mudança de banco + acessos, **tier B**; regras TEST-01..08/12/17, CODE-*, SEC-03/07, OPS-11, ENV-13, AUD-02/09, MC. Sem decisão estrutural nova (sem ADR): o service worker e o `dev:db` são ferramental, documentados no README.
+Feito (branch `feature/s05-shell-pwa-config`):
+- **API (test-first):** migração reversível `20261111180000_configuracoes` (`empresas`: telefone, endereço, `markup_bps` inteiro 0–100000; `categorias`: `atributos text[]`, `ativa`, índice único por nome sem diferenciar maiúsculas). Rotas só-Dono `GET/PUT /empresa`, `GET/POST /categorias`, `PUT /categorias/{id}` (OpenAPI 0.3.0); toda alteração grava `eventos_acesso`. `GET /acesso/eu` passou a informar `inatividade_minutos` (a trava do app usa o limite do servidor). RLS/GRANT das tabelas já existiam e cobrem as colunas novas.
+- **PWA:** manifest, 3 ícones PNG (gerados por `apps/web/scripts/gerar-icones.mjs`, sem dependência), service worker mínimo que só atende `/`, `/assets/` e `/icons/` — nada da API vai para o cache.
+- **Fluxo:** Entrar → (definir 1º PIN, 2 vezes) → "Quem está usando?" → PIN → tela inicial 3×N por perfil (Dono 7 módulos; Vendedor 4, sem Financeiro/Compras/Configurações); PIN errado com tentativas restantes, bloqueio (423), sessão derrubada (401 em uso), trava por inatividade (servidor expira + app trava e encerra a sessão; aviso ao servidor no máximo 1×/min durante o uso). Cookies httpOnly: `fetch` com `credentials: 'same-origin'`, nenhum token no JS (provado: nenhum cookie legível, `localStorage` vazio de credenciais).
+- **Configurações (só Dono):** Usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar com confirmação nomeada, trocar o próprio PIN), Empresa (nome, telefone, endereço, trava por inatividade), Markup (com exemplo R$ 100 → preço sugerido) e Categorias (nome, atributos, ativa).
+- **Dev sem Docker:** `npm run dev:db` (Postgres embutido persistente em `.dev-data/`, porta 54329, banco `ailow_dev` separado dos testes), `dev:seed`, `dev:api` (COOKIE_SECURE=false só aqui), `dev:web` (proxy do Vite, mesma origem). Segredos de dev gerados localmente; scripts recusam `NODE_ENV=production`.
+Números (antes -> depois): testes API 165 -> 202; web 4 -> 59; shared 15 -> 22; migrações 2 -> 3; rotas 17 -> 22; bundle de produção 540 kB -> 526 kB (catálogo do DS saiu do bundle).
+Evidência do "pronto quando":
+- `npm run verify` exit 0 (lint com 1 aviso antigo em `main.tsx`; 202 + 59 + 22 testes; build).
+- Playwright em **360×640, tema escuro e claro** (fluxo completo + Configurações, 2 roteiros): sem rolagem horizontal, 0 textos cortados (scrollWidth > clientWidth), todos os alvos de toque ≥ 48 px, grade de 3 colunas, sem erros de console além dos 401/409 provocados de propósito. Trava por inatividade medida: 60–61 s com limite de 1 min, sessão encerrada no servidor (`GET /acesso/eu` = 401). Capturas na pasta temporária da sessão (não versionadas).
+- PWA em build de produção (`vite preview`): sem erros de instalabilidade nem de manifest (CDP `Page.getInstallabilityErrors` e `getAppManifest`), service worker ativo, cache só com a casca, offline abre com "Sem conexão".
+- Mutação (L-0006): `exigirPerfil('dono')` removido -> 2 testes reprovam; service worker interceptando tudo -> reprova; 6 mutações na lógica do web (aviso ao servidor, limite de trava, 401 só com `nao_autenticado`, `credentials`, Vendedor vendo Compras, 423) reprovaram a suíte (1 "sobrevivente" era mutação no comentário, falha do meu script).
+Decisões: markup em pontos-base inteiros (RN-01); logo da empresa **não** entrou (RF-CFG-02 pede logo; exige armazenamento de arquivo, a decidir); após Entrar o app encerra a sessão e leva a "Quem está usando?" (a sessão da senha serve só para o onboarding), exceto no 1º PIN; módulos sem tela mostram "em breve" desabilitado em vez de botão morto; rótulo "Configurações" hifeniza em 360 px em vez de cortar (D23).
+Pendências / riscos honestos:
+- Rótulos dos blocos e textos secundários usam 13–14 px (o PRD diz mínimo 16 px): herdado do DS (S02), a revisar com o Pedro.
+- Dono bloqueado só se desbloqueia entrando de novo com senha ("Entrar com e-mail e senha"); logo da empresa; Dono não pode criar outro Dono (a API só cria Vendedor).
+- Telas verificadas só no Chromium (Playwright); não testado em Safari/iOS nem instalado de fato num celular.
+- Não testado: Compose (continua só no CI). Os servidores de dev (`dev:db`, `dev:api`, `dev:web`, preview) ficaram rodando nesta sessão: encerrar ao reiniciar o Windows (o encerramento em massa de processos foi negado pelo classificador e não foi contornado).
+- Lacunas da S04 seguem: sem rate limit de senha, TOTP sem cifra, sem revogação de aparelho, API como dono do schema (S14).
+Aprendizado: L-0002 recorreu (escapes de `node -e`/heredoc destruíram uma regex e um heredoc); recorrência 2 e lição ativa 1 ampliada (código só por Write/Edit). Achado pelos testes: schema de resposta Zod 4 com `.transform()` derruba o serializador com 500 (agora com teste de regressão no `shared`).
+Verificação: `npm run verify`; `node harness/scripts/check-harness.mjs` -> Harness OK.
+
+**Aguardando portão do Pedro (mergear o PR).** O prompt da S06 só vale após o ok.
+
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
 - [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
