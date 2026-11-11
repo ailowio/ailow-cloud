@@ -1,6 +1,11 @@
 import type {
   Categoria,
+  ContaAPagar,
+  DespesaEntrada,
   Empresa,
+  FormaPagamento,
+  Lancamento,
+  Relatorio,
   UsuarioPublico,
 } from '@ailow/shared';
 import type { Cliente } from './cliente';
@@ -37,6 +42,15 @@ export function criarApi(c: Cliente) {
     categorias: () => p<{ categorias: Categoria[] }>('GET', '/categorias'),
     criarCategoria: (c: CategoriaCorpo) => p<{ id: string }>('POST', '/categorias', c),
     alterarCategoria: (id: string, c: CategoriaAlterar) => p('PUT', `/categorias/${id}`, c),
+    // --- financeiro (S06, só Dono)
+    novaDespesa: (d: DespesaEntrada) => p<{ id: string }>('POST', '/financeiro/despesas', d),
+    contasAPagar: () => p<{ hoje: string; contas: ContaAPagar[] }>('GET', '/financeiro/contas-a-pagar'),
+    pagar: (id: string, forma: FormaPagamento) =>
+      p('POST', `/financeiro/lancamentos/${id}/pagar`, { forma_pagamento: forma }),
+    estornar: (id: string, motivo: string) => p<{ id: string }>('POST', `/financeiro/lancamentos/${id}/estornar`, { motivo }),
+    extrato: (data: string) => p<{ data: string; lancamentos: Lancamento[] }>('GET', `/financeiro/extrato?data=${data}`),
+    relatorio: (periodo: 'dia' | 'mes', data: string) =>
+      p<Relatorio>('GET', `/financeiro/relatorio?periodo=${periodo}&data=${data}`),
   };
 }
 

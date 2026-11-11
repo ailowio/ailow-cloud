@@ -96,6 +96,13 @@ h1, h2, h3, h4 {
 }
 .ailow-pular:focus { top: 8px; }
 
+/* Opções de listas suspensas (ex.: sugestões de categoria): alvo de toque mínimo de 48 px. */
+.ailow-opcao {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
 /* Botão de mostrar/ocultar senha: alvo de toque de 48 px (o padrão do Mantine tem 32 px). */
 .mantine-PasswordInput-visibilityToggle.mantine-ActionIcon-root {
   width: 48px;

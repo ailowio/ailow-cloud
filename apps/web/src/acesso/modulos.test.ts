@@ -20,8 +20,8 @@ describe('módulos da tela inicial por perfil', () => {
     expect(new Set(rotulos).size).toBe(rotulos.length);
   });
 
-  it('nesta fase só Configurações está pronto; o resto avisa "em breve" em vez de fingir que abre', () => {
+  it('nesta fase só Financeiro e Configurações estão prontos; o resto avisa "em breve" em vez de fingir que abre', () => {
     const prontos = modulosPara('dono').filter((m) => m.pronto).map((m) => m.id);
-    expect(prontos).toEqual(['configuracoes']);
+    expect(prontos).toEqual(['financeiro', 'configuracoes']);
   });
 });
