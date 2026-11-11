@@ -62,16 +62,18 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
 ## Diário
 
 - **Ativo:** `docs/diario/ATUAL.md` (as 3 últimas entradas; ler só a última por padrão).
-- **Arquivo:** `docs/diario/ARQUIVO-S00-S06.md` (S00 a S06b e Prep ambiente Windows, intactos; ler só sob demanda com Grep).
+- **Arquivo:** `docs/diario/ARQUIVO-S00-S06.md` (S00 a S06b e Prep ambiente Windows) e `docs/diario/ARQUIVO-S07-S09.md` (S07 em diante); intactos, ler só sob demanda com Grep.
 
 ## Pendências transversais (fora de sessão)
 - [x] Arquivo de ambiente real na pasta do app (2026-11-12). Não ler/colar conteúdo (SEC-01).
 - [ ] Reescrita do histórico do Git (acervo): **adiada** (Pedro, 2026-11-12). Sem force-push/ruleset neste ciclo.
 - [x] WSL2 + Docker Desktop + Compose local (2026-11-12); guia `docs/dev-windows.md`.
+- [ ] **Impressão física das etiquetas (S08, Pedro):** comprar a bobina 33 × 22 mm de 3 colunas, informar o modelo da impressora, imprimir o PDF em tamanho real (100%), calibrar espaço entre colunas/margem (`GEOMETRIA_PADRAO`, ADR 003) e fotografar a leitura pela câmera do celular. É o "pronto quando" da S08; não bloqueia a S09.
 
-### Estado de retomada — 2026-11-11 (pós-S07; sobrescrever a cada sessão)
-- **Git:** S07 (PR #14) mergeada; `main` em `812516b`. Esta migração do plano está na branch `docs/plano-enxuto` (PR próprio). Depois do merge: `git checkout main && git pull --ff-only`.
-- **Ambiente:** servidores de dev parados, portas 54329/3000/5173 livres, Compose derrubado; `.dev-data/` com dados de teste (categorias e 1 produto). Testes ao fim da S07: API 535, web 195, shared 136; OpenAPI 0.6.0; 6 migrações base + logo.
-- **Próxima:** S08 Etiquetas QR (ADR 003 reservado). O QR do SKU já existe na tela (`uqr` 0.1.3, decodificado por leitor independente); a S08 decide o formato de impressão (P2) e o PDF.
-- **Decisões do ADR 006 a confirmar pelo Pedro** (arquivo ainda diz "proposto"): aviso com `<` (mínimo 0 = sem aviso), preço sugerido arredondado ao centavo, fornecedor como texto no v1, produto sem edição.
-- **Em aberto (não bloqueiam a S08):** edição/desativação de produto (preço errado exige produto novo); consulta de SKU por código para a S10; reescrita do histórico (acervo); proxy HTTPS da S14 (prefixos `produtos`, `skus`, `estoque`, `empresa`); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos (P1 §6); `ATUAL.md` está com ~10 KB por causa da entrada da S07 (podar na S08: mover a S07 para o arquivo).
+### Estado de retomada — 2026-11-11 (pós-S08; sobrescrever a cada sessão)
+- **Git:** S08 na branch `feature/s08-etiquetas` (PR aberto, aguardando o merge do Pedro); `main` em `284345f` (PR #15). Depois do merge: `git checkout main && git pull --ff-only`.
+- **Ambiente:** servidores de dev parados (inclusive 7 órfãos de sessões anteriores), portas 54329/3000/5173 livres. `.dev-data/`: PIN do Dono de exemplo = **2468** (redefinido só no banco local). Testes: API 571, web 215, shared 151; OpenAPI 0.7.0; 6 migrações base + logo (a S08 não mexeu no banco).
+- **Próxima:** S09 Clientes (RF-CLI-01…04).
+- **Pendência única da S08 (Pedro):** impressão física + modelo da impressora + calibração + foto (ver Pendências transversais). O PDF foi aprovado em tela pelo Pedro.
+- **Decisões a confirmar pelo Pedro:** ADR 003 (PDF na API com pdfkit, uma fileira de 3 por página) e ADR 006 (aviso com `<`, preço sugerido arredondado, fornecedor texto, produto sem edição); os dois dizem "proposto".
+- **Em aberto (não bloqueiam a S09):** `npm run dev:parar` quebrado na `main` (falta aspa em `scripts/dev-parar.mjs:8`); Zod no bundle web da `main` (5 marcas); edição/desativação de produto; consulta de SKU por código para a S10; reescrita do histórico (acervo); proxy HTTPS da S14 (prefixos `produtos`, `skus`, `estoque`, `etiquetas`, `empresa`); E2E 360 px (L-0015, S13); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos (P1 §6).

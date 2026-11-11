@@ -14,6 +14,7 @@ import {
 } from '@ailow/shared';
 import type pg from 'pg';
 import { type ContextoEstoque, registrarMovimento } from './estoque.js';
+import type { DadosEtiqueta } from './etiquetas.js';
 
 // Cadastro, consulta e alertas de Produtos (S07). Só este módulo (src/produtos/) toca as tabelas `produtos`, `skus`
 // e `movimentos_estoque` (ADR 006). Recebem o cliente da transação do chamador (`withEmpresa`), que já traz a RLS.
@@ -183,6 +184,22 @@ export async function alertasDeEstoque(c: pg.PoolClient): Promise<{ total: numbe
     total: r.rows.length === 0 ? 0 : Number(r.rows[0].total),
     itens: r.rows.map(({ total: _total, ...item }) => item as AlertaEstoque),
   };
+}
+
+/**
+ * RF-PRO-06: o que vai impresso na etiqueta de cada SKU (de produto ativo). Nunca seleciona custo nem fornecedor
+ * (RF-PRO-07). Devolve null se algum id não existir, for de outra empresa (a RLS esconde) ou de produto inativo.
+ */
+export async function dadosDasEtiquetas(c: pg.PoolClient, skuIds: string[]): Promise<Map<string, DadosEtiqueta> | null> {
+  const r = await c.query(
+    `SELECT s.id, s.codigo, p.nome, s.tamanho, s.cor, p.preco_centavos
+       FROM skus s
+       JOIN produtos p ON p.empresa_id = s.empresa_id AND p.id = s.produto_id
+      WHERE s.id = ANY($1::uuid[]) AND p.ativo`,
+    [skuIds],
+  );
+  if (r.rowCount !== new Set(skuIds).size) return null;
+  return new Map(r.rows.map(({ id, ...dados }) => [id as string, dados as DadosEtiqueta]));
 }
 
 /** Histórico do SKU, do mais recente ao mais antigo. Devolve null se o SKU não existe (ou é de outra empresa). */

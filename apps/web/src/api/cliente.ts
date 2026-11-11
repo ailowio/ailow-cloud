@@ -86,5 +86,22 @@ export function criarCliente(opcoes: OpcoesCliente = {}) {
     return interpretar(resposta);
   }
 
-  return { pedir, enviarArquivo };
+  /** POST com JSON que devolve um arquivo (PDF das etiquetas). Erro continua vindo como JSON e vira ErroApi. */
+  async function baixar(caminho: string, corpo: unknown): Promise<Blob> {
+    let resposta: Response;
+    try {
+      resposta = await buscar(caminho, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: JSON.stringify(corpo),
+        headers: { 'content-type': 'application/json' },
+      });
+    } catch {
+      throw new ErroApi(0, 'sem_conexao');
+    }
+    if (!resposta.ok) return interpretar(resposta);
+    return resposta.blob();
+  }
+
+  return { pedir, enviarArquivo, baixar };
 }

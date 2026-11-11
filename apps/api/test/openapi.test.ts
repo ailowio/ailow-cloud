@@ -64,6 +64,7 @@ describe('OpenAPI do módulo de acesso', () => {
     'post /skus/{id}/estoque',
     'get /skus/{id}/movimentos',
     'get /estoque/alertas',
+    'post /etiquetas',
     'post /admin/login',
     'post /admin/sair',
     'post /admin/empresas',

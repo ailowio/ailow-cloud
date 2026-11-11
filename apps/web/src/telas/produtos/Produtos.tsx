@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Badge, Button, Group, SegmentedControl, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconChevronDown, IconChevronUp, IconPlus, IconSearch } from '@tabler/icons-react';
+import { IconChevronDown, IconChevronUp, IconPlus, IconQrcode, IconSearch } from '@tabler/icons-react';
 import type { Perfil, Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, SeloEstoque, Valor } from '../../componentes';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
+import { Etiquetas } from './Etiquetas';
 import { NovoProduto } from './NovoProduto';
 import { type SkuAberto, SkuFolha } from './SkuFolha';
 import { linhaDoAlerta, rotuloPorte, tituloDoAlerta } from './rotulos';
 
-type Vista = 'lista' | 'novo';
+type Vista = 'lista' | 'novo' | 'etiquetas';
 type Aba = 'todos' | 'baixo';
 
 /**
@@ -21,6 +22,14 @@ export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void
   const [vista, setVista] = useState<Vista>('lista');
   const [busca, setBusca] = useState('');
   const dono = props.perfil === 'dono';
+
+  if (vista === 'etiquetas' && dono) {
+    return (
+      <Moldura titulo="Etiquetas" voltar={{ rotulo: 'Produtos', aoVoltar: () => setVista('lista') }}>
+        <Etiquetas api={props.api} />
+      </Moldura>
+    );
+  }
 
   if (vista === 'novo' && dono) {
     return (
@@ -38,12 +47,18 @@ export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
   return (
     <Moldura titulo="Produtos" voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
-      <Lista api={props.api} dono={dono} buscaInicial={busca} aoNovo={() => setVista('novo')} />
+      <Lista
+        api={props.api}
+        dono={dono}
+        buscaInicial={busca}
+        aoNovo={() => setVista('novo')}
+        aoEtiquetas={() => setVista('etiquetas')}
+      />
     </Moldura>
   );
 }
 
-function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: () => void }) {
+function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: () => void; aoEtiquetas: () => void }) {
   const [texto, setTexto] = useState(props.buscaInicial);
   const [busca, setBusca] = useState(props.buscaInicial);
   const [aba, setAba] = useState<Aba>('todos');
@@ -60,9 +75,15 @@ function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: (
   return (
     <Stack gap="md">
       {props.dono && (
-        <Button h={48} leftSection={<IconPlus aria-hidden />} onClick={props.aoNovo}>
-          Novo produto
-        </Button>
+        // Um sobre o outro: lado a lado, os dois rótulos eram cortados em 360 px.
+        <Stack gap="xs">
+          <Button h={48} leftSection={<IconPlus aria-hidden />} onClick={props.aoNovo}>
+            Novo produto
+          </Button>
+          <Button h={48} variant="default" leftSection={<IconQrcode aria-hidden />} onClick={props.aoEtiquetas}>
+            Etiquetas
+          </Button>
+        </Stack>
       )}
       {props.dono && (
         <SegmentedControl
