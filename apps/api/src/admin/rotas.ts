@@ -23,6 +23,7 @@ import {
 import { type Guardas, adminDe } from '../acesso/guardas.js';
 import { novoToken } from '../acesso/tokens.js';
 import { validarTotp } from '../acesso/totp.js';
+import { semearCategoriasFinanceiras } from '../configuracoes/categorias.js';
 import { withEmpresa } from '../db.js';
 
 const adminCookie = [{ admin_sessao: [] }];
@@ -126,6 +127,7 @@ export async function registrarRotasAdmin(app: FastifyInstance, deps: Deps, g: G
             [donoId, empresaId, dono.nome, dono.email, senhaHash, now],
           );
           await c.query('SELECT registrar_login($1, $2, $3)', [dono.email, empresaId, donoId]);
+          await semearCategoriasFinanceiras(c, empresaId, now);
           await registrarEvento(c, {
             empresaId,
             atorTipo: 'admin',

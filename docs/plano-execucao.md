@@ -262,7 +262,29 @@ Pendências / riscos honestos:
 Aprendizado: L-0009 (proxy), L-0010 (`.git` zerado; lição ativa 8), L-0011 (teste instável), recorrência da L-0006 (mutação achou teste de concorrência sem corrida). `node harness/scripts/check-harness.mjs` -> Harness OK.
 Verificação: `npm run verify` exit 0; `gh pr checks 9` -> 6/6 pass (verify, compose, imagem, seguranca-sast, seguranca-sca, seguranca-segredos) no commit 9624672 (run 43045905219).
 
-**Aguardando portão do Pedro (mergear o PR #9).** O prompt da S07 só vale após o ok.
+**PR #9 mergeado pelo Pedro em 2026-11-11 (portão da S06 cumprido).**
+
+### S06b — Ajustes pedidos na revisão da S06 — 2026-11-12 — Claude Sonnet 5.5
+Pedido do Pedro ao mergear: (1) dois tipos de categoria, financeiras e de produto; (2) `boleto` fica fora e o resto do ADR 005 está ok; (3) "deve ser necessário poder estornar uma venda"; (4) listar o que falta para seguir. Gate: feature + banco + dinheiro + UI, **tier B**; TEST-01..08/12/17, SEC-03, OPS-11, AUD-02/09/10, ARQ (ADR 005 alterado e aceito), MC. Branch `feature/financeiro-categorias-estorno-venda` (a partir da `main` já com o PR #9).
+Feito:
+- **ADR 005 aceito** (era proposto), com as alterações: categorias de dois tipos (item 6), estorno de venda inteira (item 7), formas de pagamento sem boleto (item 8) e as alternativas descartadas.
+- **Banco:** migração reversível `20261112120000_categorias-tipo-e-sem-boleto`: `categorias.tipo` (`produto` default | `financeira`, esta sem atributos por `CHECK`), unicidade por `(empresa_id, tipo, nome)` com e sem diferenciar maiúsculas (a restrição `UNIQUE` antiga da migração-base também impedia o mesmo nome nos dois tipos: achado pelo teste); `boleto` fora do `CHECK` da forma; limite do nome da categoria no lançamento de 40 para 60 (o nome da categoria já aceitava 60: uma categoria de 41–60 não poderia ser usada). Subir, descer e subir testado.
+- **API (OpenAPI 0.5.0):** `GET /categorias?tipo=`, `POST /categorias` com `tipo` (sem tipo = produto), `PUT` recusa atributos em financeira; empresa nova recebe as 10 financeiras padrão (também no `dev:seed`); despesa só aceita categoria **financeira ativa** (`400 categoria_invalida`) e grava o nome como cadastrado; `POST /financeiro/vendas/{id}/estornar` e, na interface pública, `estornarOrigem` (todos os lançamentos da venda, `FOR UPDATE`, um estorno por pagamento, pula o já estornado, `ja_estornado` se tudo estornado; evento `venda_estornada`).
+- **Web:** Configurações > Categorias com abas Produtos/Financeiras (financeira sem campo de atributos); Nova despesa com seletor das financeiras ativas (e aviso se não houver); no extrato, "Estornar venda" com o total e quantas formas de pagamento serão estornadas; `boleto` removido; depois de um estorno o relatório inteiro recarrega (antes só a lista: os totais do topo ficavam velhos, achado no navegador).
+Números (antes -> depois): API 330 -> 386, web 121 -> 128, shared 51 -> 59; migrações 4 -> 5; rotas 28 -> 29. Arquivos de teste novos: `categorias-tipo` (API); alterados `financeiro`, `financeiro-lancamentos`, `configuracoes`, `rls-financeiro`, `proxy-web`, `openapi`, e os do shared e do web.
+Evidência:
+- `npm run verify` exit 0 (1 aviso antigo de lint).
+- **Mutação (L-0006), 8 defeitos, todos pegos:** `FOR UPDATE` removido do estorno por origem (2 testes); filtro de tipo de origem removido (1); estornar também o já estornado (5); categoria sem filtro de ativa (1); sem filtro de tipo financeira (1); gravar o nome digitado em vez do cadastrado (1); empresa nova sem as categorias padrão (vários); financeira aceitando atributos na edição (1). Cada um desfeito e conferido no código.
+- **Navegador (Playwright, Chromium 360×640, escuro e claro):** abas, criar/desativar categoria financeira, seletor só com ativas, formas sem boleto, despesa paga, estorno de venda de 2 formas (aviso, total R$ 89,90, os dois "Estornado", motivo nos dois estornos) e de 1 forma; totais do topo sobem R$ 89,90; 0 rolagem horizontal, 0 texto cortado, 0 fora da tela, 0 alvos < 48 px. **Dois achados só no navegador:** (a) o padrão do proxy do Vite não casava `/categorias?tipo=…` (query string) ⇒ L-0009 recorrência 2 e teste que usa a regex real; (b) totais do relatório não atualizavam depois do estorno (corrigido).
+Decisões e limites:
+- O estorno de **um** lançamento continua (corrige um pagamento lançado errado); o de **venda** é pela origem. A S10 deve chamar `estornarOrigem` na mesma transação em que devolve o estoque (RN-08).
+- O lançamento guarda o nome da categoria (sem chave estrangeira): renomear uma categoria não muda o histórico, e o relatório mostra o nome da época.
+- Categorias padrão só nascem em empresa **nova**; a empresa de exemplo do dev recebeu pelo script temporário (apagado). Em produção (S14) não há empresa antiga.
+- A venda, hoje, só existe como lançamentos (a tela de Vendas é a S10): "estornar venda" funciona sobre os lançamentos que a Vendas vai gravar.
+Aprendizado: L-0012 (servidores de dev órfãos, lição ativa 9), L-0009 e L-0002 com recorrência; `check-harness` OK (12 lições).
+Pendências / riscos: ADR 004 segue "proposto"; L-0011 (teste instável do PIN nos logs) sem PR; `dev:parar` (ação da L-0012); S14 (proxy HTTPS com `?` e todos os prefixos); sem paginação (500 linhas); `<input type="date">` só testado no Chromium.
+
+**Aguardando portão do Pedro (mergear o PR desta branch).** O prompt da S07 só vale após o ok.
 
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.

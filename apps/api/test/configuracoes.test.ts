@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { CATEGORIAS_FINANCEIRAS_PADRAO } from '@ailow/shared';
 import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -21,6 +23,7 @@ describe('configurações da empresa (Dono)', () => {
   let pool: pg.Pool;
   let owner: pg.Pool;
   let app: FastifyInstance;
+  let adminCli: Cliente;
   let a: { dados: EmpresaDeTeste; dono: Cliente; vendedor: Cliente; vendedorId: string };
   let b: { dados: EmpresaDeTeste; dono: Cliente; vendedor: Cliente; vendedorId: string };
 
@@ -37,7 +40,7 @@ describe('configurações da empresa (Dono)', () => {
     owner = adminPool();
     const relogio = new Relogio();
     app = await appDeTeste(pool, relogio);
-    const adminCli = await loginAdmin(app, relogio, await semearAdmin(pool));
+    adminCli = await loginAdmin(app, relogio, await semearAdmin(pool));
     a = await montar(adminCli, 'Config A');
     b = await montar(adminCli, 'Config B');
   });
@@ -198,6 +201,69 @@ describe('configurações da empresa (Dono)', () => {
         nome: 'Meias',
         atributos: ['cano', 'compressão'],
         ativa: false,
+        tipo: 'produto',
+      });
+    });
+
+    describe('dois tipos: produto e financeira', () => {
+      type Linha = { id: string; nome: string; tipo: string; ativa: boolean; atributos: string[] };
+      const listar = async (cli: Cliente, tipo?: string) =>
+        (await cli.get(tipo ? `/categorias?tipo=${tipo}` : '/categorias')).json().categorias as Linha[];
+
+      it('empresa nova já vem com as categorias financeiras padrão e nenhuma de produto', async () => {
+        const e = await prepararEmpresa(app, adminCli, 'Padrões');
+        const todas = await listar(e.dono);
+        expect(todas.filter((c) => c.tipo === 'produto')).toEqual([]);
+        expect(todas.filter((c) => c.tipo === 'financeira').map((c) => c.nome).sort()).toEqual(
+          [...CATEGORIAS_FINANCEIRAS_PADRAO].sort(),
+        );
+        expect(todas.every((c) => c.ativa && c.atributos.length === 0)).toBe(true);
+      });
+
+      it('Dono cria categoria financeira e a lista filtra por tipo', async () => {
+        const nome = `Taxa do cartão ${randomUUID().slice(0, 8)}`;
+        const r = await a.dono.post('/categorias', { nome, atributos: [], tipo: 'financeira' });
+        expect(r.statusCode).toBe(201);
+        const id = r.json().id as string;
+        const prod = (await a.dono.post('/categorias', { nome: `Produto ${nome}`, atributos: ['x'] })).json().id as string;
+
+        const financeiras = await listar(a.dono, 'financeira');
+        expect(financeiras.map((c) => c.id)).toContain(id);
+        expect(financeiras.map((c) => c.id)).not.toContain(prod);
+        const produtos = await listar(a.dono, 'produto');
+        expect(produtos.map((c) => c.id)).toContain(prod);
+        expect(produtos.map((c) => c.id)).not.toContain(id);
+        expect((await listar(a.dono)).map((c) => c.id)).toEqual(expect.arrayContaining([id, prod]));
+      });
+
+      it('o mesmo nome pode existir como categoria de produto e como financeira', async () => {
+        const nome = `Embalagem ${randomUUID().slice(0, 8)}`;
+        expect((await a.dono.post('/categorias', { nome, atributos: [] })).statusCode).toBe(201);
+        expect((await a.dono.post('/categorias', { nome, atributos: [], tipo: 'financeira' })).statusCode).toBe(201);
+        const repetida = await a.dono.post('/categorias', { nome: nome.toUpperCase(), atributos: [], tipo: 'financeira' });
+        expect(repetida.statusCode).toBe(409);
+      });
+
+      it('categoria financeira com atributos é 400; tipo inventado é 400; filtro inventado é 400', async () => {
+        expect((await a.dono.post('/categorias', { nome: 'F1', atributos: ['bojo'], tipo: 'financeira' })).statusCode).toBe(400);
+        expect((await a.dono.post('/categorias', { nome: 'F2', atributos: [], tipo: 'servico' })).statusCode).toBe(400);
+        expect((await a.dono.get('/categorias?tipo=servico')).statusCode).toBe(400);
+      });
+
+      it('editar mantém o tipo; financeira não ganha atributos ao ser editada (400, e nada muda)', async () => {
+        const nome = `Editável ${randomUUID().slice(0, 8)}`;
+        const id = (await a.dono.post('/categorias', { nome, atributos: [], tipo: 'financeira' })).json().id as string;
+        const r = await a.dono.put(`/categorias/${id}`, { nome: `${nome} 2`, atributos: ['bojo'], ativa: true });
+        expect(r.statusCode).toBe(400);
+        expect(r.json().erro).toBe('categoria_financeira_sem_atributos');
+        const ok = await a.dono.put(`/categorias/${id}`, { nome: `${nome} 2`, atributos: [], ativa: false });
+        expect(ok.statusCode).toBe(204);
+        expect((await listar(a.dono, 'financeira')).find((c) => c.id === id)).toMatchObject({ nome: `${nome} 2`, tipo: 'financeira', ativa: false });
+      });
+
+      it('Vendedor não acessa nenhum dos dois tipos', async () => {
+        expect((await a.vendedor.get('/categorias?tipo=financeira')).statusCode).toBe(403);
+        expect((await a.vendedor.post('/categorias', { nome: 'X', atributos: [], tipo: 'financeira' })).statusCode).toBe(403);
       });
     });
 

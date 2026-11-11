@@ -53,6 +53,7 @@ describe('OpenAPI do módulo de acesso', () => {
     'get /financeiro/contas-a-pagar',
     'post /financeiro/lancamentos/{id}/pagar',
     'post /financeiro/lancamentos/{id}/estornar',
+    'post /financeiro/vendas/{id}/estornar',
     'get /financeiro/extrato',
     'get /financeiro/relatorio',
     'post /admin/login',

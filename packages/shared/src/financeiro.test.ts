@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FORMAS_PAGAMENTO,
   dataSchema,
   despesaEntradaSchema,
   estornarEntradaSchema,
+  estornoVendaResponseSchema,
+  formaPagamentoSchema,
   lancamentoNovoSchema,
   lancamentoSchema,
   valorCentavosSchema,
@@ -11,6 +14,24 @@ import {
 const ID = '0b6f5f9e-4c1d-4b0e-9a43-7d2f0f6f3a11';
 
 describe('contrato do Financeiro', () => {
+  describe('formas de pagamento', () => {
+    it('são as quatro do PRD, nesta ordem; boleto está fora do v1', () => {
+      expect(FORMAS_PAGAMENTO).toEqual(['dinheiro', 'pix', 'debito', 'credito']);
+      expect(formaPagamentoSchema.safeParse('boleto').success).toBe(false);
+    });
+  });
+
+  describe('estorno de venda (RN-08)', () => {
+    it('o corpo exige o motivo, como no estorno de um lançamento', () => {
+      expect(estornarEntradaSchema.safeParse({ motivo: 'Cliente devolveu' }).success).toBe(true);
+      expect(estornarEntradaSchema.safeParse({ motivo: 'ok' }).success).toBe(false);
+    });
+    it('a resposta lista os ids dos estornos criados (um por pagamento da venda)', () => {
+      expect(estornoVendaResponseSchema.safeParse({ ids: [ID, ID] }).success).toBe(true);
+      expect(estornoVendaResponseSchema.safeParse({ ids: [] }).success).toBe(false);
+    });
+  });
+
   describe('valor em centavos inteiros (RN-01)', () => {
     it.each([1, 100, 2_000_000_000])('aceita %i', (v) => {
       expect(valorCentavosSchema.safeParse(v).success).toBe(true);

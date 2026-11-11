@@ -1,4 +1,4 @@
-import type { FormaPagamento, Lancamento, SituacaoConta } from '@ailow/shared';
+import type { FormaPagamento, Lancamento, SituacaoConta, TipoCategoria } from '@ailow/shared';
 import { mensagemGenerica } from '../../acesso/mensagens';
 import type { ErroApi } from '../../api/cliente';
 
@@ -9,7 +9,6 @@ const ROTULOS_FORMA: Record<FormaPagamento, string> = {
   pix: 'Pix',
   debito: 'Débito',
   credito: 'Crédito',
-  boleto: 'Boleto',
 };
 export const rotuloForma = (f: FormaPagamento): string => ROTULOS_FORMA[f];
 // Ordem do seletor = ordem do contrato (o Record exige todas as formas; o teste confere a ordem).
@@ -44,7 +43,27 @@ const CONFLITOS: Record<string, string> = {
   lancamento_estornado: 'Esta conta foi cancelada e não pode ser paga.',
 };
 
+const ROTULOS_TIPO_CATEGORIA: Record<TipoCategoria, string> = {
+  produto: 'Produtos',
+  financeira: 'Financeiras',
+};
+/** Nome das duas listas de categorias (abas em Configurações). */
+export const rotuloTipoCategoria = (t: TipoCategoria): string => ROTULOS_TIPO_CATEGORIA[t];
+// Ordem das abas = ordem do contrato (o Record exige todos os tipos; o teste confere a ordem).
+export const TIPOS_DE_CATEGORIA = Object.keys(ROTULOS_TIPO_CATEGORIA) as TipoCategoria[];
+
+/**
+ * Os pagamentos de uma venda que ainda podem ser estornados, entre os lançamentos já carregados na tela.
+ * Estornar a venda é estornar todos eles de uma vez (RN-08); a lista serve para dizer ao Dono quanto será estornado.
+ */
+export function pagamentosDaVenda(lancamentos: Lancamento[], origemId: string): Lancamento[] {
+  return lancamentos.filter((l) => l.origem_tipo === 'venda' && l.origem_id === origemId && l.status !== 'estornado');
+}
+
 export function mensagemFinanceiro(e: ErroApi): string {
+  if (e.status === 400 && e.codigo === 'categoria_invalida') {
+    return 'Essa categoria não existe ou está desativada. Escolha outra, ou cadastre em Configurações › Categorias.';
+  }
   if (e.status === 409 && CONFLITOS[e.codigo]) return CONFLITOS[e.codigo] as string;
   if (e.status === 404) return 'Não encontramos este lançamento. Atualize a tela.';
   return mensagemGenerica(e);

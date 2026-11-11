@@ -12,7 +12,8 @@ export const valorCentavosSchema = z
   .min(1, { error: 'o valor precisa ser maior que zero' })
   .max(VALOR_MAXIMO_CENTAVOS, { error: 'valor acima do limite de R$ 20 milhões' });
 
-export const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito', 'boleto'] as const;
+// As quatro do PRD. Boleto ficou fora do v1 (decisão do Pedro, ADR 005).
+export const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito'] as const;
 export const formaPagamentoSchema = z.enum(FORMAS_PAGAMENTO);
 export type FormaPagamento = z.infer<typeof formaPagamentoSchema>;
 
@@ -38,7 +39,8 @@ export const STATUS_LANCAMENTO = ['aberto', 'pago', 'estornado'] as const;
 export const statusLancamentoSchema = z.enum(STATUS_LANCAMENTO);
 
 const descricaoSchema = z.string().trim().min(1, { error: 'informe a descrição' }).max(120);
-const categoriaTextoSchema = z.string().trim().min(1, { error: 'informe a categoria' }).max(40);
+// Mesmo limite do nome da categoria (60): o lançamento guarda esse nome.
+const categoriaTextoSchema = z.string().trim().min(1, { error: 'informe a categoria' }).max(60);
 
 // ------------------------------------------------------------------ interface pública (outros módulos)
 // Entrada de `registrarLancamento()`. Estorno não entra aqui: tem função própria (RN-06).
@@ -116,6 +118,10 @@ export const pagarEntradaSchema = z.object({ forma_pagamento: formaPagamentoSche
 export const estornarEntradaSchema = z.object({
   motivo: z.string().trim().min(3, { error: 'diga o motivo do estorno' }).max(200),
 });
+
+// Estornar uma VENDA inteira (RN-08): um estorno para cada pagamento (lançamento) que ela gerou.
+export const origemIdParamsSchema = z.object({ id: z.uuid() });
+export const estornoVendaResponseSchema = z.object({ ids: z.array(z.uuid()).min(1) });
 
 // Contas a pagar (RF-FIN-03): vencidas em destaque, hoje, próximos 7 dias.
 export const SITUACOES_CONTA = ['vencida', 'hoje', 'proximos_7_dias', 'depois'] as const;

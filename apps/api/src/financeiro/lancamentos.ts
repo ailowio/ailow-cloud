@@ -75,27 +75,56 @@ export async function estornarLancamento(
   motivo: string,
 ): Promise<{ id: string }> {
   // FOR UPDATE: duas tentativas simultâneas enfileiram; a 2ª já enxerga o original estornado.
-  const achado = await c.query(
-    `SELECT id, tipo, origem_tipo, status, descricao, categoria, valor_centavos, forma_pagamento
-       FROM lancamentos WHERE id = $1 FOR UPDATE`,
-    [lancamentoId],
-  );
-  const o = achado.rows[0] as
-    | {
-        id: string;
-        tipo: 'entrada' | 'saida';
-        origem_tipo: string;
-        status: 'aberto' | 'pago' | 'estornado';
-        descricao: string | null;
-        categoria: string | null;
-        valor_centavos: number;
-        forma_pagamento: FormaPagamento | null;
-      }
-    | undefined;
+  const achado = await c.query(`SELECT ${COLUNAS_ORIGINAL} FROM lancamentos WHERE id = $1 FOR UPDATE`, [lancamentoId]);
+  const o = achado.rows[0] as Original | undefined;
   if (!o) throw new ErroFinanceiro('nao_encontrado');
   if (o.origem_tipo === 'estorno') throw new ErroFinanceiro('e_estorno');
   if (o.status === 'estornado') throw new ErroFinanceiro('ja_estornado');
+  return gravarEstorno(c, ctx, o, motivo);
+}
 
+/**
+ * RN-08: estorna uma venda (ou compra) INTEIRA: todos os lançamentos gerados por ela, de uma vez, na transação do
+ * chamador (Vendas devolve o estoque na mesma transação). Um estorno para cada pagamento; o que já tinha sido
+ * estornado sozinho fica como está, então nunca há estorno em dobro. Tudo já estornado = `ja_estornado`.
+ */
+export async function estornarOrigem(
+  c: pg.PoolClient,
+  ctx: ContextoFinanceiro,
+  origemTipo: 'venda' | 'compra',
+  origemId: string,
+  motivo: string,
+): Promise<{ ids: string[] }> {
+  // FOR UPDATE em todas as linhas da origem: a 2ª tentativa simultânea espera e depois vê tudo estornado.
+  const achados = await c.query(
+    `SELECT ${COLUNAS_ORIGINAL} FROM lancamentos
+      WHERE origem_tipo = $1 AND origem_id = $2 ORDER BY criado_em, id FOR UPDATE`,
+    [origemTipo, origemId],
+  );
+  const linhas = achados.rows as Original[];
+  if (linhas.length === 0) throw new ErroFinanceiro('nao_encontrado');
+  const pendentes = linhas.filter((l) => l.status !== 'estornado');
+  if (pendentes.length === 0) throw new ErroFinanceiro('ja_estornado');
+  const ids: string[] = [];
+  for (const o of pendentes) ids.push((await gravarEstorno(c, ctx, o, motivo)).id);
+  return { ids };
+}
+
+const COLUNAS_ORIGINAL = 'id, tipo, origem_tipo, status, descricao, categoria, valor_centavos, forma_pagamento';
+
+interface Original {
+  id: string;
+  tipo: 'entrada' | 'saida';
+  origem_tipo: string;
+  status: 'aberto' | 'pago' | 'estornado';
+  descricao: string | null;
+  categoria: string | null;
+  valor_centavos: number;
+  forma_pagamento: FormaPagamento | null;
+}
+
+// Grava o lançamento inverso de um original JÁ TRAVADO (FOR UPDATE) e marcado como estornável pelo chamador.
+async function gravarEstorno(c: pg.PoolClient, ctx: ContextoFinanceiro, o: Original, motivo: string): Promise<{ id: string }> {
   const pago = o.status === 'pago';
   const r = await c.query(
     `INSERT INTO lancamentos

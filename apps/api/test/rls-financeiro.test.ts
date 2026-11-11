@@ -197,12 +197,14 @@ describe('lançamentos: isolamento por empresa e imutabilidade (banco)', () => {
       ['despesa com id de origem', (u) => valida(u, { tipo: 'saida', origem_tipo: 'despesa', descricao: 'Luz' }), '23514'],
       ['despesa sem descrição', (u) => valida(u, { tipo: 'saida', origem_tipo: 'despesa', origem_id: null }), '23514'],
       ['forma de pagamento inventada', (u) => valida(u, { forma_pagamento: 'cheque' }), '23514'],
+      ['boleto (fora do v1)', (u) => valida(u, { forma_pagamento: 'boleto' }), '23514'],
       ['status inventado', (u) => valida(u, { status: 'cancelado' }), '23514'],
       ['pago sem pago_em', (u) => valida(u, { pago_em: null }), '23514'],
       ['pago sem forma de pagamento', (u) => valida(u, { forma_pagamento: null }), '23514'],
       ['aberto com pago_em', (u) => valida(u, { status: 'aberto' }), '23514'],
       ['categoria vazia', (u) => valida(u, { categoria: '' }), '23514'],
       ['categoria só com espaços', (u) => valida(u, { categoria: '   ' }), '23514'],
+      ['categoria com 61 caracteres (o limite é o do nome da categoria: 60)', (u) => valida(u, { categoria: 'x'.repeat(61) }), '23514'],
       ['sem vencimento', (u) => valida(u, { vencimento: null }), '23502'],
       ['sem autor', (u) => valida(u, { criado_por: null }), '23502'],
       ['estorno sem lançamento original', (u) => valida(u, { tipo: 'saida', origem_tipo: 'estorno', estorno_motivo: 'x' }), '23514'],
@@ -211,6 +213,10 @@ describe('lançamentos: isolamento por empresa e imutabilidade (banco)', () => {
 
     it.each(casos)('recusa %s', async (_nome, linha, codigo) => {
       await expect(inserir(empresaA, linha(usuarioA))).rejects.toMatchObject({ code: codigo });
+    });
+
+    it('categoria com exatamente 60 caracteres cabe (é o maior nome de categoria permitido)', async () => {
+      await inserir(empresaA, valida(usuarioA, { categoria: 'x'.repeat(60) }));
     });
 
     it('estorno exige motivo e o id de origem igual ao do original', async () => {

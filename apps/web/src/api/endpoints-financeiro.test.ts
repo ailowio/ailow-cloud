@@ -49,6 +49,34 @@ describe('endpoints do Financeiro', () => {
     ]);
   });
 
+  it('estornar venda inteira: POST na rota da venda, com o motivo', async () => {
+    const { api, chamadas } = apiComEspiao({ status: 201, corpo: { ids: ['a', 'b'] } });
+    expect(await api.estornarVenda('venda-1', 'Cliente devolveu')).toEqual({ ids: ['a', 'b'] });
+    expect(chamadas).toEqual([
+      { url: '/financeiro/vendas/venda-1/estornar', metodo: 'POST', corpo: { motivo: 'Cliente devolveu' } },
+    ]);
+  });
+
+  it('categorias: sem tipo pede as duas listas; com tipo filtra na URL', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { categorias: [] } });
+    await api.categorias();
+    await api.categorias('financeira');
+    await api.categorias('produto');
+    expect(chamadas.map((c) => [c.metodo, c.url])).toEqual([
+      ['GET', '/categorias'],
+      ['GET', '/categorias?tipo=financeira'],
+      ['GET', '/categorias?tipo=produto'],
+    ]);
+  });
+
+  it('criar categoria financeira: o tipo vai no corpo', async () => {
+    const { api, chamadas } = apiComEspiao({ status: 201, corpo: { id: 'x' } });
+    await api.criarCategoria({ nome: 'Aluguel', atributos: [], tipo: 'financeira' });
+    expect(chamadas).toEqual([
+      { url: '/categorias', metodo: 'POST', corpo: { nome: 'Aluguel', atributos: [], tipo: 'financeira' } },
+    ]);
+  });
+
   it('extrato e relatório: GET com a data e o período na URL', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: {} });
     await api.extrato('2026-11-11');

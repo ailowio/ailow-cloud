@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { criarHasher } from '../src/acesso/senhas.js';
+import { semearCategoriasFinanceiras } from '../src/configuracoes/categorias.js';
 import { createPool, withEmpresa } from '../src/db.js';
 import { lerAmbienteDev, recusarEmProducao, urlBanco } from './dev-ambiente.js';
 
@@ -32,6 +33,7 @@ try {
         [donoId, empresaId, DONO_EMAIL, senhaHash],
       );
       await c.query('SELECT registrar_login($1, $2, $3)', [DONO_EMAIL, empresaId, donoId]);
+      await semearCategoriasFinanceiras(c, empresaId, new Date());
       await c.query(
         `INSERT INTO usuarios (empresa_id, nome, perfil, pin_hash) VALUES ($1, $2, 'vendedor', $3)`,
         [empresaId, VENDEDOR_NOME, pinHash],

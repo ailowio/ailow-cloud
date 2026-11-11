@@ -6,6 +6,7 @@ import type {
   FormaPagamento,
   Lancamento,
   Relatorio,
+  TipoCategoria,
   UsuarioPublico,
 } from '@ailow/shared';
 import type { Cliente } from './cliente';
@@ -13,8 +14,9 @@ import type { Cliente } from './cliente';
 // Tipos vêm do pacote compartilhado (só tipos: nada de Zod no bundle do navegador).
 export type QuemUsaItem = UsuarioPublico & { bloqueado: boolean };
 export type UsuarioAdminItem = QuemUsaItem & { ativo: boolean };
-export type CategoriaCorpo = Pick<Categoria, 'nome' | 'atributos'>;
-export type CategoriaAlterar = CategoriaCorpo & Pick<Categoria, 'ativa'>;
+// O tipo só vale na criação (a API não deixa trocá-lo depois); sem tipo, é categoria de produto.
+export type CategoriaCorpo = Pick<Categoria, 'nome' | 'atributos'> & { tipo?: TipoCategoria };
+export type CategoriaAlterar = Pick<Categoria, 'nome' | 'atributos' | 'ativa'>;
 
 export function criarApi(c: Cliente) {
   const p = c.pedir;
@@ -39,7 +41,8 @@ export function criarApi(c: Cliente) {
     empresa: () => p<Empresa>('GET', '/empresa'),
     salvarEmpresa: (e: Empresa) => p<Empresa>('PUT', '/empresa', e),
     // --- categorias (RF-CFG-04)
-    categorias: () => p<{ categorias: Categoria[] }>('GET', '/categorias'),
+    categorias: (tipo?: TipoCategoria) =>
+      p<{ categorias: Categoria[] }>('GET', tipo ? `/categorias?tipo=${tipo}` : '/categorias'),
     criarCategoria: (c: CategoriaCorpo) => p<{ id: string }>('POST', '/categorias', c),
     alterarCategoria: (id: string, c: CategoriaAlterar) => p('PUT', `/categorias/${id}`, c),
     // --- financeiro (S06, só Dono)
@@ -48,6 +51,9 @@ export function criarApi(c: Cliente) {
     pagar: (id: string, forma: FormaPagamento) =>
       p('POST', `/financeiro/lancamentos/${id}/pagar`, { forma_pagamento: forma }),
     estornar: (id: string, motivo: string) => p<{ id: string }>('POST', `/financeiro/lancamentos/${id}/estornar`, { motivo }),
+    // Estorna a venda inteira (todos os pagamentos dela de uma vez, RN-08); `origemId` é o id da venda.
+    estornarVenda: (origemId: string, motivo: string) =>
+      p<{ ids: string[] }>('POST', `/financeiro/vendas/${origemId}/estornar`, { motivo }),
     extrato: (data: string) => p<{ data: string; lancamentos: Lancamento[] }>('GET', `/financeiro/extrato?data=${data}`),
     relatorio: (periodo: 'dia' | 'mes', data: string) =>
       p<Relatorio>('GET', `/financeiro/relatorio?periodo=${periodo}&data=${data}`),
