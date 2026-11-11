@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Logo (placeholder)">
+  <!-- PLACEHOLDER: substitua este arquivo pela logo definitiva (SVG com viewBox, sem script nem link externo). -->
+  <rect width="64" height="64" rx="14" fill="#2448ff"/>
+  <g stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none">
+    <path d="M32 12.8 17.9 49.9M32 12.8 46.1 49.9M23 38.4h18"/>
+  </g>
+  <circle cx="50.6" cy="16" r="4.2" fill="#ff7043"/>
+</svg>

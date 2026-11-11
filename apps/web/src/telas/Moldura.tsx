@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ActionIcon, Box, Button, Container, Group, Stack, Text, Title, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconArrowLeft, IconMoon, IconSun } from '@tabler/icons-react';
+import { Logo } from '../componentes/Logo';
 
 /** Alterna claro/escuro. Alvo de 48 px; o rótulo diz a ação, não o estado. */
 function AlternarTema() {
@@ -36,9 +37,13 @@ export function Moldura(props: {
       <Box component="header" className="ailow-topo">
         <Container size={560} px="md">
           <Group justify="space-between" wrap="nowrap" h={64}>
-            <Text ff="var(--mantine-font-family-headings)" fw={700} fz={22} c="var(--ailow-primario-texto)">
-              Ailow
-            </Text>
+            <Group gap="xs" wrap="nowrap">
+              <Logo altura={36} alt="" />
+              {/* Nome ao lado da marca. Quando a logo definitiva já trouxer o nome, remova este texto. */}
+              <Text ff="var(--mantine-font-family-headings)" fw={700} fz={22} c="var(--ailow-primario-texto)">
+                Ailow
+              </Text>
+            </Group>
             <Group gap="xs" wrap="nowrap">
               {props.acaoTopo && (
                 <Button variant="default" size="md" h={48} onClick={props.acaoTopo.aoClicar}>
