@@ -343,7 +343,7 @@ Decisões e limites (propostas por mim; o Pedro confirma ao mergear — também 
 - Limites: 144 variações e 12 cores por produto, 9.999 produtos por empresa (4 dígitos do código), 200 produtos na lista.
 - Vendedor também não vê fornecedor nem estoque mínimo (além do custo), por ser decisão de compra.
 Pendências / riscos honestos:
-- **CI do PR ainda não conferido** (é aberto no fim desta sessão; ver a nota de fechamento). Compose não foi rodado localmente.
+- **CI do PR #14:** 6/6 verdes (verify, compose, imagem, seguranca-sast, seguranca-sca, seguranca-segredos; run 43112617551). O Compose não foi rodado localmente (só no CI).
 - Sem **edição de produto**, sem acrescentar tamanho/cor depois, sem desativar produto: o produto vai precisar de uma sessão de edição (preço é urgente na prática).
 - Para a S10 falta uma função de consulta (buscar SKU por código e preço, na transação da venda): deixei de fora por ser YAGNI até lá.
 - Saldo e movimentos são consistentes pela interface (o runtime ainda pode atualizar `estoque` direto); trigger avaliado e adiado (ADR 006, alternativa 2).
@@ -370,7 +370,7 @@ Verificação: `npm run verify` exit 0; mutação 17/17; Playwright 360×640 nos
 - **Fazer depois do reinício:** Docker/WSL, mover `.env`, `compose up`. **Cumprido** no estado de 2026-11-12 pós-WSL/Docker.
 
 ### Estado de retomada — 2026-11-11 (fim da S07; aguardando o portão do Pedro)
-- **Git:** branch `feature/s07-produtos` com a S07 completa, a partir da `main` em `507a8b2`; PR da S07 aberto (ver a mensagem de fechamento); PR #12 (handoff) ainda aberto: se for mergeado antes, resolver o conflito trivial neste arquivo. Depois do merge: `git checkout main && git pull --ff-only`.
+- **Git:** branch `feature/s07-produtos` com a S07 completa, a partir da `main` em `507a8b2`; PR da S07 = **#14** (6/6 checks verdes); PR #12 (handoff) ainda aberto: se for mergeado antes, resolver o conflito trivial neste arquivo. Depois do merge: `git checkout main && git pull --ff-only`.
 - **Ambiente:** servidores de dev parados, portas 54329/3000/5173 livres, Compose derrubado; `.dev-data/` com dados de teste da S07.
 - **Portão 🚦:** o Pedro revisa e mergeia o PR da S07 (confirma ou altera o ADR 006: aviso `<`, arredondamento do preço, fornecedor texto, produto imutável). **O prompt da S08 só vale depois do ok.**
 - **Em aberto (não bloqueiam a S08):** edição/desativação de produto; consulta de SKU para a S10; ADR 004 "proposto"; reescrita do histórico (acervo); logo definitiva (RF-CFG-02); L-0011; `dev:parar` (L-0012); proxy HTTPS S14 (prefixos novos: `produtos`, `skus`, `estoque`); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos.
