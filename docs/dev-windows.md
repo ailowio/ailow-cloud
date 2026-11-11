@@ -9,7 +9,7 @@ Em 2026-11-11/12 o install do WSL2:
 
 1. abria sozinho no login (Docker Desktop ainda estava em `HKCU\...\Run` apesar de `AutoStart: false` nas settings);
 2. ao aceitar o install, o Windows reiniciava para o firmware/BIOS e **travava** se a virtualização AMD não estivesse clara;
-3. bloqueava o `docker compose` local (pendência do diário em `docs/plano-execucao.md`).
+3. bloqueava o `docker compose` local (pendência registrada em `docs/diario/ARQUIVO-S00-S06.md`).
 
 Isto **não danifica o hardware**. O risco é só travar no POST/BIOS → segurar o botão de ligar ~10–15 s e ligar de novo.
 

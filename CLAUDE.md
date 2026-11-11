@@ -7,7 +7,7 @@ Este app herda `D:\apps\harness`. Antes de qualquer trabalho:
 1. Leia `D:\apps\harness\PROTOCOLO.md` (gate de leitura, tiers, ciclo de vida, DoD).
 2. Declare tarefa → tipo → tier → IDs de regra aplicáveis → critérios de aceite mensuráveis.
 3. Siga `D:\apps\harness\checklists\` correspondente.
-4. Plano e diário de execução: `docs/plano-execucao.md` (fonte única entre sessões). PRD: `docs/prd/PRD-ailow-cloud-v1.md`.
+4. Plano de execução: `docs/plano-execucao.md`; diário ativo: `docs/diario/ATUAL.md` (o antigo está em `docs/diario/ARQUIVO-*.md`: ler só sob demanda). **Abra em camadas, sem ler o plano inteiro**: Contrato + linha da sessão + Estado de retomada + última entrada do diário. PRD: `docs/prd/PRD-ailow-cloud-v1.md` (só as seções citadas).
 
 ## Regras do projeto (verificáveis)
 - Test-first: teste vermelho antes do código; nunca mude expectativa de teste para passar.
@@ -41,4 +41,4 @@ Conventional Commits · branch curta + PR pequena com template · CI verde (`ver
 - `docker compose up --build` (precisa de `POSTGRES_PASSWORD` no arquivo de ambiente local) — ver README.
 
 ## Handoff
-Ao encerrar sessão longa, atualizar o Diário em `docs/plano-execucao.md` (estado, pendências, comandos, prompt da próxima sessão).
+Ao encerrar sessão longa: entrada curta (≤ 2 KB) em `docs/diario/ATUAL.md` com poda das antigas para o arquivo, Estado de retomada sobrescrito em `docs/plano-execucao.md` e o prompt da próxima sessão no chat.
