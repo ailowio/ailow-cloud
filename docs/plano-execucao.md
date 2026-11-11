@@ -203,9 +203,9 @@ Pendências / riscos honestos:
 - Não testado: Compose (continua só no CI). Os servidores de dev (`dev:db`, `dev:api`, `dev:web`, preview) ficaram rodando nesta sessão: encerrar ao reiniciar o Windows (o encerramento em massa de processos foi negado pelo classificador e não foi contornado).
 - Lacunas da S04 seguem: sem rate limit de senha, TOTP sem cifra, sem revogação de aparelho, API como dono do schema (S14).
 Aprendizado: L-0002 recorreu (escapes de `node -e`/heredoc destruíram uma regex e um heredoc); recorrência 2 e lição ativa 1 ampliada (código só por Write/Edit). Achado pelos testes: schema de resposta Zod 4 com `.transform()` derruba o serializador com 500 (agora com teste de regressão no `shared`).
-Verificação: `npm run verify`; `node harness/scripts/check-harness.mjs` -> Harness OK.
+Verificação: `npm run verify`; `node harness/scripts/check-harness.mjs` -> Harness OK; `gh pr checks 6` -> 6/6 pass (verify, compose, imagem, seguranca-sast, seguranca-sca, seguranca-segredos) no commit 212bbf3.
 
-**Aguardando portão do Pedro (mergear o PR).** O prompt da S06 só vale após o ok.
+**Aguardando portão do Pedro (mergear o PR #6).** O prompt da S06 só vale após o ok.
 
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
