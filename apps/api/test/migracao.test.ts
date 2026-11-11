@@ -27,7 +27,7 @@ describe('migrações', () => {
     await c.connect();
     try {
       const r = await c.query(
-        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias') ORDER BY 1",
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos') ORDER BY 1",
       );
       return r.rows.map((x) => x.tablename);
     } finally {
@@ -45,12 +45,12 @@ describe('migrações', () => {
     await admin.query(`CREATE DATABASE ${nome}`);
 
     await rodar('up');
-    expect(await tabelas()).toEqual(['categorias', 'empresas']);
+    expect(await tabelas()).toEqual(['categorias', 'empresas', 'lancamentos']);
 
     await rodar('down');
     expect(await tabelas()).toEqual([]);
 
     await rodar('up');
-    expect(await tabelas()).toEqual(['categorias', 'empresas']);
+    expect(await tabelas()).toEqual(['categorias', 'empresas', 'lancamentos']);
   });
 });
