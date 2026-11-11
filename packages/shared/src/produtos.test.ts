@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { VALOR_MAXIMO_CENTAVOS } from './financeiro.js';
 import {
+  PRECO_MAXIMO_CENTAVOS,
   ajusteEstoqueSchema,
   atribuirCodigosDeCor,
   chaveCor,
@@ -33,6 +35,12 @@ const produto = (extra: Record<string, unknown> = {}) => ({
   preco_centavos: 8990,
   skus: [sku()],
   ...extra,
+});
+
+describe('teto de preço', () => {
+  it('é o mesmo teto de R$ 20 milhões do Financeiro (RN-01)', () => {
+    expect(PRECO_MAXIMO_CENTAVOS).toBe(VALOR_MAXIMO_CENTAVOS);
+  });
 });
 
 describe('preço sugerido (RN-05)', () => {
