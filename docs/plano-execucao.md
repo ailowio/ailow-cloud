@@ -260,7 +260,9 @@ Pendências / riscos honestos:
 - O proxy HTTPS de produção (S14) precisa do mesmo conjunto de prefixos (acrescentar ao checklist do deploy).
 - Os servidores de dev e as linhas de teste "(teste S06 …)" ficaram no banco de **dev** local (`.dev-data/`, ignorado pelo git; apague a pasta para recomeçar). Nada foi aplicado fora da máquina.
 Aprendizado: L-0009 (proxy), L-0010 (`.git` zerado; lição ativa 8), L-0011 (teste instável), recorrência da L-0006 (mutação achou teste de concorrência sem corrida). `node harness/scripts/check-harness.mjs` -> Harness OK.
-Verificação: `npm run verify` exit 0; CI do PR: ver o PR da S06.
+Verificação: `npm run verify` exit 0; `gh pr checks 9` -> 6/6 pass (verify, compose, imagem, seguranca-sast, seguranca-sca, seguranca-segredos) no commit 9624672 (run 43045905219).
+
+**Aguardando portão do Pedro (mergear o PR #9).** O prompt da S07 só vale após o ok.
 
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
