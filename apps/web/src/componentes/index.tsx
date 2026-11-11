@@ -9,10 +9,10 @@ import { formatarReais } from '../lib/dinheiro';
 export function BlocoAcao(props: { rotulo: string; icone: ReactNode; destaque?: boolean; alerta?: number; onClick?: () => void }) {
   const { rotulo, icone, destaque, alerta, onClick } = props;
   return (
-    <Indicator label={alerta} disabled={!alerta} color="coral" size={22} offset={10} zIndex={2}>
+    <Indicator label={alerta} disabled={!alerta} color="red" size={22} offset={10} zIndex={2}>
       <UnstyledButton className="ailow-bloco" data-destaque={destaque ? 'true' : 'false'} onClick={onClick} mih={104} w="100%" p="sm">
         <Stack align="center" gap={10}>
-          <Box c={destaque ? '#fff' : 'var(--mantine-color-violeta-text)'} lh={0}>{icone}</Box>
+          <Box c={destaque ? '#fff' : 'var(--ailow-primario-texto)'} lh={0}>{icone}</Box>
           <Text fw={650} size="sm">{rotulo}</Text>
         </Stack>
       </UnstyledButton>
@@ -28,15 +28,15 @@ export function GradeModulos({ children }: { children: ReactNode }) {
 /** Valor em reais, a partir de centavos inteiros. */
 export function Valor({ centavos, destaque }: { centavos: number; destaque?: boolean }) {
   return (
-    <Text span fw={destaque ? 700 : 550} c={destaque ? 'var(--mantine-color-violeta-text)' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
+    <Text span fw={destaque ? 700 : 550} c={destaque ? 'var(--ailow-laranja-texto)' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
       {formatarReais(centavos)}
     </Text>
   );
 }
 
-/** ok (neutro) | baixo (âmbar) | zerado (coral). */
+/** ok (neutro) | baixo (âmbar) | zerado (vermelho). */
 export function SeloEstoque({ atual, minimo }: { atual: number; minimo: number }) {
-  if (atual <= 0) return <Badge color="coral">Zerado</Badge>;
+  if (atual <= 0) return <Badge color="red">Zerado</Badge>;
   if (atual <= minimo) return <Badge color="ambar">Baixo · {atual}</Badge>;
   return <Badge color="gray" variant="light">{atual} em estoque</Badge>;
 }
@@ -52,7 +52,7 @@ export function EstadoVazio(props: { titulo: string; texto: string; acao?: strin
   );
 }
 
-/** Teclado numérico do PIN: 4 pontos de progresso (ciano = detalhe luminoso), teclas de 64 px. */
+/** Teclado numérico do PIN: 4 pontos de progresso em laranja (destaque), teclas de 64 px. */
 export function TecladoPin({ onCompleto }: { onCompleto: (pin: string) => void }) {
   const [pin, setPin] = useState('');
   const tecla = (k: string) => {
@@ -71,9 +71,9 @@ export function TecladoPin({ onCompleto }: { onCompleto: (pin: string) => void }
             h={16}
             style={{
               borderRadius: '50%',
-              border: '2px solid var(--mantine-color-ciano-5)',
-              background: i < pin.length ? 'var(--mantine-color-ciano-5)' : 'transparent',
-              boxShadow: i < pin.length ? '0 0 10px var(--mantine-color-ciano-5)' : 'none',
+              border: '2px solid var(--mantine-color-coral-5)',
+              background: i < pin.length ? 'var(--mantine-color-coral-5)' : 'transparent',
+              boxShadow: i < pin.length ? '0 0 10px var(--mantine-color-coral-5)' : 'none',
             }}
           />
         ))}
@@ -103,20 +103,24 @@ export function Carrinho(props: { itens: ItemCarrinho[]; onMudar: (codigo: strin
   return (
     <Stack gap="sm" p="md" className="ailow-cartao">
       {props.itens.map((i) => (
-        <Group key={i.codigo} wrap="nowrap" justify="space-between" gap="xs">
-          <Box miw={0} style={{ flex: 1 }}>
-            <Text truncate>{i.nome}</Text>
+        <Stack key={i.codigo} gap={6} pb="sm" style={{ borderBottom: '1px solid var(--ailow-borda)' }}>
+          {/* Nome nunca é truncado: o vendedor precisa saber o que está no carrinho. */}
+          <Text fw={600} style={{ overflowWrap: 'anywhere' }}>{i.nome}</Text>
+          <Group justify="space-between" wrap="nowrap" gap="xs">
             <Text size="sm" c="dimmed">{i.detalhe}</Text>
-          </Box>
-          <Group gap={4} wrap="nowrap">
-            <ActionIcon variant="default" size={44} aria-label="Menos" onClick={() => props.onMudar(i.codigo, -1)}>−</ActionIcon>
-            <Text w={24} ta="center" fw={650}>{i.qtd}</Text>
-            <ActionIcon variant="default" size={44} aria-label="Mais" onClick={() => props.onMudar(i.codigo, 1)}>+</ActionIcon>
+            <Group gap={4} wrap="nowrap">
+              <ActionIcon variant="default" size={44} aria-label={`Menos ${i.nome}`} onClick={() => props.onMudar(i.codigo, -1)}>−</ActionIcon>
+              <Text w={28} ta="center" fw={650}>{i.qtd}</Text>
+              <ActionIcon variant="default" size={44} aria-label={`Mais ${i.nome}`} onClick={() => props.onMudar(i.codigo, 1)}>+</ActionIcon>
+            </Group>
           </Group>
-          <Valor centavos={i.precoCentavos * i.qtd} />
-        </Group>
+          <Group justify="space-between">
+            <Text size="sm" c="dimmed">{i.qtd} × <Valor centavos={i.precoCentavos} /></Text>
+            <Valor centavos={i.precoCentavos * i.qtd} />
+          </Group>
+        </Stack>
       ))}
-      <Group justify="space-between" pt="xs" style={{ borderTop: '1px solid var(--ailow-borda)' }}>
+      <Group justify="space-between" pt={4}>
         <Text fz="lg" fw={700}>Total</Text>
         <Text fz="lg"><Valor centavos={total} destaque /></Text>
       </Group>

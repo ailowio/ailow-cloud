@@ -7,7 +7,7 @@ import { DataTable } from 'mantine-datatable';
 import {
   IconCircleCheck, IconClock, IconCoin, IconMoon, IconPackage, IconPlus, IconSettings, IconSun, IconTruckDelivery, IconUsers,
 } from '@tabler/icons-react';
-import { ambar, azul, ciano, coral, navy, violeta } from '../tema/tema';
+import { ambar, azul, ciano, coral, navy } from '../tema/tema';
 import {
   BlocoAcao, Carrinho, EstadoVazio, Etapas, GradeModulos, SeloEstoque, TecladoPin, Valor, type ItemCarrinho,
 } from '../componentes';
@@ -16,15 +16,14 @@ import {
 const SKUS = [
   { codigo: '0042-46-CHO', nome: 'Tomara que caia Essência', tam: '46', cor: 'Chocolate', preco: 8900, estoque: 3, minimo: 2 },
   { codigo: '0042-48-CHO', nome: 'Tomara que caia Essência', tam: '48', cor: 'Chocolate', preco: 8900, estoque: 0, minimo: 2 },
-  { codigo: '0107-M-PRE', nome: 'Calcinha Bombom', tam: 'M', cor: 'Preto', preco: 2900, estoque: 12, minimo: 4 },
+  { codigo: '0107-M-PRE', nome: 'Calcinha Bombom cintura alta renda francesa', tam: 'M', cor: 'Preto', preco: 2900, estoque: 12, minimo: 4 },
 ];
 
 const PALETAS = [
-  { nome: 'violeta', papel: 'Marca, ação primária', cores: violeta, tom: 6 },
-  { nome: 'azul', papel: 'Secundária, informação', cores: azul, tom: 6 },
-  { nome: 'ciano', papel: 'Detalhes luminosos, foco', cores: ciano, tom: 5 },
-  { nome: 'coral', papel: 'Perigo (com moderação)', cores: coral, tom: 5 },
-  { nome: 'ambar', papel: 'Alerta (com moderação)', cores: ambar, tom: 5 },
+  { nome: 'azul', papel: 'Primária: ações, seleção, foco', cores: azul, tom: 6 },
+  { nome: 'ciano', papel: 'Detalhes luminosos (com moderação)', cores: ciano, tom: 5 },
+  { nome: 'coral', papel: 'Destaque laranja: totais, PIN', cores: coral, tom: 5 },
+  { nome: 'ambar', papel: 'Alerta: estoque baixo', cores: ambar, tom: 5 },
   { nome: 'navy', papel: 'Base neutra do tema escuro', cores: navy, tom: 7 },
 ];
 
@@ -68,7 +67,7 @@ export function Catalogo() {
         <Container size="sm" py="sm">
           <Group justify="space-between">
             <Group gap="xs">
-              <Box w={10} h={10} bg="violeta.6" style={{ borderRadius: 3, boxShadow: '0 0 12px var(--mantine-color-violeta-6)' }} />
+              <Box w={10} h={10} bg="coral.5" style={{ borderRadius: 3, boxShadow: '0 0 12px var(--mantine-color-coral-5)' }} />
               <Title order={1} fz="xl">Ailow Cloud</Title>
               <Badge variant="light" color="azul">Design System</Badge>
             </Group>
@@ -101,7 +100,7 @@ export function Catalogo() {
 
           <Secao titulo="Entrada por PIN">
             <Box p="md" className="ailow-cartao">
-              <TecladoPin onCompleto={(pin) => notifications.show({ message: `PIN com ${pin.length} dígitos recebido.`, color: 'ciano' })} />
+              <TecladoPin onCompleto={(pin) => notifications.show({ message: `PIN com ${pin.length} dígitos recebido.`, color: 'azul' })} />
             </Box>
           </Secao>
 
@@ -123,9 +122,9 @@ export function Catalogo() {
           <Secao titulo="Lista de produtos">
             <Stack gap="sm" hiddenFrom="sm">
               {SKUS.map((s) => (
-                <Group key={s.codigo} justify="space-between" wrap="nowrap" p="md" className="ailow-cartao">
-                  <Box miw={0}>
-                    <Text truncate fw={550}>{s.nome}</Text>
+                <Group key={s.codigo} justify="space-between" wrap="nowrap" align="flex-start" p="md" className="ailow-cartao">
+                  <Box miw={0} style={{ flex: 1 }}>
+                    <Text fw={600} style={{ overflowWrap: 'anywhere' }}>{s.nome}</Text>
                     <Text size="sm" c="dimmed">{s.tam} · {s.cor} · {s.codigo}</Text>
                   </Box>
                   <Stack gap={4} align="flex-end"><Valor centavos={s.preco} /><SeloEstoque atual={s.estoque} minimo={s.minimo} /></Stack>
@@ -152,10 +151,10 @@ export function Catalogo() {
 
           <Secao titulo="Avisos">
             <SimpleGrid cols={2}>
-              <Button color="violeta" leftSection={<IconCircleCheck size={20} />} onClick={() => notifications.show({ message: 'Venda 1827 finalizada.', color: 'violeta', autoClose: 3000 })}>
+              <Button color="azul" leftSection={<IconCircleCheck size={20} />} onClick={() => notifications.show({ message: 'Venda 1827 finalizada.', color: 'azul', autoClose: 3000 })}>
                 Sucesso
               </Button>
-              <Button color="coral" onClick={() => notifications.show({ title: 'Peça sem estoque', message: 'Chame o Dono.', color: 'coral', autoClose: false })}>
+              <Button color="red" onClick={() => notifications.show({ title: 'Peça sem estoque', message: 'Chame o Dono.', color: 'red', autoClose: false })}>
                 Erro
               </Button>
             </SimpleGrid>

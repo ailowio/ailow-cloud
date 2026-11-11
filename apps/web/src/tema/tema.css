@@ -8,7 +8,9 @@
   --ailow-superficie-2: #f6f7fb;          /* campos, áreas internas */
   --ailow-borda: #dde1ee;
   --ailow-sombra: 0 1px 2px rgb(17 24 50 / 6%), 0 4px 14px rgb(17 24 50 / 6%);
-  --ailow-brilho: 0 6px 20px rgb(146 0 255 / 28%);
+  --ailow-brilho: 0 6px 20px rgb(36 72 255 / 30%);
+  --ailow-primario-texto: #1b37d6;        /* azul.7 sobre branco = 8,19:1 */
+  --ailow-laranja-texto: #bf431e;         /* coral.7 sobre branco = 5,20:1 */
   --ailow-topo: #ffffff;
 }
 
@@ -18,7 +20,9 @@
   --ailow-superficie-2: #1b2340;
   --ailow-borda: #2b3454;
   --ailow-sombra: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
-  --ailow-brilho: 0 0 0 1px rgb(146 0 255 / 55%), 0 8px 28px rgb(146 0 255 / 35%);
+  --ailow-brilho: 0 0 0 1px rgb(36 72 255 / 60%), 0 8px 28px rgb(36 72 255 / 40%);
+  --ailow-primario-texto: #6984ff;        /* azul.3 sobre navy = 5,65:1 (superfície 5,07:1) */
+  --ailow-laranja-texto: #ff7043;         /* coral.5 sobre navy = 6,82:1 (superfície 6,11:1) */
   --ailow-topo: #111832;
 }
 
@@ -47,11 +51,11 @@ h1, h2, h3, h4 {
   box-shadow: var(--ailow-sombra);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
-.ailow-bloco:hover { border-color: var(--mantine-color-violeta-4); }
+.ailow-bloco:hover { border-color: var(--mantine-color-azul-4); }
 .ailow-bloco:active { transform: scale(0.97); }
 .ailow-bloco[data-destaque='true'] {
-  background: var(--mantine-color-violeta-6);
-  border-color: var(--mantine-color-violeta-6);
+  background: var(--mantine-color-azul-6);
+  border-color: var(--mantine-color-azul-6);
   color: #fff;
   box-shadow: var(--ailow-brilho);
 }
