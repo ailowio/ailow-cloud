@@ -220,12 +220,34 @@ describe('Acesso de empresa', () => {
     });
 
     it('o PIN em texto não aparece nos logs (SEC-16)', async () => {
+      // L-0011: não use substring solta no log inteiro (time/UUID podem conter "1357" por acaso).
+      // Parseia cada linha JSON e garante que nenhum valor de campo string é exatamente o PIN;
+      // também rejeita "pin":"<valor>" se o corpo do request vazasse para o log.
       linhasDeLog.length = 0;
       await dono.somenteAparelho().post('/acesso/pin', { usuario_id: vendedorId, pin: '9876' });
       await dono.somenteAparelho().post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
-      const tudo = linhasDeLog.join('');
-      expect(tudo).not.toContain('9876');
-      expect(tudo).not.toContain(PIN_VENDEDOR);
+      for (const pin of ['9876', PIN_VENDEDOR]) {
+        expect(linhasDeLog.join('')).not.toContain(`"pin":"${pin}"`);
+        for (const linha of linhasDeLog) {
+          let obj: unknown;
+          try {
+            obj = JSON.parse(linha);
+          } catch {
+            expect(linha).not.toContain(`"pin":"${pin}"`);
+            continue;
+          }
+          const valores: unknown[] = [];
+          const coletar = (v: unknown) => {
+            if (v === null || typeof v !== 'object') {
+              valores.push(v);
+              return;
+            }
+            for (const x of Object.values(v as Record<string, unknown>)) coletar(x);
+          };
+          coletar(obj);
+          expect(valores.some((v) => v === pin)).toBe(false);
+        }
+      }
     });
   });
 

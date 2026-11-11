@@ -7,6 +7,11 @@ import { nomeSchema } from './acesso.js';
 const digitos = z.string().regex(/^\d{10,11}$/, { error: 'telefone com DDD: 10 ou 11 dígitos' });
 
 // Resposta: sem transformações (o serializador do Zod 4 não codifica transformação de mão única).
+export const LOGO_MIMES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+export const logoMimeSchema = z.enum(LOGO_MIMES);
+// Limite do corpo da logo (RF-CFG-02); SVG fora de propósito (XSS).
+export const LOGO_MAX_BYTES = 512 * 1024;
+
 export const empresaSchema = z.object({
   nome: nomeSchema,
   telefone: digitos.nullable(),
@@ -15,17 +20,22 @@ export const empresaSchema = z.object({
   markup_bps: z.number().int().min(0).max(100_000),
   // Minutos sem uso até travar o app e expirar a sessão no servidor (RF-ACE-04).
   inatividade_minutos: z.number().int().min(1).max(120),
+  // true se a empresa tem logo enviada (GET /empresa/logo); falso = placeholder do app.
+  tem_logo: z.boolean(),
 });
 export type Empresa = z.infer<typeof empresaSchema>;
 
 // Entrada: aceita máscara no telefone ((11) 98765-4321) e normaliza para dígitos.
-export const empresaEntradaSchema = empresaSchema.extend({
-  telefone: z
-    .string()
-    .transform((v) => v.replace(/[\s().-]/g, ''))
-    .pipe(digitos)
-    .nullable(),
-});
+// tem_logo não é editável por este corpo (só via PUT/DELETE /empresa/logo).
+export const empresaEntradaSchema = empresaSchema
+  .omit({ tem_logo: true })
+  .extend({
+    telefone: z
+      .string()
+      .transform((v) => v.replace(/[\s().-]/g, ''))
+      .pipe(digitos)
+      .nullable(),
+  });
 
 const atributoSchema = z.string().trim().min(1).max(40);
 const atributosSchema = z

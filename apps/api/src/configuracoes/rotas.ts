@@ -7,6 +7,8 @@ import {
   empresaEntradaSchema,
   empresaSchema,
   erroSchema,
+  LOGO_MAX_BYTES,
+  LOGO_MIMES,
 } from '@ailow/shared';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -17,13 +19,21 @@ import { withEmpresa } from '../db.js';
 
 const UNIQUE_VIOLATION = '23505';
 const sessaoCookie = [{ sessao: [] }];
+const LOGO_SELECT =
+  'nome, telefone, endereco, markup_bps, inatividade_minutos, (logo_bytes IS NOT NULL) AS tem_logo';
 
-// Configurações da empresa (S05, RF-CFG-02/03/04). Todas as rotas exigem o Dono (RN-10);
-// a empresa vem da sessão, nunca do corpo, e a RLS é a segunda trava.
+function mimePermitido(m: string): m is (typeof LOGO_MIMES)[number] {
+  return (LOGO_MIMES as readonly string[]).includes(m);
+}
+
+// Configurações da empresa (S05, RF-CFG-02/03/04). Rotas de dados exigem o Dono (RN-10);
+// GET da imagem da logo é de qualquer sessão (aparece no topo para Vendedor também).
+// A empresa vem da sessão, nunca do corpo, e a RLS é a segunda trava.
 export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: Deps, g: Guardas): Promise<void> {
   const { pool, agora } = deps;
   const rotas = app.withTypeProvider<ZodTypeProvider>();
   const soDono = [g.exigirSessao, g.exigirPerfil('dono')];
+  const comSessao = [g.exigirSessao];
 
   // ---------------------------------------------------------------- dados da empresa + markup + trava
   rotas.get(
@@ -40,10 +50,7 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
     async (request) => {
       const s = sessaoDe(request);
       return withEmpresa(pool, s.empresaId, async (c) => {
-        const r = await c.query(
-          'SELECT nome, telefone, endereco, markup_bps, inatividade_minutos FROM empresas WHERE id = $1',
-          [s.empresaId],
-        );
+        const r = await c.query(`SELECT ${LOGO_SELECT} FROM empresas WHERE id = $1`, [s.empresaId]);
         return r.rows[0];
       });
     },
@@ -69,7 +76,7 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
           `UPDATE empresas
               SET nome = $2, telefone = $3, endereco = $4, markup_bps = $5, inatividade_minutos = $6
             WHERE id = $1
-        RETURNING nome, telefone, endereco, markup_bps, inatividade_minutos`,
+        RETURNING ${LOGO_SELECT}`,
           [s.empresaId, e.nome, e.telefone, e.endereco, e.markup_bps, e.inatividade_minutos],
         );
         await registrarEvento(c, {
@@ -84,6 +91,116 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
       });
     },
   );
+
+  // ---------------------------------------------------------------- logo (RF-CFG-02)
+  rotas.get(
+    '/empresa/logo',
+    {
+      preValidation: comSessao,
+      schema: {
+        tags: ['configuracoes'],
+        summary: 'Imagem da logo da empresa (qualquer usuário da sessão)',
+        security: sessaoCookie,
+        response: { 401: erroSchema, 404: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const row = await withEmpresa(pool, s.empresaId, async (c) => {
+        const r = await c.query<{ logo_bytes: Buffer | null; logo_mime: string | null }>(
+          'SELECT logo_bytes, logo_mime FROM empresas WHERE id = $1',
+          [s.empresaId],
+        );
+        return r.rows[0] ?? null;
+      });
+      if (!row?.logo_bytes || !row.logo_mime) return naoEncontrado(reply);
+      // Resposta binária: fora do schema Zod (só 401/404 tipados acima).
+      return reply
+        .header('cache-control', 'private, no-store')
+        .type(row.logo_mime)
+        .send(row.logo_bytes as never);
+    },
+  );
+
+  rotas.put(
+    '/empresa/logo',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['configuracoes'],
+        summary: 'Envia ou substitui a logo da empresa (PNG/JPEG/WebP, até 512 KiB)',
+        security: sessaoCookie,
+        // multipart: corpo não passa pelo Zod
+        response: { 200: empresaSchema, 400: erroSchema, 401: erroSchema, 403: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const arquivo = await request.file();
+      if (!arquivo) {
+        return reply.code(400).send({ erro: 'requisicao_invalida', mensagem: 'envie o arquivo no campo file' });
+      }
+      const mime = arquivo.mimetype;
+      if (!mimePermitido(mime)) {
+        await arquivo.toBuffer().catch(() => undefined);
+        return reply.code(400).send({ erro: 'requisicao_invalida', mensagem: 'use PNG, JPEG ou WebP' });
+      }
+      let bytes: Buffer;
+      try {
+        bytes = await arquivo.toBuffer();
+      } catch {
+        return reply.code(400).send({ erro: 'requisicao_invalida', mensagem: `logo até ${LOGO_MAX_BYTES} bytes` });
+      }
+      if (bytes.length === 0 || bytes.length > LOGO_MAX_BYTES) {
+        return reply.code(400).send({ erro: 'requisicao_invalida', mensagem: `logo até ${LOGO_MAX_BYTES} bytes` });
+      }
+      return withEmpresa(pool, s.empresaId, async (c) => {
+        const r = await c.query(
+          `UPDATE empresas SET logo_bytes = $2, logo_mime = $3 WHERE id = $1 RETURNING ${LOGO_SELECT}`,
+          [s.empresaId, bytes, mime],
+        );
+        await registrarEvento(c, {
+          empresaId: s.empresaId,
+          atorTipo: 'usuario',
+          atorId: s.usuarioId,
+          alvoId: s.empresaId,
+          tipo: 'empresa_logo_alterada',
+          em: agora(),
+        });
+        return r.rows[0];
+      });
+    },
+  );
+
+  rotas.route({
+    method: 'DELETE',
+    url: '/empresa/logo',
+    preValidation: soDono,
+    schema: {
+      tags: ['configuracoes'],
+      summary: 'Remove a logo da empresa (volta o placeholder do app)',
+      security: sessaoCookie,
+      response: { 200: empresaSchema, 401: erroSchema, 403: erroSchema },
+    },
+    handler: async (request) => {
+      const s = sessaoDe(request);
+      return withEmpresa(pool, s.empresaId, async (c) => {
+        const r = await c.query(
+          `UPDATE empresas SET logo_bytes = NULL, logo_mime = NULL WHERE id = $1 RETURNING ${LOGO_SELECT}`,
+          [s.empresaId],
+        );
+        await registrarEvento(c, {
+          empresaId: s.empresaId,
+          atorTipo: 'usuario',
+          atorId: s.usuarioId,
+          alvoId: s.empresaId,
+          tipo: 'empresa_logo_alterada',
+          em: agora(),
+        });
+        return r.rows[0];
+      });
+    },
+  });
 
   // ---------------------------------------------------------------- categorias
   rotas.get(

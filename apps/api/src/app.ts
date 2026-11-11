@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { healthResponseSchema } from '@ailow/shared';
+import { LOGO_MAX_BYTES } from '@ailow/shared';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import fastifySwagger from '@fastify/swagger';
 import fastify, { type FastifyError, type FastifyInstance, type FastifyServerOptions, LogController } from 'fastify';
 import {
@@ -64,12 +66,12 @@ export async function buildApp({
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Ailow Cloud API', version: '0.5.0' },
+      info: { title: 'Ailow Cloud API', version: '0.5.1' },
       tags: [
         { name: 'acesso', description: 'Entrar, aparelho vinculado, PIN e sessão' },
         { name: 'usuarios', description: 'Gestão de usuários da empresa (somente Dono)' },
         { name: 'admin', description: 'Administração da plataforma (Admin com TOTP)' },
-        { name: 'configuracoes', description: 'Dados da empresa, markup e categorias (somente Dono)' },
+        { name: 'configuracoes', description: 'Dados da empresa, markup, logo e categorias (somente Dono; GET logo com sessão)' },
         { name: 'financeiro', description: 'Despesas, contas a pagar, estorno e relatórios (somente Dono)' },
       ],
       // Autenticação por cookie de sessão no servidor (ADR 004); nenhum token é exposto ao JavaScript.
@@ -85,6 +87,10 @@ export async function buildApp({
   });
 
   await app.register(fastifyCookie);
+  // Upload da logo (RF-CFG-02): um arquivo, até LOGO_MAX_BYTES; throwFileSizeLimit gera erro no toBuffer.
+  await app.register(fastifyMultipart, {
+    limits: { files: 1, fileSize: LOGO_MAX_BYTES },
+  });
   app.decorateRequest('sessao', null);
   app.decorateRequest('aparelho', null);
   app.decorateRequest('admin', null);

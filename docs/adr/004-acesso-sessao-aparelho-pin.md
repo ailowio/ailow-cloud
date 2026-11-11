@@ -1,7 +1,7 @@
 # ADR 004: Acesso — sessão no servidor, aparelho vinculado, PIN e TOTP do Admin
 
-- **Status:** proposto (vira aceito quando o Pedro mergear o PR da S04; a numeração 003 está reservada para a S08)
-- **Data:** 2026-11-11
+- **Status:** aceito em 2026-11-12 pelo Pedro (código na main desde a S04 / PR #5; a numeração 003 segue reservada para a S08)
+- **Data:** 2026-11-11 (aceite: 2026-11-12)
 - **Decisores:** Pedro (dono do produto); proposta redigida com apoio de IA
 - **Tier do app:** B
 - **Regras do harness relacionadas:** SEC-04, SEC-07, SEC-16, SEC-17, AUD-02/03/04/06/10/11, TEST-17

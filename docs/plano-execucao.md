@@ -321,15 +321,23 @@ Pronto para: colar o Prompt da S07 numa conversa nova.
 
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [x] **Mover o arquivo de ambiente real para a pasta do app.** Feito 2026-11-12: `D:\apps\.env` → `D:\apps\ailow-cloud\.env`; `git check-ignore -v .env` ok; removida linha duplicada vazia `AUTH_PEPPER=` que quebrava o Compose (last-wins). Não ler/colar conteúdo (SEC-01).
-- [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
-- [x] **WSL2 + Docker Desktop + Compose local.** Feito 2026-11-12: WSL 3.0.5 + Ubuntu (WSL2); Docker engine ok; `docker compose up --build` → `/health` `{"status":"ok","db":"ok"}`, `/openapi.json` 200. Guia: `docs/dev-windows.md`. Aviso não bloqueante: nested virt `ERROR_INVALID_DATA`. Lição L-0013.
+- [ ] Decidir a reescrita do histórico do Git (acervo): **adiada** (Pedro 2026-11-12: não limpar ainda). Sem force-push/ruleset neste ciclo.
+- [x] **WSL2 + Docker Desktop + Compose local.** Feito 2026-11-12. Nested virt `ERROR_INVALID_DATA` = limitação aceita (`docs/dev-windows.md`).
+
+### Limpeza de pendências (pós-plano; paralelo à S07 no Claude Code) — 2026-11-12 — Composer
+Gate: feature logo + bugfix PIN + tooling + docs, **tier B**. Branch `chore/limpeza-pendencias-pos-s07` (worktree; S07 ainda WIP fora desta branch).
+Feito:
+- **ADR 004 aceito** (código já na main desde S04).
+- **RF-CFG-02 logo via UI:** migração `logo_bytes`/`logo_mime` (PNG/JPEG/WebP ≤ 512 KiB, sem SVG); `PUT/DELETE/GET /empresa/logo`; Configurações > Empresa envia/troca/remove; OpenAPI 0.5.1; `@fastify/multipart`.
+- **L-0011:** asserção SEC-16 parseia JSON do log (não substring solta em `time`/UUID).
+- **`npm run dev:parar`** (L-0012 ação 3).
+- **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS → S14; Safari/iOS → só Chromium por ora; texto 13–14 px aceito; nested virt aceito.
+Verificação: `npm run verify` (ver PR).
 
 ### Estado de retomada — 2026-11-12 (pronto para S07; sanado)
-- **Git:** PRs #9, #10 e **#11** (docs Windows/WSL) **mergeados**. `main` local = `origin/main` (`507a8b2`). `git rev-parse --show-toplevel` = `D:/apps/ailow-cloud`. Sem PR aberto.
-- **Ambiente:** `.env` no app (ignorado); WSL2+Ubuntu; Docker ok. **Compose derrubado** de propósito (`docker compose down`) — portas 3000/54329/5173 livres para `dev:*` na S07. Volume do Postgres do Compose permanece (sem `-v`).
-- **Docs:** `docs/dev-windows.md` na main; prompt da S07 no plano.
-- **Próximo passo:** conversa nova + colar o **Prompt da S07** abaixo. Branch a partir desta `main`.
-- **Em aberto (NÃO bloqueiam a S07 — não sanar agora):** ADR 004 ainda "proposto" (código já na main; aceitar em PR docs quando quiser); logo/RF-CFG-02; reescrita do histórico (acervo) — só com pedido explícito + ruleset; L-0011 (PR próprio); `dev:parar` (L-0012); proxy HTTPS S14; texto 13–14 px; Safari/iOS; nested virt `ERROR_INVALID_DATA` (cosmético).
+- **Git:** PRs #9–#12 mergeados na main de base desta limpeza. S07 segue no Claude Code (`feature/s07-produtos`) — mergear limpeza e S07 com cuidado (proxy/modulos).
+- **Ambiente / docs:** `.env` ok; WSL/Docker ok; `docs/dev-windows.md`; `dev:parar` disponível.
+- **Em aberto (adiados):** reescrita histórico acervo; proxy HTTPS S14; Safari/iOS; polish visual 13–14 px (aceito).
 
 ### Estado de retomada — 2026-11-11 (histórico)
 - **Git:** S05 (PR #6) e S05b (PR #7) mergeados; handoff apontava para S06. Superado pelos estados e PRs #9/#10 acima.

@@ -23,6 +23,7 @@ export function Financeiro(props: { api: Api; aoVoltar: () => void }) {
   return (
     <Moldura
       titulo={item?.titulo ?? 'Financeiro'}
+      logoEmpresa
       voltar={{
         rotulo: item ? 'Financeiro' : 'Início',
         aoVoltar: item ? () => setSecao('menu') : props.aoVoltar,
