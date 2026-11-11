@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, NumberInput, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Group, NumberInput, Stack, Text, TextInput } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import type { Empresa as DadosEmpresa } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { Valor } from '../../componentes';
+import { Logo } from '../../componentes/Logo';
 import { bpsParaPercentual, exemploPrecoCentavos, formatarTelefone, percentualParaBps } from '../../lib/formatos';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { useAcao } from './comum';
@@ -54,6 +55,13 @@ function FormDados(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Promi
 
   return (
     <Stack gap="md">
+      {/* RF-CFG-02: o envio da logo da empresa ainda não existe; este espaço mostra o placeholder. */}
+      <Group gap="md" wrap="nowrap" align="center">
+        <Logo altura={64} alt="Logo da empresa (placeholder)" />
+        <Text size="sm" c="dimmed">
+          Logo da empresa: o envio chega em breve.
+        </Text>
+      </Group>
       <TextInput label="Nome da empresa" required size="lg" maxLength={120} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
       <TextInput
         label="Telefone"

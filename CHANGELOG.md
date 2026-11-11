@@ -16,6 +16,7 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 - Shell PWA (S05): app instalável (manifest, ícones, service worker mínimo que só guarda a casca estática e nunca a API); fluxo Entrar → "Quem está usando?" → PIN → tela inicial 3×N filtrada por perfil, tratamento de PIN errado (tentativas restantes), usuário bloqueado e sessão expirada; trava por inatividade alinhada ao limite do servidor (`GET /acesso/eu` agora informa `inatividade_minutos`).
 - Configurações (S05, só Dono): usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar, trocar o próprio PIN), dados da empresa, trava por inatividade, markup padrão (em pontos-base, inteiro) e categorias com atributos. API: `GET/PUT /empresa`, `GET/POST /categorias`, `PUT /categorias/{id}` (OpenAPI 0.3.0). Migração reversível `20261111180000_configuracoes` (colunas novas em `empresas` e `categorias`; RLS e GRANT já existentes cobrem).
+- Logo placeholder (S05): `apps/web/public/logo.svg` aparece no topo de todas as telas e em Configurações > Empresa; para usar a logo definitiva basta substituir o arquivo (teste garante SVG seguro e fora do cache do service worker). O envio da logo por empresa (RF-CFG-02) segue pendente.
 - Desenvolvimento sem Docker: `npm run dev:db` (Postgres embutido persistente, banco separado dos testes), `dev:seed`, `dev:api` (COOKIE_SECURE=false só no dev) e `dev:web` (proxy do Vite para a API, mesma origem).
 
 ### Alterado

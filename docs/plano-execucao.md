@@ -207,6 +207,10 @@ Verificação: `npm run verify`; `node harness/scripts/check-harness.mjs` -> Har
 
 **Aguardando portão do Pedro (mergear o PR #6).** O prompt da S06 só vale após o ok.
 
+### S05b — Placeholder da logo — 2026-11-11 — Claude Sonnet 5.5
+Pedido do Pedro após o merge do PR #6: placeholder para a logo (ele envia a definitiva depois); texto pequeno (13–14 px) **aceito por ora**, aprovação visual dele depois. Feito: `apps/web/public/logo.svg` (placeholder), componente `Logo`, usado no topo de todas as telas e em Configurações > Empresa ("o envio chega em breve"). Troca = substituir o arquivo; o teste `logo.test.ts` (Red -> Green) exige SVG com viewBox, sem script/link externo, e fora de `/icons` e `/assets` (o service worker guardaria a logo antiga). O texto "Ailow" ao lado da marca fica até a logo definitiva trazer o nome (comentário em `Moldura.tsx`).
+Verificação: `npm run verify` exit 0 (202 + 62 + 22 testes); Playwright 360×640 nos 2 temas: logo carrega, sem overflow. Pendente: envio da logo por empresa (RF-CFG-02), exige armazenamento de arquivo.
+
 ### Pendências transversais (fora de sessão) — 2026-11-11
 - [ ] **Mover o arquivo de ambiente real para a pasta do app.** Ele foi salvo na raiz do workspace (`D:\apps`), mas pertence ao ailow-cloud: o lugar certo é `D:\apps\ailow-cloud\` (o Compose lê o arquivo de ambiente ao lado do `compose.yaml`). Fazer ao finalizar a configuração local; não ler nem colar o conteúdo (SEC-01); confirmar com `git check-ignore -v` que o novo caminho está ignorado e apagar o da raiz. Dono: Pedro.
 - [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
