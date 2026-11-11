@@ -68,3 +68,17 @@ describe('endpoints de Produtos', () => {
     expect(chamadas).toEqual([{ url: '/estoque/alertas', metodo: 'GET', corpo: undefined }]);
   });
 });
+
+describe('endpoint de Etiquetas (S08, RF-PRO-06)', () => {
+  it('POST /etiquetas com os itens do contrato e devolve o PDF', async () => {
+    const chamadas: { url: string; metodo?: string; corpo?: unknown }[] = [];
+    const fetchFalso = (async (url: string, init?: RequestInit) => {
+      chamadas.push({ url, metodo: init?.method, corpo: JSON.parse(String(init?.body)) });
+      return new Response(new Uint8Array([1]), { status: 200, headers: { 'content-type': 'application/pdf' } });
+    }) as typeof fetch;
+    const itens = [{ sku_id: 'abc', quantidade: 3 }];
+    const blob = await criarApi(criarCliente({ fetch: fetchFalso })).etiquetasPdf(itens);
+    expect(blob.type).toBe('application/pdf');
+    expect(chamadas).toEqual([{ url: '/etiquetas', metodo: 'POST', corpo: { itens } }]);
+  });
+});

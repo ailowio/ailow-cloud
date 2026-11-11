@@ -1,7 +1,7 @@
 # Diário ativo (as 3 últimas entradas)
 
 > Regras (skill `execucao-em-sessoes`): entrada nova ≤ 2 KB; ao passar de 3 entradas ou ~8 KB, mover as mais antigas, **sem editar**, para `ARQUIVO-*.md`. Detalhe técnico longo (mutações, medições) vai para a descrição do PR.
-> Arquivo: `docs/diario/ARQUIVO-S00-S06.md` (S00 a S06b e Prep ambiente Windows; ler só sob demanda).
+> Arquivo: `docs/diario/ARQUIVO-S00-S06.md` (S00 a S06b e Prep ambiente Windows) e `ARQUIVO-S07-S09.md` (S07 em diante); ler só sob demanda.
 
 Template:
 ```text
@@ -13,40 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S07 — Produtos — 2026-11-11 — Claude Sonnet 5.5
-Gate declarado: feature + mudança de banco + UI + dinheiro/estoque, **tier B**; regras TEST-01..08/12/17, CODE-*, SEC-03/07, OPS-11, ARQ (ADR), AUD-02/09/10, MC. Decisão estrutural ⇒ **ADR 006 (proposto)**. Critérios: RF-PRO-01…05/07 e RN-03/RN-05 com teste; saldo 0 não baixa; concorrência no limite; custo ausente para o Vendedor (2 empresas × 2 perfis); mutação ≥ 8 defeitos; navegador 360×640 nos 2 temas; `verify` e CI verdes.
-Estado real ao abrir: `git rev-parse --show-toplevel` = `D:/apps/ailow-cloud`, `main` limpa em `507a8b2`, portas 54329/3000/5173 livres; **PR #12 (handoff) ainda aberto**, então a branch `feature/s07-produtos` saiu da `main` (o PR #12 só retoca este plano: pode haver conflito trivial em `docs/plano-execucao.md` na hora de mergear).
-Feito (branch `feature/s07-produtos`):
-- **Banco:** migração reversível `20261112180000_produtos`: `produtos`, `skus` e `movimentos_estoque` (RLS forçada, política `isolamento_empresa`, GRANT explícito, chaves compostas por empresa). Movimentos só-acréscimo (`SELECT`/`INSERT`), com autor, motivo, quantidade com sinal, `saldo_apos`, `seq` (ordem de gravação) e o id da venda nos tipos `venda`/`estorno_venda` (índice único: a mesma venda não baixa nem estorna o mesmo SKU duas vezes, RN-08). `CHECK (estoque >= 0)` (RN-03). Chave estrangeira composta com coluna gerada `'produto'`: **o banco recusa categoria financeira** num produto, e `ON DELETE RESTRICT` impede apagar categoria em uso (só desativa). Subir, descer e subir testado (`migracao.test.ts`).
-- **Interface pública de estoque** (`src/produtos/estoque.ts`, `registrarMovimento`): `UPDATE ... AND estoque + $q >= 0` com a linha travada, na transação do chamador; teste de fronteira (só `src/produtos/` cita as tabelas). O estoque inicial do cadastro usa a mesma função.
-- **API (OpenAPI 0.6.0):** `GET/POST /produtos` (cadastro com SKUs, código `PPPP-TT-CCC`, estoque inicial e mínimo por SKU; busca por nome sem acento/caixa, código e preço: "89,90" exato, "89" a faixa de R$ 89,00 a R$ 89,99), `POST /skus/{id}/estoque` (entrada/ajuste, só Dono), `GET /skus/{id}/movimentos`, `GET /estoque/alertas`. Numeração sem buraco por `pg_advisory_xact_lock` por empresa. **Vendedor:** custo, fornecedor e mínimo não são nem selecionados e a chave some da resposta; criar, ajustar, histórico e alertas dão 403. Criar e ajustar gravam `eventos_acesso`.
-- **Shared:** contrato de Produtos e regras puras sem dependência (`produtos-calculos.ts`: preço sugerido em centavos, código de SKU/cor, ordem de tamanhos, faixa de preço), expostas ao navegador por `@ailow/shared/puro` para o web não levar o Zod (conferido: 0 marcas do Zod no bundle).
-- **Web:** módulo Produtos (lista/busca com debounce, cartão por produto com variações, aba "Abaixo do mínimo"), assistente "Novo produto" em 6 passos (categoria → nome e porte → atributos [pulado se a categoria não tem] → tamanhos e cores [grades da P1 + tamanho/cor digitados] → custo, preço com sugestão do markup e fornecedor → estoque inicial e mínimo por SKU, com "aplicar a todos"), folha do SKU (código, **QR gerado no aparelho com `uqr` 0.1.3**, entrada/ajuste com motivo e histórico com autor) e **aviso vermelho na tela inicial do Dono** (3 primeiros itens + selo no bloco Produtos). Produtos deixou de ser "em breve" (`modulos.ts` + teste).
-Números (antes -> depois): testes API 386 -> 530, web 128 -> 195, shared 59 -> 136; migrações 5 -> 6; rotas 29 -> 34; OpenAPI 0.5.0 -> 0.6.0; bundle de produção 526 kB -> 599 kB (Mantine + telas novas; sem Zod; code-split fica para a S13).
-Evidência do "pronto quando":
-- `npm run verify` exit 0 (1 aviso antigo de lint em `main.tsx`; 530 + 195 + 136 testes; build).
-- **RN-03:** saldo 0 não baixa (nada gravado); baixar mais que o saldo recusa; baixar exatamente o saldo zera; **concorrência no limite** com a 1ª transação aberta e a 2ª comprovadamente bloqueada (400 ms) e depois recusada, e 5 baixas simultâneas com saldo 3 = exatamente 3 passam; pela API, 2 baixas simultâneas = 200 e 409; `UPDATE` para saldo negativo é recusado pelo banco.
-- **RF-PRO-07:** o texto cru da resposta do Vendedor não contém `custo`, `fornecedor` nem `estoque_minimo`; `GET /estoque/alertas` e o histórico dão 403 a ele; 2 empresas × 2 perfis em `produtos.test.ts` e isolamento nas 3 tabelas em `rls-produtos.test.ts` (70 casos).
-- **Mutação (L-0006), 17 defeitos plantados por script (`split/join`, sem regex), todos pegos** e os arquivos restaurados (`git status` limpo depois): baixa sem a condição `>= 0`; códigos de erro trocados; `saldo_apos` errado; custo/fornecedor selecionados ao Vendedor; mínimo selecionado ao Vendedor; alerta com `<=`; criar produto sem `exigirPerfil`; histórico aberto ao Vendedor; numeração sem a trava; categoria financeira aceita; busca sem tratar acento; banco sem o `CHECK` de saldo; `GRANT UPDATE` em movimentos; política de `skus` com `USING (true)`; preço sugerido sem arredondar; Produtos "em breve"; sinal de menos como hífen. Nenhum sobreviveu na 1ª rodada.
-- **Navegador (Playwright, Chromium 360×640, escuro e claro):** lista, busca por código, os 6 passos do assistente, cadastro de um produto de 24 variações, folha do SKU (ajuste negativo bloqueado quando passa do saldo; "Vai ficar com 0"; histórico com autor), aba "Abaixo do mínimo", tela inicial com o aviso e a visão do Vendedor. Medido em cada tela: 0 rolagem horizontal, 0 texto cortado, 0 elementos fora da tela, 0 alvos < 48 px; nome de produto de 53 caracteres quebra em linhas (D23). **2 defeitos só achados no navegador e corrigidos:** o rótulo "Continuar" era cortado (padding do botão; o último passo agora empilha os botões) e o `Switch` dos atributos tinha alvo de 30 px (linha de 48 px). Contraste do botão do aviso conferido (branco sobre `#c92a2a`, ≈ 6:1; antes ficava abaixo de 4,5:1).
-- **QR:** o SVG renderizado na folha foi decodificado por um leitor **independente** (`jsqr`, instalado só fora do repositório) e devolveu exatamente `0001-40-CHO`; e `0042-46-CHO` cabe na versão 1 (21×21) com correção M (teste `qr.test.ts`): resolve o "a validar" da P2 para esse código. **Não** foi lido com câmera de celular nem impresso (S08).
-Decisões e limites (propostas por mim; o Pedro confirma ao mergear — também no ADR 006):
-- Aviso = estoque **estritamente abaixo** do mínimo (`<`); mínimo 0 = sem aviso. (O selo "Baixo" do DS passou de `<=` para `<` para casar com o aviso.)
-- Preço sugerido arredondado ao centavo (metade para cima): o PRD diz "sem arredondamento", impossível em centavos (RN-01). A API guarda o preço digitado.
-- Fornecedor = texto livre no v1; tabela na S11. Produto **imutável** nesta versão (sem editar preço, nome, grade nem desativar): preço errado exige produto novo até uma migração de edição (pendência abaixo).
-- Limites: 144 variações e 12 cores por produto, 9.999 produtos por empresa (4 dígitos do código), 200 produtos na lista.
-- Vendedor também não vê fornecedor nem estoque mínimo (além do custo), por ser decisão de compra.
-Pendências / riscos honestos:
-- **CI do PR #14:** 6/6 verdes (verify, compose, imagem, seguranca-sast, seguranca-sca, seguranca-segredos; run 43112617551). O Compose não foi rodado localmente (só no CI).
-- Sem **edição de produto**, sem acrescentar tamanho/cor depois, sem desativar produto: o produto vai precisar de uma sessão de edição (preço é urgente na prática).
-- Para a S10 falta uma função de consulta (buscar SKU por código e preço, na transação da venda): deixei de fora por ser YAGNI até lá.
-- Saldo e movimentos são consistentes pela interface (o runtime ainda pode atualizar `estoque` direto); trigger avaliado e adiado (ADR 006, alternativa 2).
-- Testado só no Chromium; não em Safari/iOS nem com câmera real. Texto de 13–14 px segue como no DS.
-- Perguntas do Marcos da P1 (Q1–Q5: as "3 medidas" do sutiã, Plus por letra ou G1/G2, preço por tamanho, cores, atacado) continuam abertas e podem mexer no modelo.
-- O dev local (`.dev-data/`) ganhou categorias e 1 produto de teste (`Tomara que caia Essência…`, nº 0001); apague a pasta para recomeçar. Servidores de dev parados por PID/`pg_ctl` e portas conferidas livres (L-0012).
-Aprendizado: **L-0014** (testes com ordem/busca dependentes de uuid/hex aleatório, achados antes do merge; lição ativa 11) e recorrência da L-0011; o guarda do proxy (L-0009) e o contrato OpenAPI funcionaram como desenhados. Falhas minhas no caminho, todas corrigidas antes do commit: expectativa de código de erro do banco errada no teste (`23001`, não `23503`); teste que procurava o código de B na A (o código é único por empresa); conversão centavos→texto improvisada (virou função com teste); um lote de testes de rótulos foi escrito junto com a implementação, **sem observar o vermelho separadamente**. `node harness/scripts/check-harness.mjs` -> Harness OK (14 lições).
-Verificação: `npm run verify` exit 0; mutação 17/17; Playwright 360×640 nos 2 temas; decodificação do QR; `check-harness`.
-
 ### Limpeza de pendências (pós-plano; paralelo à S07 no Claude Code) — 2026-11-12 — Composer
 Gate: feature logo + bugfix PIN + tooling + docs, **tier B**. Branch `chore/limpeza-pendencias-pos-s07` (worktree; S07 ainda WIP fora desta branch).
 Feito:
@@ -56,4 +22,12 @@ Feito:
 - **`npm run dev:parar`** (L-0012 ação 3).
 - **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS → S14; Safari/iOS → só Chromium por ora; texto 13–14 px aceito; nested virt aceito.
 Verificação: `npm run verify` (ver PR).
+
+### S08 — Etiquetas QR — 2026-11-11 — Claude Opus 5.5
+Gate: feature API + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-03, ARQ (ADR 003), CI-01, MC. Decisão do Pedro na sessão: **bobina 33 × 22 mm em 3 colunas** (não 40 × 25), PDF **na API com pdfkit**.
+Feito (branch `feature/s08-etiquetas`): `POST /etiquetas` (só Dono) devolve PDF com **uma fileira de 3 por página**; QR vetorial só com o código (versão 1, correção M, zona de 4 módulos, módulo 0,5 mm = 4 pontos a 203 dpi); texto: nome, tamanho em destaque, cor, preço, código; **sem custo nem fornecedor**. Até 999 por PDF; SKU de outra empresa, inexistente ou de produto inativo = 404. Tela "Etiquetas" em Produtos: busca, quantidade por SKU, "Usar o estoque", resumo de fileiras/em branco, download com o dia de São Paulo. ADR 003 **proposto**.
+Números: testes API 535 -> 571, web 195 -> 215, shared 136 -> 151; OpenAPI 0.6.0 -> 0.7.0; bundle web +7,5 kB.
+Evidência: `verify` exit 0; PDF lido por leitor independente (`pdfjs-dist`); PDF **baixado pelo navegador** rasterizado a 203 dpi: **71/71 QRs decodificados** (`jsqr`, fora do repo); mutação **15/15** pegas; Playwright 360×640 nos 2 temas: 0 rolagem, 0 alvo < 48 px, 0 texto cortado (3 cortes achados só no navegador e corrigidos: L-0015). Pedro testou o PDF: "gerou rápido e funcionou".
+Pendências: **(1) impressão física (única):** comprar a bobina, informar o modelo da impressora, imprimir, calibrar (espaço entre colunas 2 mm e margem 1 mm são estimativas; papel 105 × 22 mm; tamanho real 100%) e fotografar a leitura pela câmera, que é o "pronto quando" da S08. (2) Zod já vaza no bundle web da `main` (5 marcas, antes desta sessão). (3) PIN do Dono de dev redefinido para 2468 só no banco local (documentar no seed). (4) Prefixo `etiquetas` no proxy HTTPS da S14.
+Aprendizado: L-0015 (rótulo cortado em 360 px, recorrência 2; lição ativa 12; E2E na S13). Falhas corrigidas (detalhe no PR): opção inexistente do pdfjs 6, nome de arquivo só por caixa, data em UTC, heredoc (lição 1). `check-harness` OK.
 

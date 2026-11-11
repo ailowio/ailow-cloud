@@ -5,6 +5,7 @@ import type {
   ContaAPagar,
   DespesaEntrada,
   Empresa,
+  EtiquetasPedido,
   FormaPagamento,
   Lancamento,
   Movimento,
@@ -74,6 +75,8 @@ export function criarApi(c: Cliente) {
     ajustarEstoque: (skuId: string, a: AjusteEstoque) => p<{ estoque: number }>('POST', `/skus/${skuId}/estoque`, a),
     movimentos: (skuId: string) => p<{ movimentos: Movimento[] }>('GET', `/skus/${skuId}/movimentos`),
     alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),
+    // --- etiquetas (S08, só Dono): o PDF volta como Blob.
+    etiquetasPdf: (itens: EtiquetasPedido['itens']) => c.baixar('/etiquetas', { itens }),
   };
 }
 

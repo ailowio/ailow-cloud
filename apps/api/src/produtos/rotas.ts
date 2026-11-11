@@ -3,6 +3,7 @@ import {
   alertasEstoqueResponseSchema,
   erroSchema,
   estoqueResponseSchema,
+  etiquetasPedidoSchema,
   movimentosResponseSchema,
   produtoCriadoSchema,
   produtoNovoSchema,
@@ -15,10 +16,20 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { type Deps, naoEncontrado, registrarEvento } from '../acesso/comum.js';
 import { type Guardas, sessaoDe } from '../acesso/guardas.js';
 import { withEmpresa } from '../db.js';
+import { FUSO } from '../financeiro/lancamentos.js';
 import { ErroEstoque, registrarMovimento } from './estoque.js';
-import { ErroProduto, alertasDeEstoque, criarProduto, listarProdutos, movimentosDoSku } from './produtos.js';
+import { type DadosEtiqueta, gerarPdfEtiquetas } from './etiquetas.js';
+import {
+  ErroProduto,
+  alertasDeEstoque,
+  criarProduto,
+  dadosDasEtiquetas,
+  listarProdutos,
+  movimentosDoSku,
+} from './produtos.js';
 
 const sessaoCookie = [{ sessao: [] }];
+const DIA_EM_SAO_PAULO = new Intl.DateTimeFormat('en-CA', { timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit' });
 
 function responderErro(reply: FastifyReply, err: unknown) {
   if (err instanceof ErroEstoque) {
@@ -150,6 +161,35 @@ export async function registrarRotasProdutos(app: FastifyInstance, deps: Deps, g
       const movimentos = await withEmpresa(pool, s.empresaId, (c) => movimentosDoSku(c, request.params.id));
       if (movimentos === null) return naoEncontrado(reply);
       return { movimentos };
+    },
+  );
+
+  rotas.post(
+    '/etiquetas',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['produtos'],
+        summary: 'PDF das etiquetas com QR (bobina 33 × 22 mm, 3 colunas; uma página por fileira), sem custo (Dono)',
+        security: sessaoCookie,
+        body: etiquetasPedidoSchema,
+        // 200 = application/pdf (binário, fora do schema Zod; ver ADR 003).
+        response: { 400: erroSchema, 404: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const { itens } = request.body;
+      const dados = await withEmpresa(pool, s.empresaId, (c) => dadosDasEtiquetas(c, itens.map((i) => i.sku_id)));
+      if (dados === null) return naoEncontrado(reply);
+      const etiquetas = itens.flatMap((i) => Array.from({ length: i.quantidade }, () => dados.get(i.sku_id) as DadosEtiqueta));
+      const pdf = await gerarPdfEtiquetas(etiquetas);
+      const dia = DIA_EM_SAO_PAULO.format(agora()); // AAAA-MM-DD; em UTC, às 22h já seria "amanhã"
+      return reply
+        .header('cache-control', 'private, no-store')
+        .header('content-disposition', `attachment; filename="etiquetas-${dia}.pdf"`)
+        .type('application/pdf')
+        .send(pdf as never);
     },
   );
 

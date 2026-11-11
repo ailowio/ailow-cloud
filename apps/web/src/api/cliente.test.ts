@@ -126,3 +126,29 @@ describe('endpoints: método, caminho e corpo de cada chamada', () => {
     expect(chamadas[0]?.init.body).toBe(corpo === undefined ? undefined : JSON.stringify(corpo));
   });
 });
+
+describe('download de arquivo (PDF das etiquetas, S08)', () => {
+  it('POST com JSON devolve o corpo como Blob, com o tipo do servidor', async () => {
+    const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]);
+    const { fn, chamadas } = fetchFalso(() => new Response(pdf, { status: 200, headers: { 'content-type': 'application/pdf' } }));
+    const blob = await criarCliente({ fetch: fn }).baixar('/etiquetas', { itens: [] });
+    expect(chamadas[0]?.init.method).toBe('POST');
+    expect(chamadas[0]?.init.credentials).toBe('same-origin');
+    expect(chamadas[0]?.init.body).toBe(JSON.stringify({ itens: [] }));
+    expect(blob.type).toBe('application/pdf');
+    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(pdf);
+  });
+
+  it('erro da API vira ErroApi com o código (e não um "PDF" com o JSON de erro)', async () => {
+    const { fn } = fetchFalso(() => json(404, { erro: 'nao_encontrado' }));
+    await expect(criarCliente({ fetch: fn }).baixar('/etiquetas', { itens: [] })).rejects.toMatchObject({
+      status: 404,
+      codigo: 'nao_encontrado',
+    });
+  });
+
+  it('sem rede vira sem_conexao', async () => {
+    const { fn } = fetchFalso(() => Promise.reject(new TypeError('falhou')));
+    await expect(criarCliente({ fetch: fn }).baixar('/etiquetas', {})).rejects.toMatchObject({ codigo: 'sem_conexao' });
+  });
+});

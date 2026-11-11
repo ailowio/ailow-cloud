@@ -5,6 +5,7 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 ## [Não lançado]
 
 ### Adicionado
+- Etiquetas com QR (S08, RF-PRO-06, ADR 003 proposto; OpenAPI 0.7.0): `POST /etiquetas` (só Dono) devolve um **PDF para bobina de 33 × 22 mm em 3 colunas, uma fileira por página**, gerado na API com `pdfkit` 0.20.2; QR vetorial só com o código do SKU (`uqr`, versão 1, correção M, zona de silêncio de 4 módulos, módulo de 0,5 mm = 4 pontos a 203 dpi) e texto legível (nome, tamanho em destaque, cor, preço, código), **sem custo nem fornecedor** (RF-PRO-07). Até 999 etiquetas por PDF; SKU de outra empresa, inexistente ou de produto inativo dá 404 sem PDF. Tela "Etiquetas" em Produtos (só Dono): busca, quantidade por SKU, "Usar o estoque", resumo de fileiras e etiquetas em branco, download `etiquetas-AAAA-MM-DD.pdf`. Testes leem o PDF com `pdfjs-dist` (dependência só de teste). **Geometria a calibrar na 1ª impressão** (ver ADR 003).
 - Logo da empresa via UI (RF-CFG-02): `PUT/DELETE/GET /empresa/logo` (PNG/JPEG/WebP ≤ 512 KiB, bytea + MIME em `empresas`, sem SVG); Configurações > Empresa envia/troca/remove; placeholder do app quando não há logo. OpenAPI 0.5.1; `@fastify/multipart` 10.1.8.
 - `npm run dev:parar` — encerra Postgres embutido e libera portas 54329/3000/5173 (L-0012).
 - Monorepo com npm workspaces: `apps/api`, `apps/web`, `packages/shared`; `npm run verify` único na raiz (lint, tipos, testes e build).
