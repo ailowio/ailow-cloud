@@ -1,17 +1,17 @@
 # Matriz de acessos — Ailow Cloud   (AUD-01/03/06/09)
 
-- **Dono do sistema:** Pedro · **Dono dos dados:** cada empresa cliente (a plataforma é operadora) · **Classificação dos dados:** pessoais (nome, e-mail, clientes finais nas próximas sessões) e financeiros (S06+) · **Última atualização:** 2026-11-11 (S05)
+- **Dono do sistema:** Pedro · **Dono dos dados:** cada empresa cliente (a plataforma é operadora) · **Classificação dos dados:** pessoais (nome, e-mail, clientes finais nas próximas sessões) e financeiros (S06+) · **Última atualização:** 2026-11-11 (S06)
 - Estado: **construído na S04, ainda sem produção.** Inventários de rotinas e interfaces nascem na S14 (deploy). Itens "a decidir" dependem do Pedro.
 
 ## 1. Perfis (papéis) e o que cada um pode fazer
 | Perfil | Descrição / função | Dados e telas acessíveis | Pode alterar? | Privilegiado? | Justificativa (menor privilégio) |
 |---|---|---|---|---|---|
 | `vendedor` | quem atende no balcão | só a própria sessão (`/acesso/eu`); módulos de venda nas próximas sessões; **nunca** Financeiro, Compras, Configurações nem custo (RN-10) | não gere usuários | não | precisa vender, não administrar |
-| `dono` | proprietário da empresa | todos os dados **da própria empresa**; gestão de usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar) e Configurações (dados da empresa, trava por inatividade, markup, categorias — `/empresa`, `/categorias`) | sim, na própria empresa | sim (dentro da empresa) | decide quem usa o sistema |
+| `dono` | proprietário da empresa | todos os dados **da própria empresa**; gestão de usuários (criar Vendedor, redefinir PIN, desbloquear, derrubar sessões, desativar), Configurações (dados da empresa, trava por inatividade, markup, categorias — `/empresa`, `/categorias`) e **Financeiro** (despesas, contas a pagar, baixa, estorno, relatórios — `/financeiro/*`, S06) | sim, na própria empresa | sim (dentro da empresa) | decide quem usa o sistema |
 | `admin` (plataforma) | operador da plataforma | criar empresa + Dono; redefinir senha do Dono. **Não** acessa dados de negócio por estas rotas | sim | **sim** | suporte do produto; exige senha + TOTP |
-| `ailow_app` (papel de banco) | runtime da API para dados de negócio | tabelas de negócio via RLS (ADR 002); `eventos_acesso` só leitura/inserção; **sem acesso** a `admins`, `admin_sessoes`, `diretorio_login` | conforme GRANT | não | ver ADR 002/004 |
+| `ailow_app` (papel de banco) | runtime da API para dados de negócio | tabelas de negócio via RLS (ADR 002); `eventos_acesso` só leitura/inserção; `lancamentos` só `SELECT`/`INSERT` + `UPDATE` das colunas da baixa (status, pago_em, forma_pagamento, pago_por), **sem `DELETE`** (RN-06, ADR 005); **sem acesso** a `admins`, `admin_sessoes`, `diretorio_login` | conforme GRANT | não | ver ADR 002/004/005 |
 
-Enforcement: `exigirSessao` + `exigirPerfil('dono')` (`apps/api/src/acesso/guardas.ts`; também nas rotas de Configurações, `apps/api/src/configuracoes/rotas.ts`), RLS por `empresa_id`; provado em `apps/api/test/autorizacao.test.ts` (2 empresas × 2 perfis), `rls-acesso.test.ts` e `configuracoes.test.ts` (Vendedor 403, outra empresa isolada, alteração auditada em `eventos_acesso`). Credenciais do ambiente de desenvolvimento (`npm run dev:seed`) valem só no banco local de dev (`.dev-data/`, ignorado pelo git) e não são acessos reais.
+Enforcement: `exigirSessao` + `exigirPerfil('dono')` (`apps/api/src/acesso/guardas.ts`; também nas rotas de Configurações, `apps/api/src/configuracoes/rotas.ts`, e do Financeiro, `apps/api/src/financeiro/rotas.ts`), RLS por `empresa_id`; provado em `apps/api/test/autorizacao.test.ts` (2 empresas × 2 perfis), `rls-acesso.test.ts`, `configuracoes.test.ts`, `rls-financeiro.test.ts` e `financeiro.test.ts` (Vendedor 403 sem efeito colateral, outra empresa isolada, criar/baixar/estornar auditados em `eventos_acesso`, lançamento imutável no banco). Credenciais do ambiente de desenvolvimento (`npm run dev:seed`) valem só no banco local de dev (`.dev-data/`, ignorado pelo git) e não são acessos reais.
 
 ## 2. Quem tem qual perfil
 | Pessoa | Função | Perfil(is) | Concedido em | Solicitado por | Aprovado por (dono) | MFA? | Próxima revisão |

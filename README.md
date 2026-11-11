@@ -2,13 +2,13 @@
 
 ERP mobile multi-tenant para lojistas pequenos: vender pelo celular com QR code, estoque e financeiro integrados, botões grandes para quem não é da tecnologia. Primeiro cliente e caso de uso: Marcant Moda Íntima (`acervo/marcant/`).
 
-**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (sessão S05 de 14: acesso e Configurações no ar; os demais módulos vêm nas próximas sessões).
+**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (sessão S06 de 14: acesso, Configurações e o núcleo do Financeiro no ar; os demais módulos vêm nas próximas sessões).
 
 ## Estrutura
 
 ```
 apps/api         API Node/TS (Fastify + Zod → OpenAPI 3.1), migrações SQL, testes com Postgres real
-apps/web         PWA Vite + React + Mantine (acesso, tela inicial e Configurações; catálogo do DS em /?catalogo só em dev)
+apps/web         PWA Vite + React + Mantine (acesso, tela inicial, Configurações e Financeiro; catálogo do DS em /?catalogo só em dev)
 packages/shared  schemas Zod compartilhados entre API e web
 compose.yaml     Postgres 18 + migração + API (local)
 ```
@@ -36,6 +36,7 @@ npm run dev:web    # 4) app em http://localhost:5173 (o proxy do Vite leva a API
 - Os dados e os segredos de dev (senha do banco, `AUTH_PEPPER`) ficam em `.dev-data/` (ignorado pelo git), gerados na primeira execução. Apague a pasta para recomeçar do zero.
 - O banco de dev (`ailow_dev`) é separado do banco temporário dos testes (ENV-13). Estes scripts recusam rodar com `NODE_ENV=production`.
 - O proxy mantém navegador e API na mesma origem, então o cookie de sessão (httpOnly, `SameSite=Strict`) funciona sem CORS e **nenhum token passa pelo JavaScript**. Se a API estiver em outra porta, use `API_URL=http://127.0.0.1:PORTA npm run dev:web`.
+- O proxy só repassa à API os prefixos listados em `apps/web/vite.config.ts`. Criou um prefixo novo de rota (ex.: `/produtos`)? Acrescente-o lá: o teste `apps/api/test/proxy-web.test.ts` reprova se faltar.
 - O catálogo do Design System fica em `http://localhost:5173/?catalogo` (só em desenvolvimento).
 - O service worker só é registrado no build de produção (`npm run build` + `npx vite preview` em `apps/web`), para não guardar arquivos velhos durante o desenvolvimento.
 - O Compose (abaixo) segue como caminho oficial e o da VPS; `dev:db` é só conveniência local.
@@ -75,7 +76,7 @@ Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` 
 | Doc | Onde |
 |---|---|
 | PRD | `docs/prd/PRD-ailow-cloud-v1.md` |
-| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP) |
+| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP · 005 Financeiro: lançamentos imutáveis e interface pública) |
 | Instruções para agentes de IA | `CLAUDE.md` / `AGENTS.md` |
 | Como contribuir | `CONTRIBUTORS.md`, `.github/pull_request_template.md` |
 | Matriz de acessos (auditoria) | `docs/auditoria/matriz-acessos.md` |
