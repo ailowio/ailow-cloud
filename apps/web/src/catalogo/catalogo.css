@@ -1,4 +1,0 @@
-/* Tabela só no computador; no celular a lista vira cartões (princípio 6 do Design System). */
-@media (min-width: 48em) {
-  .so-desktop { display: block !important; }
-}

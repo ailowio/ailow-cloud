@@ -1,79 +1,86 @@
 # Design System — Ailow Cloud
 
-> Sessão S02 · 2026-11-10 · Status: **proposta — aguarda aprovação do Pedro (🚦)**
-> Base: **Mantine** (MIT) + `mantine-datatable` (D20). Versões: Mantine **9.8.0** saiu em 10/11/2026 (hoje) → fixar **9.7.x** (≥ 2 semanas; 9.7.3 de 17/10/2026); `mantine-datatable` 9.7.5 declara compatibilidade com Mantine 9.x. Fontes: [changelog Mantine](https://mantine.dev/changelog/previous-versions/), [mantine-datatable](https://icflorescu.github.io/mantine-datatable/). **Conferir de novo na S03 antes de instalar (IA-05).**
-> **Verificado na documentação oficial (10/11/2026):** `createTheme` e `MantineProvider` vêm de `@mantine/core`; `colors` = objeto de arrays com ao menos 10 tons; `primaryShade` aceita número (0–9) ou `{ light, dark }` (padrão `{ light: 6, dark: 8 }`); `autoContrast` + `luminanceThreshold` (padrão 0,3); `defaultRadius`; `headings.fontWeight` é string; `MantineProvider` tem `defaultColorScheme` (`light | dark | auto`) e `forceColorScheme`. Fontes: [theme object](https://mantine.dev/theming/theme-object/), [MantineProvider](https://mantine.dev/theming/mantine-provider/), [getting started](https://mantine.dev/getting-started/).
-> **Ainda não verificado:** o tipo `MantineColorsTuple` (as páginas não o citam; usar só se existir na 9.7.x) e a chave exata de `fontSizes`. Instalação (sem framework, vale para Vite): `@mantine/core @mantine/hooks`, dev `postcss postcss-preset-mantine postcss-simple-vars`, `import "@mantine/core/styles.css"`. Confirmar a versão mínima do React na S03.
+> Status: **v1.1 — identidade Ailow azul + laranja** (2026-11-10, D23). Histórico: v0 magenta/dourado (recusada) → v1 violeta (recusada) → v1.1.
+> **Código vivo:** `apps/web/src/tema/` (tokens) e `apps/web/src/componentes/` (componentes). Catálogo: `npm run dev -w apps/web` → http://localhost:5173.
+> Base: **Mantine 9.7.3** + **mantine-datatable 9.7.5** (D20), versões exatas. Fontes auto-hospedadas (sem requisição a terceiros): **Sora** (títulos) e **Manrope** (texto), licença OFL-1.1.
 
-## 1. Princípios (do discovery para a tela)
+## 1. Princípios
 
 | # | Princípio | Regra prática | Referência de padrão |
 |---|---|---|---|
-| 1 | **Botão grande, pouca escolha** | Toque ≥ **48×48 px**; máx. **3 botões por linha**; 1 ação primária por tela | Material 3 (alvos de toque), Spectrum (acessibilidade) |
-| 2 | **Uma palavra** | Módulos e botões com 1 palavra; verbo no infinitivo nas ações ("Vender", "Salvar", "Finalizar") | D4 |
-| 3 | **Passo a passo** em vez de formulário longo | Cadastro de produto e fechamento de venda em **etapas** (Stepper), uma decisão por tela | Salesforce Lightning (wizards) |
-| 4 | **Nunca tela vazia muda** | Todo vazio diz o que vai aparecer e tem o botão para começar | Shopify Polaris (empty states) |
-| 5 | **Estado visível sem ler número** | Estoque baixo = selo vermelho; vencido = faixa; pago = verde | Polaris (badges), Atlassian (feedback) |
-| 6 | **Lista que vira tabela** | Celular: **cartões** empilhados; computador: **tabela** (`mantine-datatable`) com filtros no topo | Polaris (index table), GitLab Pajamas (filtros) |
-| 7 | **Feedback imediato** | Toda ação responde: notificação curta ("Venda 1827 finalizada"); erro diz o que fazer | Atlassian (flags/banners) |
-| 8 | **Cor semântica ≠ cor da marca** | Sucesso/alerta/perigo têm tokens próprios; a cor da empresa nunca indica erro | GitHub Primer (tokens semânticos) |
+| 1 | **Botão grande, pouca escolha** | Toque ≥ **48×48 px**; máx. **3 por linha**; 1 ação primária por tela | Material 3, Adobe Spectrum |
+| 2 | **Uma palavra** | Módulos e botões com 1 palavra; ações no infinitivo | D4 |
+| 3 | **Passo a passo** | Formulários longos viram etapas com "Passo N de M" + barra | Salesforce Lightning (wizards) |
+| 4 | **Nunca tela vazia muda** | Todo vazio diz o que vai aparecer e oferece a ação | Shopify Polaris |
+| 5 | **Estado visível sem ler número** | Estoque baixo = âmbar; zerado/erro = vermelho | Polaris, Atlassian |
+| 6 | **Lista que vira tabela** | Celular: cartões; computador (≥ 48em): `mantine-datatable` | Polaris, GitLab Pajamas |
+| 7 | **Feedback imediato** | Notificação curta no sucesso; erro fica até fechar e diz o que fazer | Atlassian |
+| 8 | **Camadas, não um fundo só** | Fundo da página ≠ superfície dos cartões, nos dois temas | GitHub Primer (tokens de superfície) |
 
-## 2. Tema em duas camadas (multi-tenant)
+## 2. Identidade (brief do Pedro + D23)
 
-```
-Camada 1 — Ailow Cloud (fixa): neutros, tipografia, espaçamento, raios, cores semânticas, componentes
-Camada 2 — Empresa (por tenant, em Configurações): cor primária, cor de destaque, logo/ícone, tema padrão (claro/escuro)
-```
+Tecnologia premium: **navy profundo e slate escuro** como base, **azul elétrico como primária** e **laranja como destaque** (a mistura azul + laranja é a assinatura). Ciano só em detalhes. Sem violeta.
 
-O produto é um só; **cada loja vê a própria marca**. A Marcant é o primeiro tema de empresa.
-
-### 2.1 Tema da empresa Marcant
-
-| Token | Escala (10 tons, 0 → 9) | Uso |
+| Escala Mantine | Tom da marca | Papel |
 |---|---|---|
-| `marca` (primária) | `#fde9f1 #f9c6da #f39fc0 #ec77a6 #e4518d #d63777 #b82a63 #952150 #72193d #4f102a` | Botão primário, foco, seleção. **Tom 6 no claro** (contraste com texto branco ≈ 5,9:1) e **tom 5 no escuro** (≈ 4,5:1) |
-| `ouro` (destaque) | `#fbf5e6 #f3e5c0 #e9d296 #dfbe6b #d4ab4a #c39836 #a67f2b #856523 #644c1a #433311` | Ícone "M", destaque de totais, selos premium. Texto dourado sobre branco **só no tom 7** (≈ 5,4:1) |
-| Tema padrão | **escuro** (o Marcos: "só gosto de tema escuro" — R1 55:00) com troca para claro | |
+| `azul` | `#2448FF` (índice 6) | **Primária**: botões, bloco "Vendas" com brilho, seleção, barra de progresso |
+| `coral` | `#FF7043` (5) | **Destaque laranja**: total do carrinho, pontos do PIN, marca no topo |
+| `ambar` | `#FF9A52` (5) | Alerta: estoque baixo |
+| `ciano` | `#39CFFF` (5) | Detalhes luminosos, com moderação |
+| `red` (nativa) | — | **Perigo**: zerado, erro, contador de alertas (separado do laranja da marca) |
+| `dark` (substituída por navy) | `#111832` (7) | Base neutra do tema escuro |
 
-Origem: parede magenta, "M" dourado e fachada rosé (fotos F18–F25, P3). Os contrastes foram calculados pela fórmula de luminância relativa do WCAG; **reconferir com ferramenta na S05**.
+Texto colorido usa tokens próprios com contraste medido: `--ailow-primario-texto` e `--ailow-laranja-texto`.
 
-### 2.2 Camada Ailow (fixa)
+### Superfícies (`apps/web/src/tema/tema.css`)
 
-| Grupo | Tokens |
+| Token | Claro | Escuro |
+|---|---|---|
+| Fundo da página (`--mantine-color-body`) | `#eef0f7` slate frio | `#0b1126` navy |
+| Superfície (`--ailow-superficie`) | `#ffffff` | `#151c36` slate |
+| Borda (`--ailow-borda`) | `#dde1ee` | `#2b3454` |
+| Sombra (`--ailow-sombra`) | sombra suave azulada | sombra profunda + filete interno |
+| Brilho do destaque (`--ailow-brilho`) | halo azul 30% | contorno + halo azul 40–60% |
+
+Tema padrão: **escuro** (`defaultColorScheme="dark"`), com troca no topo.
+
+### Contraste (calculado pela fórmula de luminância do WCAG)
+
+| Par | Razão |
 |---|---|
-| Neutros | Escala `escuro` do Mantine levemente puxada para o rosé (fundo escuro `#17131a`, superfície `#211b24`, borda `#3a3140`); claro: fundo `#fbf8fa`, superfície `#ffffff`, borda `#e9e1e6` |
-| Semânticas | `sucesso` verde · `alerta` âmbar · `perigo` vermelho · `info` azul (paletas nativas do Mantine `green`, `yellow`, `red`, `blue`) |
-| Tipografia | **Inter** (texto e números, `tabular-nums` em valores) · títulos em Inter 700. Base **16 px**; escala 14 · 16 · 18 · 22 · 28 · 36 |
-| Espaçamento | Grade de 8: 4 · 8 · 12 · 16 · 24 · 32 · 48 |
-| Raio | `md` 12 px nos blocos de ação e cartões; `sm` 8 px em campos |
-| Toque | Altura mínima de botão **48 px** (`size="lg"`); blocos da grade ≥ **96 px** de altura |
+| Branco sobre azul.6 `#2448FF` (botão, claro) | 6,09:1 |
+| Branco sobre azul.5 `#3454FF` (botão, escuro) | 5,44:1 |
+| `--ailow-primario-texto` claro `#1b37d6` sobre branco | 8,19:1 |
+| `--ailow-primario-texto` escuro `#6984ff` sobre navy / superfície | 5,65:1 / 5,07:1 |
+| `--ailow-laranja-texto` claro `#bf431e` sobre branco | 5,20:1 |
+| `--ailow-laranja-texto` escuro `#ff7043` sobre navy / superfície | 6,82:1 / 6,11:1 |
 
-## 3. Componentes do Ailow Cloud (sobre o Mantine)
+Tudo ≥ 4,5:1 (AA para texto normal).
+
+### Regra de texto: nunca truncar o que identifica
+
+Nome de produto, cliente ou fornecedor **nunca** usa reticências: quebra linha (`overflow-wrap: anywhere`). No carrinho, o nome ocupa a linha inteira e controles e valor vão para a linha de baixo. Teste automático no catálogo (Playwright, 390 px): 0 textos visíveis cortados.
+
+## 3. Componentes (`apps/web/src/componentes/index.tsx`)
 
 | Componente | Base Mantine | Regra |
 |---|---|---|
-| **BlocoAcao** | `UnstyledButton` + ícone + rótulo | Quadrado da tela inicial; ícone 32 px, 1 palavra, selo de alerta no canto (ex.: estoque baixo) |
-| **GradeModulos** | `SimpleGrid cols={3}` | 3 colunas sempre; filtra por perfil (D7) |
-| **TopoTela** | `Group` | Voltar · título de 1 palavra · ação secundária; logo da empresa só na tela inicial |
-| **TecladoPin** | `SimpleGrid` + `Button` | Teclas 64 px; 4 pontos de progresso; vibra/erro visual após PIN errado |
-| **Carrinho** | `Drawer position="bottom"` / painel fixo | Sempre visível na venda: nº de itens + total; abre para editar quantidade |
-| **Etapas** | `Stepper` | Cadastro de produto e fechamento; botão "Continuar" fixo no rodapé |
-| **ListaIndice** | `Card` (celular) / `DataTable` (computador) | Busca no topo, filtros em chips, vazio com ação |
-| **Valor** | `Text` | Sempre `R$ 1.234,56`, `tabular-nums`, nunca ponto flutuante na lógica (RN-01) |
-| **SeloEstoque** | `Badge` | ok (neutro) · baixo (alerta) · zerado (perigo) |
-| **EstadoVazio** | `Stack` | Ícone + frase + 1 botão |
-| **Aviso** | `notifications` | Sucesso 3 s; erro fica até fechar e diz como resolver |
+| **BlocoAcao** | `UnstyledButton` + `Indicator` | Quadrado da tela inicial, ≥ 104 px; `destaque` = azul com brilho; selo vermelho com contagem de alertas |
+| **GradeModulos** | `SimpleGrid cols={3}` | Sempre 3 colunas |
+| **TecladoPin** | `SimpleGrid` + `Button` | Teclas de 64 px; pontos laranja com brilho conforme o progresso |
+| **Carrinho** | `Stack` em cartão | Linha: nome/detalhe, − qtd +, valor; total em laranja |
+| **Etapas** | `Progress` | "Passo N de M" + barra; Voltar/Continuar; cabe em 360 px |
+| **Valor** | `Text` | `R$ 1.234,56` a partir de **centavos inteiros** (`formatarReais`, RN-01, com teste) |
+| **SeloEstoque** | `Badge` | neutro · âmbar (baixo) · vermelho (zerado) |
+| **EstadoVazio** | `Stack` em cartão | Título + frase + 1 botão |
+| Avisos | `@mantine/notifications` | Sucesso azul 3 s; erro vermelho até fechar |
 
-Ícones: **Tabler Icons** (a biblioteca usada nos exemplos do Mantine, MIT) — conferir na S03.
+Classes utilitárias: `.ailow-cartao`, `.ailow-bloco`, `.so-desktop`. Ícones: Tabler Icons, traço 1,75.
 
-## 4. Textos (voz)
+## 4. Voz
 
-- Curto, segunda pessoa, carinhoso, sem jargão: "Peça sem estoque. Chame o Dono." · "Venda finalizada." · "Qual o celular da cliente?"
-- Erro = o que houve + o que fazer. Nunca "Erro 500".
-- Dinheiro sempre em reais com vírgula; datas `dd/mm` (e `dd/mm/aaaa` em relatórios).
+Curto, segunda pessoa, carinhoso, sem jargão: "Peça sem estoque. Chame o Dono." · "Venda finalizada." Erro = o que houve + o que fazer. Dinheiro em reais com vírgula; datas `dd/mm`.
 
-## 5. Entregáveis da S02
+## 5. Verificação (2026-11-10)
 
-- Este documento.
-- `tema-mantine.ts`: proposta do tema (copiado para `apps/web` na S05).
-- `prototipo.html`: protótipo navegável (PIN 1234 → tela inicial → Vendas → Fechar → Pronto), claro/escuro, com bloqueio sem estoque. Simula os tokens em HTML puro (não usa Mantine).
+`npm run verify` (tipos + 4 testes + build) verde. Catálogo inspecionado em 390×844 nos dois temas: sem overflow horizontal, fontes Sora/Manrope carregadas, fundo escuro `#0b1126`.

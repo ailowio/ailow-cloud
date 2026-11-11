@@ -117,3 +117,12 @@ Feito (pedido do Pedro, opção B): apps/web com Vite 8 + React 19 + Mantine 9.7
 Verificação: `npm run verify` em apps/web = tsc OK, 4 testes OK, build OK; captura em 390x844 sem erro de console (só favicon 404).
 Defeitos conhecidos: pequeno overflow horizontal à direita no catálogo em 390 px (Etapas/Container); bundle 540 kB (sem code-split); tabela do desktop não foi vista em tela larga.
 Fora do escopo (S03): CI, Docker, API, git init. Nada commitado.
+
+### S02c — Identidade Ailow + git — 2026-11-10 — Claude Opus 5.5
+Feito: git init em ailow-cloud, 2 commits em main e push para ailowio/ailow-cloud (repo PRIVADO, vazio antes). Branch feature/ds-identidade-ailow: tema com a paleta Ailow (D22), modo claro em camadas, fontes Sora/Manrope (OFL, auto-hospedadas), Etapas sem Stepper (corrigiu o overflow em 390 px), docs/design-system/README.md v1; removidos prototipo.html e tema-mantine.ts (superados pelo código em apps/web).
+Verificação: npm run verify verde (tsc, 4 testes, build); Playwright 390x844 nos 2 temas: sem overflow (scrollWidth 375 = largura útil), fundo escuro #0b1126, fontes carregadas.
+Pendências: gitleaks ausente na máquina (SEC-05 → S03); branch protection só depois que o CI existir (CI-08/GIT-07 → S03); repo privado → dar acesso ao professor ou tornar público antes da entrega; violeta-texto no escuro ≈ 3,9:1 (só ícone/texto grande).
+
+### S02d — Azul + laranja, sem truncamento — 2026-11-10 — Claude Opus 5.5
+Feito: primária azul #2448FF, destaque laranja (coral), violeta removido, perigo = vermelho nativo (D23); tokens --ailow-primario-texto / --ailow-laranja-texto; carrinho e lista sem truncar nomes (nome em linha própria, quebra de linha).
+Verificação: npm run verify verde; contrastes calculados (todos >= 5,07:1); Playwright 390 px nos 2 temas: 0 textos visíveis cortados, sem overflow horizontal.

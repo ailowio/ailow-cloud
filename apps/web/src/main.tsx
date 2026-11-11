@@ -1,7 +1,9 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import 'mantine-datatable/styles.css';
-import './catalogo/catalogo.css';
+import '@fontsource-variable/sora';
+import '@fontsource-variable/manrope';
+import './tema/tema.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MantineProvider } from '@mantine/core';
