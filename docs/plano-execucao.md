@@ -126,3 +126,31 @@ Pendências: gitleaks ausente na máquina (SEC-05 → S03); branch protection s�
 ### S02d — Azul + laranja, sem truncamento — 2026-11-10 — Claude Opus 5.5
 Feito: primária azul #2448FF, destaque laranja (coral), violeta removido, perigo = vermelho nativo (D23); tokens --ailow-primario-texto / --ailow-laranja-texto; carrinho e lista sem truncar nomes (nome em linha própria, quebra de linha).
 Verificação: npm run verify verde; contrastes calculados (todos >= 5,07:1); Playwright 390 px nos 2 temas: 0 textos visíveis cortados, sem overflow horizontal.
+
+### S03 — Fundação — 2026-11-10 — Claude Sonnet 5.5
+Gate declarado: infra de app novo, **tier B**; regras CI-01/03/05/07/08/17/18, ENV-02/04/05/06/09/10/11/13, SEC-01/05/10/12/14, TEST-12/17, OBS-01/02, IA-05, OPS-11, AUD-20/22/24.
+Feito (branch `feature/s03-fundacao`, **PR #2**; PR #1 já estava mergeado):
+- Monorepo npm workspaces (`apps/api`, `apps/web`, `packages/shared`), lockfile único na raiz; `npm run verify` = build shared + Biome + tipos + testes + build (api, web).
+- API Fastify 5.12.8 + Zod 4.6.7 (OpenAPI 3.1 em `/openapi.json`); `GET /health` (200 ok / 503 degradado quando o banco cai); logs JSON com `request_id` (aceita `x-request-id` só se `^[A-Za-z0-9._-]{1,64}$`, senão UUID; `authorization`/`cookie` redigidos); config por env que falha cedo citando o nome da variável.
+- Postgres 18 + migração SQL reversível: `empresas` e `categorias`, RLS `ENABLE`+`FORCE`, política falha-fechada, papel `ailow_app` (NOLOGIN, NOBYPASSRLS); `withEmpresa()` = `SET LOCAL ROLE` + `set_config(..., true)`.
+- Dockerfile multi-stage não-root (sem npm no runtime), `compose.yaml` (db com healthcheck → migrate one-shot → api com healthcheck, `read_only`, `cap_drop: ALL`), `.dockerignore`, `.env.example` só com nomes.
+- CI (`.github/workflows/ci.yml`): `verify`, `seguranca-segredos` (gitleaks v8.30.1 por digest), `seguranca-sast` (Semgrep 1.185.0), `seguranca-sca` (npm audit alto+), `imagem` (Trivy), `compose` (smoke); `permissions: contents: read`; actions por SHA.
+- ADR 001 e 002 (status **proposto**), CLAUDE.md, AGENTS.md, CONTRIBUTORS.md, CHANGELOG.md, template de PR, README.
+Números (antes -> depois): testes api 0 -> 25 (config 6, RLS 10, migração up/down 1, app 8), shared 0 -> 3, web 4 -> 4; jobs de CI 0 -> 6; Dockerfile/compose 0 -> 1.
+Evidência do "pronto quando":
+- `npm run verify` verde local (exit 0) e job `verify` verde no CI (Postgres 18.6 de serviço).
+- RLS: `apps/api/test/rls.test.ts` 10/10. **Teste de mutação** (política `USING (true)`): 5 testes falharam; migração restaurada.
+- `docker compose up`: **não executado localmente (a máquina não tem Docker nem WSL)**. Verificado no job `compose` do CI (run 42947205992, commit 550abd6): `db: healthy`, `api: healthy`, migração com exit 0, `/health` -> `{"status":"ok","db":"ok"}`, `uid=1000` (não-root).
+- CI verde (6/6) no commit 550abd6. O 1º run (commit 03cc84f) reprovou `imagem`: Trivy achou 10 HIGH, todos no npm embutido na imagem base (`/usr/local/lib/node_modules/npm`); corrigido removendo o npm do runtime (a migração chama o node-pg-migrate com `node`).
+Decisões: Biome em vez de ESLint (typescript-eslint declara peer `typescript <6.1.0`, o projeto usa TS 7.0.2); `embedded-postgres` só em dev/teste para rodar Postgres real sem Docker; papel de runtime assumido por `SET LOCAL ROLE` (ver riscos no ADR 002); tabela de exemplo = `categorias` (será reaproveitada em Configurações/Produtos — se mudar o modelo, nova migração).
+Pendências para a próxima / riscos honestos:
+- 🚦 **Aguardando o Pedro:** assinar ADR 001/002 (os motivos de descarte de Supabase/Next.js no ADR 001 são proposta da IA — D13 só registra o descarte), mergear o PR #2, ativar a proteção da `main`.
+- Proposta de proteção da `main` (não aplicada): PR obrigatório; checks obrigatórios `verify`, `seguranca-segredos`, `seguranca-sast`, `seguranca-sca`, `imagem`, `compose`; branch atualizada; sem bypass de admin; aprovação ≠ autor **dispensada pela exceção EX-01** (autor único). Não verifiquei se o plano da conta permite proteger `main` em repositório privado — conferir em Settings → Branches.
+- ADR 002: a API conecta como dono do schema (superusuário na imagem do Postgres); criar papel de login dedicado e sem privilégios na S14 (acesso novo -> inventário AUD).
+- `npm audit`: 3 moderados (minimatch/glob via node-pg-migrate), abaixo do gate; 1 aviso de lint pré-existente em `apps/web/src/main.tsx`; gitleaks não instalado localmente (o CI cobre o histórico inteiro).
+- Teste de config: o Red foi observado só indiretamente (falha do `globalSetup`, módulo ausente), não pela asserção.
+- Dependabot/atualização automática de dependências e actions ainda não configurado; cobertura de testes ainda sem gate (CI-04, tier B) -> avaliar na S13.
+- L-0006 (canário de lint/mutação reproduzível, prazo 2026-11-14) aberta; L-0003 teve recorrência (guard de .env x heredoc).
+Verificação: `npm run verify` (exit 0; 25+4+3 testes); `gh pr checks 2` -> 6/6 pass; `node harness/scripts/check-harness.mjs` -> Harness OK.
+
+**Aguardando portão do Pedro (assinar ADR 001/002, ativar branch protection, mergear PRs).** O prompt da S04 só vale após o ok.
