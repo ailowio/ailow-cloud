@@ -2,7 +2,7 @@
 
 ERP mobile multi-tenant para lojistas pequenos: vender pelo celular com QR code, estoque e financeiro integrados, botões grandes para quem não é da tecnologia. Primeiro cliente e caso de uso: Marcant Moda Íntima (`acervo/marcant/`).
 
-**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (sessão S06 de 14: acesso, Configurações e o núcleo do Financeiro no ar; os demais módulos vêm nas próximas sessões).
+**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S06/S06b na main — Financeiro + categorias; próxima sessão: **S07 Produtos**).
 
 ## Estrutura
 
@@ -15,7 +15,7 @@ compose.yaml     Postgres 18 + migração + API (local)
 
 ## Como rodar
 
-Requisitos: Node 22+. Docker só é necessário para o Compose.
+Requisitos: Node 22+. Docker só é necessário para o Compose. No Windows (WSL2 + Docker Desktop + BIOS AMD), use o guia `docs/dev-windows.md` antes do primeiro `compose up`.
 
 ```bash
 npm ci
@@ -47,15 +47,18 @@ Depois de alterar `packages/shared`, rode `npm run build:shared` (API e web cons
 
 ### Subir tudo com Docker Compose
 
+O arquivo de ambiente real fica em `D:\apps\ailow-cloud\.env` (gitignored), **ao lado** do `compose.yaml` — não na raiz `D:\apps\`. Não ler/colar o conteúdo (SEC-01).
+
 ```bash
-cp .env.example .env        # preencha POSTGRES_PASSWORD e AUTH_PEPPER (instrução no próprio arquivo)
+cp .env.example .env        # só se ainda não existir; preencha POSTGRES_PASSWORD e AUTH_PEPPER
+docker info                 # engine tem de responder (Docker Desktop aberto no Windows)
 docker compose up --build   # db saudável → migração → api saudável
 curl http://127.0.0.1:3000/health        # {"status":"ok","db":"ok"}
 curl http://127.0.0.1:3000/openapi.json  # contrato OpenAPI 3.1
 docker compose down         # NÃO use -v se quiser manter os dados do banco
 ```
 
-> Estado do Compose: validado pelo job `compose` do CI; **não foi executado na máquina de desenvolvimento** (sem Docker). Se falhar localmente, abra uma issue com a saída de `docker compose logs`.
+> Windows: WSL2 + Ubuntu são pré-requisito do Docker Desktop. Checklist, BIOS (SVM) e recovery de freeze: `docs/dev-windows.md`. O job `compose` do CI valida o caminho; smoke local após o setup de 2026-11-12.
 
 ### Variáveis de ambiente
 
@@ -81,6 +84,7 @@ Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` 
 | Como contribuir | `CONTRIBUTORS.md`, `.github/pull_request_template.md` |
 | Matriz de acessos (auditoria) | `docs/auditoria/matriz-acessos.md` |
 | Plano de execução e diário | `docs/plano-execucao.md` |
+| Windows: WSL2 + Docker Desktop | `docs/dev-windows.md` |
 | Design System | `docs/design-system/README.md` |
 | Pesquisas (produto, etiqueta QR, Instagram) | `docs/pesquisa/` |
 | Discovery do cliente piloto | `acervo/` — material de inspiração, **só local, não versionado** |
