@@ -143,6 +143,7 @@ describe('Financeiro (API, só Dono)', () => {
       ['relatório', 'GET', '/financeiro/relatorio?periodo=dia', undefined],
       ['pagar', 'POST', `/financeiro/lancamentos/${randomUUID()}/pagar`, { forma_pagamento: 'pix' }],
       ['estornar', 'POST', `/financeiro/lancamentos/${randomUUID()}/estornar`, { motivo: 'engano' }],
+      ['estornar venda', 'POST', `/financeiro/vendas/${randomUUID()}/estornar`, { motivo: 'engano' }],
     ];
 
     it.each(rotas)('sem sessão: %s devolve 401', async (_n, metodo, url, corpo) => {
@@ -175,6 +176,8 @@ describe('Financeiro (API, só Dono)', () => {
       expect(pagar.statusCode).toBe(404);
       const estornar = await a.dono.post(`/financeiro/lancamentos/${vendaB}/estornar`, { motivo: 'invasão' });
       expect(estornar.statusCode).toBe(404);
+      const origemB = (await owner.query('SELECT origem_id FROM lancamentos WHERE id = $1', [vendaB])).rows[0].origem_id as string;
+      expect((await a.dono.post(`/financeiro/vendas/${origemB}/estornar`, { motivo: 'invasão' })).statusCode).toBe(404);
 
       // Nada mudou do lado da B.
       expect((await contas(b.dono)).contas.find((c) => c.id === idB)?.status).toBe('aberto');
@@ -216,11 +219,70 @@ describe('Financeiro (API, só Dono)', () => {
       ['categoria vazia', { categoria: '' }],
       ['paga sem forma de pagamento', { paga: true, forma_pagamento: null }],
       ['forma de pagamento inventada', { forma_pagamento: 'cheque' }],
+      ['boleto (fora do v1)', { paga: true, forma_pagamento: 'boleto' }],
     ])('recusa %s com 400 e não grava', async (_nome, parte) => {
       const marca = `Inválida ${randomUUID()}`;
       const res = await a.dono.post('/financeiro/despesas', despesa({ descricao: marca, ...parte }));
       expect(res.statusCode).toBe(400);
       expect((await contas(a.dono)).contas.map((c) => c.descricao)).not.toContain(marca);
+    });
+
+    describe('categoria financeira da despesa', () => {
+      const nova = async (lado: Lado, nome: string, tipo: 'produto' | 'financeira') => {
+        const res = await lado.dono.post('/categorias', { nome, atributos: [], tipo });
+        expect(res.statusCode).toBe(201);
+        return (res.json() as { id: string }).id;
+      };
+      const recusada = async (lado: Lado, categoria: string) => {
+        const marca = `Categoria inválida ${randomUUID()}`;
+        const res = await lado.dono.post('/financeiro/despesas', despesa({ descricao: marca, categoria }));
+        expect(res.statusCode).toBe(400);
+        expect(res.json()).toEqual({ erro: 'categoria_invalida' });
+        expect((await contas(lado.dono)).contas.map((c) => c.descricao)).not.toContain(marca);
+      };
+
+      it('empresa nova já tem as categorias financeiras padrão para escolher', async () => {
+        const id = await criarDespesa(a.dono, { categoria: 'Luz' });
+        expect((await contas(a.dono)).contas.find((c) => c.id === id)?.categoria).toBe('Luz');
+      });
+
+      it('categoria que não existe é recusada com categoria_invalida', async () => {
+        await recusada(a, `Inventada ${randomUUID().slice(0, 8)}`);
+      });
+
+      it('categoria de PRODUTO não vale como categoria financeira, mesmo com o mesmo nome', async () => {
+        const nome = `Só de produto ${randomUUID().slice(0, 8)}`;
+        await nova(a, nome, 'produto');
+        await recusada(a, nome);
+      });
+
+      it('categoria financeira desativada não vale mais para despesa nova', async () => {
+        const nome = `Desativada ${randomUUID().slice(0, 8)}`;
+        const id = await nova(a, nome, 'financeira');
+        expect((await a.dono.post('/financeiro/despesas', despesa({ categoria: nome }))).statusCode).toBe(201);
+        expect((await a.dono.put(`/categorias/${id}`, { nome, atributos: [], ativa: false })).statusCode).toBe(204);
+        await recusada(a, nome);
+      });
+
+      it('categoria financeira de outra empresa não vale', async () => {
+        const nome = `Só da B ${randomUUID().slice(0, 8)}`;
+        await nova(b, nome, 'financeira');
+        await recusada(a, nome);
+      });
+
+      it('sem diferenciar maiúsculas, e grava o nome como o Dono o cadastrou ("aluguel" vira "Aluguel")', async () => {
+        const id = await criarDespesa(a.dono, { categoria: '  aLuGuEl ' });
+        expect((await contas(a.dono)).contas.find((c) => c.id === id)?.categoria).toBe('Aluguel');
+      });
+
+      it('renomear a categoria não reescreve o histórico: o lançamento guarda o nome da época', async () => {
+        const nome = `Antes ${randomUUID().slice(0, 8)}`;
+        const cat = await nova(a, nome, 'financeira');
+        const id = await criarDespesa(a.dono, { categoria: nome });
+        const novoNome = `Depois ${randomUUID().slice(0, 8)}`;
+        expect((await a.dono.put(`/categorias/${cat}`, { nome: novoNome, atributos: [], ativa: true })).statusCode).toBe(204);
+        expect((await contas(a.dono)).contas.find((c) => c.id === id)?.categoria).toBe(nome);
+      });
     });
 
     it('registra quem criou e a ação na trilha de auditoria (AUD-10)', async () => {
@@ -269,10 +331,10 @@ describe('Financeiro (API, só Dono)', () => {
   describe('marcar como pago (RF-FIN-03)', () => {
     it('baixa a conta com a forma escolhida, hoje, e deixa rastro', async () => {
       const id = await criarDespesa(a.dono);
-      const res = await a.dono.post(`/financeiro/lancamentos/${id}/pagar`, { forma_pagamento: 'boleto' });
+      const res = await a.dono.post(`/financeiro/lancamentos/${id}/pagar`, { forma_pagamento: 'credito' });
       expect(res.statusCode).toBe(204);
       const linha = (await extrato(a.dono)).lancamentos.find((l) => l.id === id);
-      expect(linha).toMatchObject({ status: 'pago', forma_pagamento: 'boleto', pago_em: AGORA.toISOString() });
+      expect(linha).toMatchObject({ status: 'pago', forma_pagamento: 'credito', pago_em: AGORA.toISOString() });
       expect(await eventos(id)).toEqual(['despesa_criada', 'lancamento_pago']);
       const r = await owner.query('SELECT pago_por FROM lancamentos WHERE id = $1', [id]);
       expect(r.rows[0].pago_por).toBe(a.dados.donoId);
@@ -290,6 +352,7 @@ describe('Financeiro (API, só Dono)', () => {
     it.each([
       ['sem forma de pagamento', {}],
       ['forma inventada', { forma_pagamento: 'cheque' }],
+      ['boleto (fora do v1)', { forma_pagamento: 'boleto' }],
     ])('recusa %s com 400 e a conta segue em aberto', async (_n, corpo) => {
       const id = await criarDespesa(a.dono);
       expect((await a.dono.post(`/financeiro/lancamentos/${id}/pagar`, corpo)).statusCode).toBe(400);
@@ -378,6 +441,82 @@ describe('Financeiro (API, só Dono)', () => {
 
     it('lançamento inexistente é 404', async () => {
       expect((await a.dono.post(`/financeiro/lancamentos/${randomUUID()}/estornar`, { motivo: 'engano' })).statusCode).toBe(404);
+    });
+  });
+
+  // RN-08 / RF-VEN-08: cancelar uma venda estorna todos os lançamentos dela de uma vez.
+  describe('estorno de venda inteira (RN-08)', () => {
+    async function vendaEmDuasFormas(lado: Lado): Promise<{ origem: string; pix: string; dinheiro: string }> {
+      const origem = randomUUID();
+      const pix = await venda(lado, { origem_id: origem, valor_centavos: 6_000, forma_pagamento: 'pix' });
+      const dinheiro = await venda(lado, { origem_id: origem, valor_centavos: 2_990, forma_pagamento: 'dinheiro' });
+      return { origem, pix, dinheiro };
+    }
+
+    it('estorna os dois pagamentos, devolve os ids dos estornos e deixa rastro da venda na trilha', async () => {
+      const v = await vendaEmDuasFormas(a);
+      const res = await a.dono.post(`/financeiro/vendas/${v.origem}/estornar`, { motivo: 'Cliente devolveu tudo' });
+      expect(res.statusCode).toBe(201);
+      const { ids } = res.json() as { ids: string[] };
+      expect(ids).toHaveLength(2);
+
+      const linhas = (await extrato(a.dono)).lancamentos;
+      expect(linhas.find((l) => l.id === v.pix)?.status).toBe('estornado');
+      expect(linhas.find((l) => l.id === v.dinheiro)?.status).toBe('estornado');
+      const estornos = linhas.filter((l) => ids.includes(l.id));
+      expect(estornos.map((e) => e.valor_centavos).sort((x, y) => x - y)).toEqual([2_990, 6_000]);
+      for (const e of estornos) expect(e).toMatchObject({ tipo: 'saida', origem_tipo: 'estorno', estorno_motivo: 'Cliente devolveu tudo', status: 'pago' });
+      expect(await eventos(v.origem)).toEqual(['venda_estornada']);
+    });
+
+    it('o relatório do dia volta ao que era antes da venda (entrou e saiu o mesmo valor)', async () => {
+      const empresa = await montar('Fin API venda relatório');
+      const v = await vendaEmDuasFormas(empresa);
+      expect((await relatorio(empresa.dono, 'dia', HOJE)).entradas_centavos).toBe(8_990);
+      await empresa.dono.post(`/financeiro/vendas/${v.origem}/estornar`, { motivo: 'Troca por outro modelo' });
+      const rel = await relatorio(empresa.dono, 'dia', HOJE);
+      expect(rel).toMatchObject({ entradas_centavos: 8_990, saidas_centavos: 8_990, saldo_centavos: 0 });
+    });
+
+    it('segunda tentativa é 409 ja_estornado e não cria estorno extra', async () => {
+      const v = await vendaEmDuasFormas(a);
+      await a.dono.post(`/financeiro/vendas/${v.origem}/estornar`, { motivo: 'primeira' });
+      const segunda = await a.dono.post(`/financeiro/vendas/${v.origem}/estornar`, { motivo: 'segunda' });
+      expect(segunda.statusCode).toBe(409);
+      expect(segunda.json()).toEqual({ erro: 'ja_estornado' });
+      const n = await owner.query('SELECT 1 FROM lancamentos WHERE estorno_de = ANY($1::uuid[])', [[v.pix, v.dinheiro]]);
+      expect(n.rowCount).toBe(2);
+    });
+
+    it('toque duplo simultâneo: um 201 e um 409, só dois estornos no total', async () => {
+      const v = await vendaEmDuasFormas(a);
+      const [r1, r2] = await Promise.all([
+        a.dono.post(`/financeiro/vendas/${v.origem}/estornar`, { motivo: 'toque 1' }),
+        a.dono.post(`/financeiro/vendas/${v.origem}/estornar`, { motivo: 'toque 2' }),
+      ]);
+      expect([r1.statusCode, r2.statusCode].sort()).toEqual([201, 409]);
+      const n = await owner.query('SELECT 1 FROM lancamentos WHERE estorno_de = ANY($1::uuid[])', [[v.pix, v.dinheiro]]);
+      expect(n.rowCount).toBe(2);
+    });
+
+    it('venda inexistente é 404; id que não é UUID é 400', async () => {
+      expect((await a.dono.post(`/financeiro/vendas/${randomUUID()}/estornar`, { motivo: 'engano' })).statusCode).toBe(404);
+      expect((await a.dono.post('/financeiro/vendas/abc/estornar', { motivo: 'engano' })).statusCode).toBe(400);
+    });
+
+    it.each([
+      ['sem motivo', {}],
+      ['motivo curto demais', { motivo: 'ok' }],
+    ])('recusa %s com 400 e a venda fica como estava', async (_n, corpo) => {
+      const v = await vendaEmDuasFormas(a);
+      expect((await a.dono.post(`/financeiro/vendas/${v.origem}/estornar`, corpo)).statusCode).toBe(400);
+      expect((await extrato(a.dono)).lancamentos.find((l) => l.id === v.pix)?.status).toBe('pago');
+    });
+
+    it('despesa e compra não são "venda": o id de uma despesa não estorna nada por esta rota', async () => {
+      const id = await criarDespesa(a.dono);
+      expect((await a.dono.post(`/financeiro/vendas/${id}/estornar`, { motivo: 'engano' })).statusCode).toBe(404);
+      expect((await contas(a.dono)).contas.find((c) => c.id === id)?.status).toBe('aberto');
     });
   });
 

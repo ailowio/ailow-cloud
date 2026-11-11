@@ -33,12 +33,41 @@ const atributosSchema = z
   .max(20)
   .refine((l) => new Set(l.map((a) => a.toLowerCase())).size === l.length, { error: 'atributos repetidos' });
 
-export const categoriaCorpoSchema = z.object({
+// Dois tipos de categoria, em listas separadas: as de PRODUTO (com atributos, usadas ao cadastrar produtos)
+// e as FINANCEIRAS (usadas nas despesas e no relatório do Financeiro). O tipo é definido na criação.
+export const TIPOS_CATEGORIA = ['produto', 'financeira'] as const;
+export const tipoCategoriaSchema = z.enum(TIPOS_CATEGORIA);
+export type TipoCategoria = z.infer<typeof tipoCategoriaSchema>;
+
+// Nomes que toda empresa nova já recebe como categorias financeiras (o Dono edita, desativa e cria outras).
+export const CATEGORIAS_FINANCEIRAS_PADRAO = [
+  'Aluguel',
+  'Água',
+  'Luz',
+  'Internet',
+  'Condomínio',
+  'Embalagens',
+  'Salários',
+  'Impostos',
+  'Fornecedores',
+  'Outros',
+] as const;
+
+const categoriaBaseSchema = z.object({
   nome: z.string().trim().min(1, { error: 'informe o nome' }).max(60),
   atributos: atributosSchema,
 });
-export const categoriaAlterarSchema = categoriaCorpoSchema.extend({ ativa: z.boolean() });
-export const categoriaSchema = categoriaAlterarSchema.extend({ id: z.uuid() });
+export const categoriaCorpoSchema = categoriaBaseSchema
+  // Sem tipo, é de produto: quem já usa a API continua funcionando.
+  .extend({ tipo: tipoCategoriaSchema.default('produto') })
+  .refine((c) => c.tipo === 'produto' || c.atributos.length === 0, {
+    error: 'categoria financeira não tem atributos',
+    path: ['atributos'],
+  });
+// Alterar não troca o tipo (a categoria de produto não vira financeira): por isso o corpo não o tem.
+export const categoriaAlterarSchema = categoriaBaseSchema.extend({ ativa: z.boolean() });
+export const categoriaSchema = categoriaBaseSchema.extend({ ativa: z.boolean(), tipo: tipoCategoriaSchema, id: z.uuid() });
 export type Categoria = z.infer<typeof categoriaSchema>;
 export const categoriasResponseSchema = z.object({ categorias: z.array(categoriaSchema) });
 export const categoriaIdParamsSchema = z.object({ id: z.uuid() });
+export const categoriasQuerySchema = z.object({ tipo: tipoCategoriaSchema.optional() });

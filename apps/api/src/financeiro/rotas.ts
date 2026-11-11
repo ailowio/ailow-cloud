@@ -8,7 +8,9 @@ import {
   extratoResponseSchema,
   idCriadoSchema,
   type Lancamento,
+  estornoVendaResponseSchema,
   lancamentoIdParamsSchema,
+  origemIdParamsSchema,
   pagarEntradaSchema,
   relatorioQuerySchema,
   relatorioSchema,
@@ -19,8 +21,16 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type pg from 'pg';
 import { type Deps, naoEncontrado, registrarEvento, semConteudo } from '../acesso/comum.js';
 import { type Guardas, sessaoDe } from '../acesso/guardas.js';
+import { nomeDaCategoriaFinanceira } from '../configuracoes/categorias.js';
 import { withEmpresa } from '../db.js';
-import { ErroFinanceiro, FUSO, estornarLancamento, pagarLancamento, registrarLancamento } from './lancamentos.js';
+import {
+  ErroFinanceiro,
+  FUSO,
+  estornarLancamento,
+  estornarOrigem,
+  pagarLancamento,
+  registrarLancamento,
+} from './lancamentos.js';
 
 const sessaoCookie = [{ sessao: [] }];
 // Teto de linhas por resposta: uma loja pequena fica longe disso (sem paginação no v1).
@@ -87,6 +97,9 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
       const d = request.body;
       const quando = agora();
       const id = await withEmpresa(pool, s.empresaId, async (c) => {
+        // A categoria tem de ser uma categoria FINANCEIRA ativa da empresa; o lançamento guarda o nome cadastrado.
+        const categoria = await nomeDaCategoriaFinanceira(c, d.categoria);
+        if (categoria === null) return null;
         const { id: novo } = await registrarLancamento(
           c,
           { empresaId: s.empresaId, autorId: s.usuarioId, agora: quando },
@@ -95,7 +108,7 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
             origem_tipo: 'despesa',
             origem_id: null,
             descricao: d.descricao,
-            categoria: d.categoria,
+            categoria,
             valor_centavos: d.valor_centavos,
             forma_pagamento: d.forma_pagamento,
             vencimento: d.vencimento,
@@ -112,6 +125,7 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
         });
         return novo;
       });
+      if (id === null) return reply.code(400).send({ erro: 'categoria_invalida' });
       return reply.code(201).send({ id });
     },
   );
@@ -225,6 +239,48 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
           return estorno;
         });
         return reply.code(201).send({ id });
+      } catch (err) {
+        return responderErro(reply, err);
+      }
+    },
+  );
+
+  rotas.post(
+    '/financeiro/vendas/:id/estornar',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['financeiro'],
+        summary: 'Estorna uma venda inteira: um estorno para cada pagamento dela, de uma vez (Dono)',
+        security: sessaoCookie,
+        params: origemIdParamsSchema,
+        body: estornarEntradaSchema,
+        response: { 201: estornoVendaResponseSchema, 400: erroSchema, 404: erroSchema, 409: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const quando = agora();
+      try {
+        const { ids } = await withEmpresa(pool, s.empresaId, async (c) => {
+          const estornos = await estornarOrigem(
+            c,
+            { empresaId: s.empresaId, autorId: s.usuarioId, agora: quando },
+            'venda',
+            request.params.id,
+            request.body.motivo,
+          );
+          await registrarEvento(c, {
+            empresaId: s.empresaId,
+            atorTipo: 'usuario',
+            atorId: s.usuarioId,
+            alvoId: request.params.id,
+            tipo: 'venda_estornada',
+            em: quando,
+          });
+          return estornos;
+        });
+        return reply.code(201).send({ ids });
       } catch (err) {
         return responderErro(reply, err);
       }

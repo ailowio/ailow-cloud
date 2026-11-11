@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { categoriaCorpoSchema, empresaEntradaSchema, empresaSchema } from './configuracoes.js';
+import {
+  CATEGORIAS_FINANCEIRAS_PADRAO,
+  TIPOS_CATEGORIA,
+  categoriaAlterarSchema,
+  categoriaCorpoSchema,
+  empresaEntradaSchema,
+  empresaSchema,
+} from './configuracoes.js';
 
 const base = { nome: 'Marcant', telefone: null, endereco: null, markup_bps: 0, inatividade_minutos: 5 };
 
@@ -26,5 +33,34 @@ describe('contrato de Configurações', () => {
   it('atributos repetidos, sem diferenciar maiúsculas, são recusados', () => {
     expect(categoriaCorpoSchema.safeParse({ nome: 'Sutiã', atributos: ['Aro', 'aro'] }).success).toBe(false);
     expect(categoriaCorpoSchema.safeParse({ nome: 'Sutiã', atributos: ['aro', 'bojo'] }).success).toBe(true);
+  });
+
+  describe('dois tipos de categoria: produto e financeira', () => {
+    it('sem tipo informado, a categoria é de produto (compatível com quem já usa a API)', () => {
+      expect(categoriaCorpoSchema.parse({ nome: 'Sutiã', atributos: [] }).tipo).toBe('produto');
+    });
+
+    it('só existem os tipos produto e financeira', () => {
+      expect(TIPOS_CATEGORIA).toEqual(['produto', 'financeira']);
+      expect(categoriaCorpoSchema.safeParse({ nome: 'X', atributos: [], tipo: 'outro' }).success).toBe(false);
+    });
+
+    it('categoria financeira não tem atributos (atributo é coisa de produto)', () => {
+      expect(categoriaCorpoSchema.safeParse({ nome: 'Aluguel', atributos: [], tipo: 'financeira' }).success).toBe(true);
+      expect(categoriaCorpoSchema.safeParse({ nome: 'Aluguel', atributos: ['bojo'], tipo: 'financeira' }).success).toBe(false);
+    });
+
+    it('a alteração não permite trocar o tipo: ele é definido na criação', () => {
+      const r = categoriaAlterarSchema.parse({ nome: 'Aluguel', atributos: [], ativa: true, tipo: 'produto' });
+      expect(r).not.toHaveProperty('tipo');
+    });
+
+    it('as categorias financeiras padrão são nomes únicos (sem diferenciar maiúsculas) e cabem no limite do nome', () => {
+      const minusculas = CATEGORIAS_FINANCEIRAS_PADRAO.map((n) => n.toLowerCase());
+      expect(new Set(minusculas).size).toBe(minusculas.length);
+      for (const n of CATEGORIAS_FINANCEIRAS_PADRAO) {
+        expect(categoriaCorpoSchema.safeParse({ nome: n, atributos: [], tipo: 'financeira' }).success, n).toBe(true);
+      }
+    });
   });
 });

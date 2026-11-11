@@ -2,6 +2,7 @@ import {
   categoriaAlterarSchema,
   categoriaCorpoSchema,
   categoriaIdParamsSchema,
+  categoriasQuerySchema,
   categoriasResponseSchema,
   empresaEntradaSchema,
   empresaSchema,
@@ -91,15 +92,21 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
       preValidation: soDono,
       schema: {
         tags: ['configuracoes'],
-        summary: 'Categorias da empresa e os atributos de cada uma (Dono)',
+        summary: 'Categorias da empresa (de produto e/ou financeiras) e os atributos de cada uma (Dono)',
         security: sessaoCookie,
-        response: { 200: categoriasResponseSchema, 401: erroSchema, 403: erroSchema },
+        querystring: categoriasQuerySchema,
+        response: { 200: categoriasResponseSchema, 400: erroSchema, 401: erroSchema, 403: erroSchema },
       },
     },
     async (request) => {
       const s = sessaoDe(request);
       const categorias = await withEmpresa(pool, s.empresaId, async (c) => {
-        const r = await c.query('SELECT id, nome, atributos, ativa FROM categorias ORDER BY lower(nome), id');
+        // Sem `tipo` na consulta, devolve os dois tipos.
+        const r = await c.query(
+          `SELECT id, nome, atributos, ativa, tipo FROM categorias
+            WHERE ($1::text IS NULL OR tipo = $1) ORDER BY lower(nome), id`,
+          [request.query.tipo ?? null],
+        );
         return r.rows;
       });
       return { categorias };
@@ -112,7 +119,7 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
       preValidation: soDono,
       schema: {
         tags: ['configuracoes'],
-        summary: 'Cria uma categoria com seus atributos (Dono)',
+        summary: 'Cria uma categoria de produto (com atributos) ou financeira, conforme o tipo (Dono)',
         security: sessaoCookie,
         body: categoriaCorpoSchema,
         response: { 201: z.object({ id: z.uuid() }), 400: erroSchema, 401: erroSchema, 403: erroSchema, 409: erroSchema },
@@ -123,8 +130,8 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
       try {
         const id = await withEmpresa(pool, s.empresaId, async (c) => {
           const r = await c.query(
-            'INSERT INTO categorias (empresa_id, nome, atributos, criado_em) VALUES ($1, $2, $3, $4) RETURNING id',
-            [s.empresaId, request.body.nome, request.body.atributos, agora()],
+            'INSERT INTO categorias (empresa_id, nome, atributos, tipo, criado_em) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [s.empresaId, request.body.nome, request.body.atributos, request.body.tipo, agora()],
           );
           const novo = r.rows[0].id as string;
           await registrarEvento(c, {
@@ -171,12 +178,17 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
       const s = sessaoDe(request);
       const { nome, atributos, ativa } = request.body;
       try {
-        const achou = await withEmpresa(pool, s.empresaId, async (c) => {
-          const r = await c.query(
-            'UPDATE categorias SET nome = $2, atributos = $3, ativa = $4 WHERE id = $1 RETURNING id',
-            [request.params.id, nome, atributos, ativa],
-          );
-          if (r.rowCount === 0) return false;
+        const resultado = await withEmpresa(pool, s.empresaId, async (c) => {
+          // O tipo não muda na edição; só ele diz se a categoria pode ter atributos.
+          const atual = await c.query('SELECT tipo FROM categorias WHERE id = $1 FOR UPDATE', [request.params.id]);
+          if (atual.rowCount === 0) return 'nao_encontrada' as const;
+          if (atual.rows[0].tipo === 'financeira' && atributos.length > 0) return 'financeira_com_atributos' as const;
+          await c.query('UPDATE categorias SET nome = $2, atributos = $3, ativa = $4 WHERE id = $1', [
+            request.params.id,
+            nome,
+            atributos,
+            ativa,
+          ]);
           await registrarEvento(c, {
             empresaId: s.empresaId,
             atorTipo: 'usuario',
@@ -185,9 +197,12 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
             tipo: 'categoria_alterada',
             em: agora(),
           });
-          return true;
+          return 'ok' as const;
         });
-        if (!achou) return naoEncontrado(reply);
+        if (resultado === 'nao_encontrada') return naoEncontrado(reply);
+        if (resultado === 'financeira_com_atributos') {
+          return reply.code(400).send({ erro: 'categoria_financeira_sem_atributos' });
+        }
         return reply.code(204).send(null);
       } catch (err) {
         if ((err as { code?: string }).code === UNIQUE_VIOLATION) {
