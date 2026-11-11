@@ -4,18 +4,33 @@ import 'mantine-datatable/styles.css';
 import '@fontsource-variable/sora';
 import '@fontsource-variable/manrope';
 import './tema/tema.css';
-import { StrictMode } from 'react';
+import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { temaAilow } from './tema/tema';
-import { Catalogo } from './catalogo/Catalogo';
+import { App } from './App';
+import { registrarServiceWorker } from './pwa/registrar';
+
+// Catálogo do Design System: só em desenvolvimento (http://localhost:5173/?catalogo). Fora do bundle de produção.
+const Catalogo = import.meta.env.DEV
+  ? lazy(() => import('./catalogo/Catalogo').then((m) => ({ default: m.Catalogo })))
+  : null;
+const mostrarCatalogo = Catalogo !== null && new URLSearchParams(location.search).has('catalogo');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={temaAilow} defaultColorScheme="dark">
       <Notifications position="bottom-center" />
-      <Catalogo />
+      {mostrarCatalogo && Catalogo ? (
+        <Suspense fallback={null}>
+          <Catalogo />
+        </Suspense>
+      ) : (
+        <App />
+      )}
     </MantineProvider>
   </StrictMode>,
 );
+
+registrarServiceWorker();
