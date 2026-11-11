@@ -1,0 +1,15 @@
+# Nada de segredo, histórico, dependências do host nem material do cliente na imagem.
+.git
+.github
+.env
+.env.*
+!.env.example
+**/node_modules
+**/dist
+**/coverage
+.playwright-mcp
+acervo
+docs
+apps/web/src
+apps/web/public
+**/*.md
