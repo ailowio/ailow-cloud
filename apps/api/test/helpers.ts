@@ -56,12 +56,17 @@ export class Cliente {
 
   constructor(private readonly app: FastifyInstance) {}
 
-  async req(method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown, headers: Record<string, string> = {}) {
+  async req(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    url: string,
+    payload?: unknown,
+    headers: Record<string, string> = {},
+  ) {
     const cookie = [...this.jar].map(([k, v]) => `${k}=${v}`).join('; ');
     const res = await this.app.inject({
       method,
       url,
-      payload: payload as object | undefined,
+      payload: payload as object | Buffer | undefined,
       headers: { ...(cookie ? { cookie } : {}), ...headers },
     });
     for (const c of res.cookies) {
@@ -74,7 +79,19 @@ export class Cliente {
   get = (url: string) => this.req('GET', url);
   post = (url: string, payload?: unknown) => this.req('POST', url, payload ?? {});
   put = (url: string, payload?: unknown) => this.req('PUT', url, payload ?? {});
+  delete = (url: string) => this.req('DELETE', url);
 
+  /** Multipart PUT (campo `file`) — usado no upload da logo. */
+  putArquivo(url: string, bytes: Buffer, filename: string, contentType: string) {
+    const boundary = '----ailowTestBoundary7MA4YWxk';
+    const head = Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
+    );
+    const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+    return this.req('PUT', url, Buffer.concat([head, bytes, tail]), {
+      'content-type': `multipart/form-data; boundary=${boundary}`,
+    });
+  }
   // Outro "navegador" no mesmo aparelho: só leva o cookie do aparelho vinculado.
   somenteAparelho(): Cliente {
     const novo = new Cliente(this.app);

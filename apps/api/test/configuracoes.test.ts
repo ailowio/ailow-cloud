@@ -61,6 +61,7 @@ describe('configurações da empresa (Dono)', () => {
         endereco: null,
         markup_bps: 0,
         inatividade_minutos: 5,
+        tem_logo: false,
       });
     });
 
@@ -79,6 +80,7 @@ describe('configurações da empresa (Dono)', () => {
         endereco: 'Rua das Flores, 10',
         markup_bps: 10000,
         inatividade_minutos: 10,
+        tem_logo: false,
       };
       expect(res.json()).toEqual(esperado);
       expect((await a.dono.get('/empresa')).json()).toEqual(esperado);
@@ -153,6 +155,40 @@ describe('configurações da empresa (Dono)', () => {
       const vendedor = (await a.vendedor.get('/acesso/eu')).json();
       expect(dono.inatividade_minutos).toBe(5);
       expect(vendedor.inatividade_minutos).toBe(5);
+    });
+  });
+
+  describe('logo da empresa (RF-CFG-02)', () => {
+    // PNG 1×1 transparente (válido e pequeno).
+    const PNG = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+
+    it('Dono envia PNG, GET devolve a imagem, Vendedor também lê; DELETE remove', async () => {
+      expect((await a.dono.get('/empresa/logo')).statusCode).toBe(404);
+      const up = await a.dono.putArquivo('/empresa/logo', PNG, 'marca.png', 'image/png');
+      expect(up.statusCode).toBe(200);
+      expect(up.json()).toMatchObject({ tem_logo: true });
+      const img = await a.dono.get('/empresa/logo');
+      expect(img.statusCode).toBe(200);
+      expect(img.headers['content-type']).toMatch(/image\/png/);
+      expect(Buffer.from(img.rawPayload)).toEqual(PNG);
+      expect((await a.vendedor.get('/empresa/logo')).statusCode).toBe(200);
+      // Empresa B não vê a logo de A.
+      expect((await b.dono.get('/empresa/logo')).statusCode).toBe(404);
+      const del = await a.dono.delete('/empresa/logo');
+      expect(del.statusCode).toBe(200);
+      expect(del.json()).toMatchObject({ tem_logo: false });
+      expect((await a.dono.get('/empresa/logo')).statusCode).toBe(404);
+    });
+
+    it('rejeita tipo inválido, arquivo vazio e Vendedor no upload', async () => {
+      const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
+      expect((await a.dono.putArquivo('/empresa/logo', svg, 'x.svg', 'image/svg+xml')).statusCode).toBe(400);
+      expect((await a.dono.putArquivo('/empresa/logo', Buffer.alloc(0), 'x.png', 'image/png')).statusCode).toBe(400);
+      expect((await a.vendedor.putArquivo('/empresa/logo', PNG, 'x.png', 'image/png')).statusCode).toBe(403);
+      expect((await a.vendedor.delete('/empresa/logo')).statusCode).toBe(403);
     });
   });
 

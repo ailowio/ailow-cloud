@@ -28,20 +28,7 @@ export function criarCliente(opcoes: OpcoesCliente = {}) {
   // Resolvido na chamada (não na criação) para respeitar um fetch trocado em testes.
   const buscar = (...args: Parameters<typeof fetch>) => (opcoes.fetch ?? globalThis.fetch)(...args);
 
-  async function pedir<T = undefined>(metodo: 'GET' | 'POST' | 'PUT', caminho: string, corpo?: unknown): Promise<T> {
-    const init: RequestInit = { method: metodo, credentials: 'same-origin' };
-    if (corpo !== undefined) {
-      init.body = JSON.stringify(corpo);
-      init.headers = { 'content-type': 'application/json' };
-    }
-
-    let resposta: Response;
-    try {
-      resposta = await buscar(caminho, init);
-    } catch {
-      throw new ErroApi(0, 'sem_conexao');
-    }
-
+  async function interpretar<T>(resposta: Response): Promise<T> {
     if (resposta.status === 204) return undefined as T;
 
     const texto = await resposta.text().catch(() => '');
@@ -66,5 +53,38 @@ export function criarCliente(opcoes: OpcoesCliente = {}) {
     return json as T;
   }
 
-  return { pedir };
+  async function pedir<T = undefined>(
+    metodo: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    caminho: string,
+    corpo?: unknown,
+  ): Promise<T> {
+    const init: RequestInit = { method: metodo, credentials: 'same-origin' };
+    if (corpo !== undefined) {
+      init.body = JSON.stringify(corpo);
+      init.headers = { 'content-type': 'application/json' };
+    }
+
+    let resposta: Response;
+    try {
+      resposta = await buscar(caminho, init);
+    } catch {
+      throw new ErroApi(0, 'sem_conexao');
+    }
+    return interpretar(resposta);
+  }
+
+  /** Upload multipart (campo `file`); não define Content-Type — o browser coloca o boundary. */
+  async function enviarArquivo<T = undefined>(caminho: string, arquivo: File): Promise<T> {
+    const corpo = new FormData();
+    corpo.append('file', arquivo);
+    let resposta: Response;
+    try {
+      resposta = await buscar(caminho, { method: 'PUT', credentials: 'same-origin', body: corpo });
+    } catch {
+      throw new ErroApi(0, 'sem_conexao');
+    }
+    return interpretar(resposta);
+  }
+
+  return { pedir, enviarArquivo };
 }

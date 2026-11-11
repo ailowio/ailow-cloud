@@ -29,6 +29,7 @@ export function Configuracoes(props: {
   return (
     <Moldura
       titulo={item?.titulo ?? 'Configurações'}
+      logoEmpresa
       voltar={{
         rotulo: item ? 'Configurações' : 'Início',
         aoVoltar: item ? () => setSecao('menu') : props.aoVoltar,

@@ -31,6 +31,7 @@ npm run dev:db     # 1) Postgres 18 persistente em 127.0.0.1:54329 + migrações
 npm run dev:seed   # 2) (uma vez) cria uma empresa de exemplo e mostra e-mail/senha do Dono e o PIN do Vendedor
 npm run dev:api    # 3) API em http://127.0.0.1:3000 (COOKIE_SECURE=false só aqui, porque o dev usa http)
 npm run dev:web    # 4) app em http://localhost:5173 (o proxy do Vite leva a API para a MESMA origem)
+npm run dev:parar  # encerra Postgres embutido + libera portas 54329/3000/5173 (L-0012)
 ```
 
 - Os dados e os segredos de dev (senha do banco, `AUTH_PEPPER`) ficam em `.dev-data/` (ignorado pelo git), gerados na primeira execução. Apague a pasta para recomeçar do zero.
