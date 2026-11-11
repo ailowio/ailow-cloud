@@ -19,6 +19,5 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Material bruto do cliente com PII (também protegido por acervo/marcant/discovery/.gitignore)
-acervo/**/bruto/
-acervo/**/transcricoes/
+# Acervo do cliente (inspiração/discovery, PII): fica só na máquina do autor, nunca no repositório público.
+acervo/
