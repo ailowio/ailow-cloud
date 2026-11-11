@@ -324,12 +324,12 @@ Pronto para: colar o Prompt da S07 numa conversa nova.
 - [ ] Decidir a reescrita do histórico do Git (acervo): reescrita pronta e validada em clone separado; falta desligar o ruleset `proteger-main` (ação do Pedro ou autorização explícita), force-push, religar o ruleset e trocar `.gitleaksignore` (fingerprint muda) por `.gitleaks.toml`.
 - [x] **WSL2 + Docker Desktop + Compose local.** Feito 2026-11-12: WSL 3.0.5 + Ubuntu (WSL2); Docker engine ok; `docker compose up --build` → `/health` `{"status":"ok","db":"ok"}`, `/openapi.json` 200. Guia: `docs/dev-windows.md`. Aviso não bloqueante: nested virt `ERROR_INVALID_DATA`. Lição L-0013.
 
-### Estado de retomada — 2026-11-12 (pós-WSL/Docker; pronto para S07)
-- **Git:** S06 (PR #9) e S06b (PR #10) **mergeados** na `main` (`c6168a2`). `git rev-parse --show-toplevel` = `D:/apps/ailow-cloud`.
-- **Ambiente Windows:** WSL2 + Ubuntu; Docker Desktop (backend WSL2); autostart Docker **desligado**. Compose **saudável** em `127.0.0.1:3000`. Dev sem Docker (`dev:db`/`dev:api`/`dev:web`) continua válido — se for usar os dois, não colidir na porta 3000 (`docker compose down` antes do `dev:api`, ou o contrário).
-- **Docs:** `docs/dev-windows.md` (BIOS SVM, freeze, gate rápido, `.env`). README atualizado.
-- **Próximo passo:** conversa nova + colar o **Prompt da S07**. Branch a partir da `main` atualizada. Conferir portas 54329/3000/5173 (L-0012); Compose pode estar na 3000.
-- **Em aberto (não bloqueiam a S07):** ADR 004 "proposto"; logo definitiva e envio por empresa (RF-CFG-02); reescrita do histórico (acervo); L-0011; `dev:parar` (L-0012); proxy HTTPS S14; texto 13–14 px; Safari/iOS.
+### Estado de retomada — 2026-11-12 (pronto para S07; sanado)
+- **Git:** PRs #9, #10 e **#11** (docs Windows/WSL) **mergeados**. `main` local = `origin/main` (`507a8b2`). `git rev-parse --show-toplevel` = `D:/apps/ailow-cloud`. Sem PR aberto.
+- **Ambiente:** `.env` no app (ignorado); WSL2+Ubuntu; Docker ok. **Compose derrubado** de propósito (`docker compose down`) — portas 3000/54329/5173 livres para `dev:*` na S07. Volume do Postgres do Compose permanece (sem `-v`).
+- **Docs:** `docs/dev-windows.md` na main; prompt da S07 no plano.
+- **Próximo passo:** conversa nova + colar o **Prompt da S07** abaixo. Branch a partir desta `main`.
+- **Em aberto (NÃO bloqueiam a S07 — não sanar agora):** ADR 004 ainda "proposto" (código já na main; aceitar em PR docs quando quiser); logo/RF-CFG-02; reescrita do histórico (acervo) — só com pedido explícito + ruleset; L-0011 (PR próprio); `dev:parar` (L-0012); proxy HTTPS S14; texto 13–14 px; Safari/iOS; nested virt `ERROR_INVALID_DATA` (cosmético).
 
 ### Estado de retomada — 2026-11-11 (histórico)
 - **Git:** S05 (PR #6) e S05b (PR #7) mergeados; handoff apontava para S06. Superado pelos estados e PRs #9/#10 acima.
