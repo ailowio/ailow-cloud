@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
+import { TEST_PEPPER } from './helpers.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -25,7 +26,7 @@ describe('API', () => {
 
   beforeAll(async () => {
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL_TEST, max: 2 });
-    app = await buildApp({ pool, logger: { level: 'info', stream: log.stream } });
+    app = await buildApp({ pool, logger: { level: 'info', stream: log.stream }, authPepper: TEST_PEPPER });
     await app.ready();
   });
 
@@ -46,7 +47,7 @@ describe('API', () => {
         connectionString: 'postgresql://x:y@127.0.0.1:1/z',
         connectionTimeoutMillis: 500,
       });
-      const app2 = await buildApp({ pool: semBanco, logger: false });
+      const app2 = await buildApp({ pool: semBanco, logger: false, authPepper: TEST_PEPPER });
       try {
         const res = await app2.inject({ method: 'GET', url: '/health' });
         expect(res.statusCode).toBe(503);
