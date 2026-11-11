@@ -3,14 +3,14 @@
 | Campo | Valor |
 |---|---|
 | Produto | **Ailow Cloud**: ERP mobile multi-tenant para lojistas pequenos, vendido por assinatura por módulo |
-| Cliente piloto / caso de uso | Marcant Moda Íntima (box no Centro Fashion Fortaleza). Material em `acervo/marcant/` |
+| Cliente piloto / caso de uso | Marcant Moda Íntima (box no Centro Fashion Fortaleza). Material em `acervo/marcant/` (local, não versionado) |
 | Status | **Revisado pelo Pedro** (2026-11-10): ajustes D19 aplicados; exceções EX-01…04 aprovadas |
 | Dono do produto | Pedro (Ailow) |
 | Repositório | https://github.com/ailowio/ailow-cloud |
 | Tier do harness | **B**: dinheiro, dados pessoais de terceiros, várias empresas no mesmo sistema |
 | Nível do Projeto Final (curso) | **Projeto A**: monólito modular, VPS + Docker, C4, k6 em 3 estágios |
 | Prazo do curso | 16/11/2026 (prazo falado no aulão 07; **confirmar no Moodle**) |
-| Fontes | `acervo/marcant/discovery/sintese-discovery.md` (S§), `jornadas.md`, `decisoes-brainstorm.md` (D1–D18) |
+| Fontes | `acervo/marcant/discovery/sintese-discovery.md` (S§), `jornadas.md`, `decisoes-brainstorm.md` (D1–D18) — arquivos locais, não versionados |
 
 ---
 

@@ -54,6 +54,6 @@ Só nomes em `.env.example`. A API falha ao iniciar, citando o nome da variável
 | Plano de execução e diário | `docs/plano-execucao.md` |
 | Design System | `docs/design-system/README.md` |
 | Pesquisas (produto, etiqueta QR, Instagram) | `docs/pesquisa/` |
-| Discovery do cliente piloto | `acervo/marcant/discovery/` (brutos com PII ficam fora do git) |
+| Discovery do cliente piloto | `acervo/` — material de inspiração, **só local, não versionado** |
 
 Regras de engenharia: harness em `D:\apps\harness\PROTOCOLO.md` (repositório pessoal do autor).
