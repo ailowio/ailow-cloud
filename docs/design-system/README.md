@@ -40,7 +40,7 @@ Texto colorido usa tokens próprios com contraste medido: `--ailow-primario-text
 | Superfície (`--ailow-superficie`) | `#ffffff` | `#151c36` slate |
 | Borda (`--ailow-borda`) | `#dde1ee` | `#2b3454` |
 | Sombra (`--ailow-sombra`) | sombra suave azulada | sombra profunda + filete interno |
-| Brilho do destaque (`--ailow-brilho`) | halo violeta 28% | contorno + halo violeta 35–55% |
+| Brilho do destaque (`--ailow-brilho`) | halo azul 30% | contorno + halo azul 40–60% |
 
 Tema padrão: **escuro** (`defaultColorScheme="dark"`), com troca no topo.
 
