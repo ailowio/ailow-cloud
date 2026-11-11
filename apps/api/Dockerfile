@@ -25,7 +25,8 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
 RUN npm ci --omit=dev --ignore-scripts --workspace=@ailow/api --workspace=@ailow/shared \
-    && npm cache clean --force
+    && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build /repo/packages/shared/dist packages/shared/dist
 COPY --from=build /repo/apps/api/dist apps/api/dist
 COPY apps/api/migrations apps/api/migrations

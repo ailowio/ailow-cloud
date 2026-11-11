@@ -31,7 +31,15 @@ services:
   migrate:
     <<: *api-build
     # Roda as migrações pendentes e termina. A api só sobe depois (service_completed_successfully).
-    command: ["npm", "run", "migrate", "-w", "@ailow/api", "--", "up"]
+    # A imagem de runtime não tem npm (removido: superfície de ataque); chama o binário direto.
+    command:
+      - node
+      - ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js
+      - -m
+      - migrations
+      - --migrations-table
+      - pgmigrations
+      - up
     environment:
       DATABASE_URL: postgresql://ailow:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo de ambiente}@db:5432/ailow
     depends_on:
