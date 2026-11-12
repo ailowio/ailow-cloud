@@ -13,14 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S08 — Etiquetas QR — 2026-11-11 — Claude Opus 5.5
-Gate: feature API + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-03, ARQ (ADR 003), CI-01, MC. Decisão do Pedro na sessão: **bobina 33 × 22 mm em 3 colunas** (não 40 × 25), PDF **na API com pdfkit**.
-Feito (branch `feature/s08-etiquetas`): `POST /etiquetas` (só Dono) devolve PDF com **uma fileira de 3 por página**; QR vetorial só com o código (versão 1, correção M, zona de 4 módulos, módulo 0,5 mm = 4 pontos a 203 dpi); texto: nome, tamanho em destaque, cor, preço, código; **sem custo nem fornecedor**. Até 999 por PDF; SKU de outra empresa, inexistente ou de produto inativo = 404. Tela "Etiquetas" em Produtos: busca, quantidade por SKU, "Usar o estoque", resumo de fileiras/em branco, download com o dia de São Paulo. ADR 003 **proposto**.
-Números: testes API 535 -> 571, web 195 -> 215, shared 136 -> 151; OpenAPI 0.6.0 -> 0.7.0; bundle web +7,5 kB.
-Evidência: `verify` exit 0; PDF lido por leitor independente (`pdfjs-dist`); PDF **baixado pelo navegador** rasterizado a 203 dpi: **71/71 QRs decodificados** (`jsqr`, fora do repo); mutação **15/15** pegas; Playwright 360×640 nos 2 temas: 0 rolagem, 0 alvo < 48 px, 0 texto cortado (3 cortes achados só no navegador e corrigidos: L-0015). Pedro testou o PDF: "gerou rápido e funcionou".
-Pendências: **(1) impressão física (única):** comprar a bobina, informar o modelo da impressora, imprimir, calibrar (espaço entre colunas 2 mm e margem 1 mm são estimativas; papel 105 × 22 mm; tamanho real 100%) e fotografar a leitura pela câmera, que é o "pronto quando" da S08. (2) Zod já vaza no bundle web da `main` (5 marcas, antes desta sessão). (3) PIN do Dono de dev redefinido para 2468 só no banco local (documentar no seed). (4) Prefixo `etiquetas` no proxy HTTPS da S14.
-Aprendizado: L-0015 (rótulo cortado em 360 px, recorrência 2; lição ativa 12; E2E na S13). Falhas corrigidas (detalhe no PR): opção inexistente do pdfjs 6, nome de arquivo só por caixa, data em UTC, heredoc (lição 1). `check-harness` OK.
-
 ### S09 — Clientes — 2026-11-13 — Claude Sonnet 5.5
 Gate: feature API + UI, **tier B**; TEST-01..08/17, SEC-01/04, AUD-10, OPS-11, MC. Branch `feature/s09-clientes` (S08 já mergeada, PR #16).
 Feito: tabela `clientes` (RLS, celular único por empresa, sem `DELETE`); `GET/POST /clientes`, ficha, `POST …/aviso-lgpd` (Dono e Vendedor) e `POST …/anonimizar` (só Dono); busca por nome (sem acento) ou celular; telas Clientes, Novo cliente e Ficha com botão WhatsApp, aviso com data e apagar com confirmação; módulo "Clientes" ativo na grade. ADR 007 **proposto**; OpenAPI 0.8.0.
@@ -37,3 +29,11 @@ Números: testes API 634 -> 662, web 231 -> 235, shared 191 -> 200.
 Decisões (Pedro): excluir = apagar do banco ou inativar; edição obrigatória; histórico aguarda S10; log sem nome/celular.
 Verificação: `verify` exit 0 (API 662, web 235, shared 200); mutação das regras novas (sessão Claude: 8/8); Playwright 360×640 nos 2 temas: 14 telas (lista, inativos, novo, ficha, editar, ficha-inativo, confirmar-excluir × 2 temas), 0 rolagem, 0 alvo < 48 px, 0 texto cortado.
 Pendências: impressão física S08 (Pedro); S10 Vendas.
+
+### S10 — Vendas — 2026-11-11 — Grok 4.7
+Gate: feature + UI + migração + dado pessoal, **tier B**. TEST-01/03/04/05/06/07/08/09/12/13/17/20, CODE-01/02/06/10/14/18, SEC-01/03/04, OPS-11, ARQ-05, AUD-03, CI-01, IA-05/08/12. Branch `feature/s10-vendas`.
+Feito: nova venda (busca, câmera nativa, carrinho, bloqueio sem estoque), fechamento (celular com cadastro se faltar, desconto, várias formas), finalização atômica (estoque + lançamento), comprovante (WhatsApp e impressão), cancelar = estorno, relatório e histórico na ficha. Venda → cliente `ON DELETE SET NULL` (ADR 007). OpenAPI 0.10.0. Migração `20261114120000_vendas`.
+Números: API 662 -> 685, web 235 -> 246, shared 200 -> 213.
+Decisões: toque do RNF-04 é clique em controle, não tecla; desconto percentual inteiro com piso; preço e estoque vêm do banco; Vendedor cancela só a própria venda e não vê o mês.
+Verificação: `verify` exit 0. Mutação do desconto de 100% (`>` virado `>=`) pegou o teste e foi revertida. Playwright 360×640, escuro e claro: 0 rolagem lateral, 0 alvo < 48 px, 0 texto cortado. Caminho Pix: 5 cliques (Vendas, peça, Fechar, Pix, Finalizar); 19 teclas à parte. PR #19.
+Pendências: impressão física S08 (Pedro); S11 Compras. `dev:parar` quebrado e Zod no bundle seguem fora desta sessão.

@@ -11,7 +11,7 @@ export interface Modulo {
 // Ordem fixa: Vendas é o 1º, no canto superior esquerdo (RF-VEN-01). Vendedor nunca vê Financeiro,
 // Compras nem Configurações (RN-10). O servidor impõe o mesmo (exigirPerfil); aqui é só para não mostrar o que não abre.
 const TODOS: readonly Modulo[] = [
-  { id: 'vendas', rotulo: 'Vendas', perfis: ['dono', 'vendedor'], pronto: false },
+  { id: 'vendas', rotulo: 'Vendas', perfis: ['dono', 'vendedor'], pronto: true },
   { id: 'produtos', rotulo: 'Produtos', perfis: ['dono', 'vendedor'], pronto: true },
   { id: 'compras', rotulo: 'Compras', perfis: ['dono'], pronto: false },
   { id: 'clientes', rotulo: 'Clientes', perfis: ['dono', 'vendedor'], pronto: true },

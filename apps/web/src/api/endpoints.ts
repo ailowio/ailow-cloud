@@ -13,8 +13,12 @@ import type {
   Produto,
   ProdutoNovo,
   Relatorio,
+  RelatorioVendas,
+  SkuParaVenda,
   TipoCategoria,
   UsuarioPublico,
+  Venda,
+  VendaFinalizar,
 } from '@ailow/shared';
 import type { Cliente } from './cliente';
 
@@ -97,6 +101,18 @@ export function criarApi(c: Cliente) {
     inativarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/inativar`),
     reativarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/reativar`),
     excluirCliente: (id: string) => p('DELETE', `/clientes/${id}`),
+    // --- vendas (S10). Dono e Vendedor; o relatório do mês é só do Dono.
+    skuPorCodigo: (codigo: string) => p<SkuParaVenda>('GET', `/skus/por-codigo?codigo=${encodeURIComponent(codigo)}`),
+    finalizarVenda: (corpo: VendaFinalizar) => p<Venda>('POST', '/vendas', corpo),
+    venda: (id: string) => p<Venda>('GET', `/vendas/${id}`),
+    cancelarVenda: (id: string, motivo: string) => p<Venda>('POST', `/vendas/${id}/cancelar`, { motivo }),
+    relatorioVendas: (periodo: 'dia' | 'mes', data: string) =>
+      p<RelatorioVendas>('GET', `/vendas/relatorio?periodo=${periodo}&data=${data}`),
+    comprasDoCliente: (id: string) =>
+      p<{ compras: { id: string; numero: number; total_centavos: number; status: Venda['status']; criado_em: string }[] }>(
+        'GET',
+        `/vendas/por-cliente/${id}`,
+      ),
   };
 }
 

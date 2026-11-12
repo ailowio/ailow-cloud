@@ -217,3 +217,35 @@ export async function movimentosDoSku(c: pg.PoolClient, skuId: string): Promise<
   );
   return r.rows.map((m) => ({ ...m, criado_em: (m.criado_em as Date).toISOString() })) as Movimento[];
 }
+
+export interface SkuParaVenda {
+  id: string;
+  codigo: string;
+  nome: string;
+  tamanho: string;
+  cor: string;
+  preco_centavos: number;
+  estoque: number;
+  categoria_nome: string;
+}
+
+const SQL_SKU_VENDA = `SELECT s.id, s.codigo, p.nome, s.tamanho, s.cor, p.preco_centavos, s.estoque, c.nome AS categoria_nome
+     FROM skus s
+     JOIN produtos p ON p.empresa_id = s.empresa_id AND p.id = s.produto_id
+     JOIN categorias c ON c.empresa_id = p.empresa_id AND c.id = p.categoria_id`;
+
+/** Scanner e busca da venda: uma peça pelo código, sem custo (RF-VEN-02, RF-PRO-07). null = não existe ou produto inativo. */
+export async function buscarSkuPorCodigo(c: pg.PoolClient, codigo: string): Promise<SkuParaVenda | null> {
+  const r = await c.query(`${SQL_SKU_VENDA} WHERE s.codigo = upper(btrim($1)) AND p.ativo`, [codigo]);
+  return (r.rows[0] as SkuParaVenda | undefined) ?? null;
+}
+
+/**
+ * Trava os SKUs na ordem do id (evita deadlock) e devolve preço e saldo para a finalização.
+ * null se algum id não existe, é de outra empresa ou o produto está inativo.
+ */
+export async function travarSkusParaVenda(c: pg.PoolClient, skuIds: string[]): Promise<SkuParaVenda[] | null> {
+  const r = await c.query(`${SQL_SKU_VENDA} WHERE s.id = ANY($1::uuid[]) AND p.ativo ORDER BY s.id FOR UPDATE OF s`, [skuIds]);
+  if (r.rowCount !== skuIds.length) return null;
+  return r.rows as SkuParaVenda[];
+}

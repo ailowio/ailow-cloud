@@ -16,6 +16,7 @@ import { Clientes } from './telas/clientes/Clientes';
 import { Configuracoes } from './telas/config/Configuracoes';
 import { Financeiro } from './telas/financeiro/Financeiro';
 import { Produtos } from './telas/produtos/Produtos';
+import { Vendas } from './telas/vendas/Vendas';
 
 // Um estado por tela. `inicio` guarda a sessão aberta e o limite de inatividade vindo do servidor.
 type Estado =
@@ -192,6 +193,10 @@ function Logado(props: {
   // Enquanto a pessoa usa o app sem chamar a API, avisa o servidor (senão a sessão expira por baixo dela).
   useTravaInatividade(props.inatividade, props.aoTravar, () => void props.api.eu().catch(() => {}));
 
+  // Vendas abre para o Dono e para o Vendedor (RF-VEN-01). O relatório do mês fica só com o Dono.
+  if (props.modulo === 'vendas') {
+    return <Vendas api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
+  }
   // Produtos abre para o Dono e para o Vendedor; a tela e a API cuidam do que cada um vê (RF-PRO-07).
   if (props.modulo === 'produtos') {
     return <Produtos api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
