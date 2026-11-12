@@ -13,14 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S12 — Pessoas (ponto) — 2026-11-12 — Claude Sonnet 5.5
-Gate: feature + migração + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-01/04, OPS-11, ARQ-05, AUD-03, CI-01, RN-10. Branch `feature/s12-pessoas` (S11 já na main, PR #20). Sem ADR (PRD §5.8/§7 + ADR 004).
-Feito: bater ponto (`GET /pontos/estado`, `POST /pontos`) e espelho do mês (`GET /pontos/espelho`); tela Pessoas; módulo pronto para Dono e Vendedor. **Pedido do Pedro:** só o Dono adiciona, edita e exclui ponto (`POST /pontos/manual`, `PUT /pontos/{id}`, `POST /pontos/{id}/excluir`), com motivo; exclusão lógica + log imutável `pontos_ajustes`; sequência entrada/saída validada sob lock; marca "ajustado". **ADR 008 proposto.** OpenAPI 0.13.0. Migrações `20261116120000_pessoas` + `20261116180000_pontos-ajustes` (sai `seq`/paridade).
-Números: API 703 -> 740 (30 da S12; o resto são testes de concorrência de compras/vendas do mesmo PR), web 248 -> 250 (sem `toques.test`, trocado pelo E2E), shared 222 -> 237.
-Decisões (Pedro): 30 s entre batidas, turno no dia/mês da entrada e "em aberto" sem horas: confirmados. Falta assinar o ADR 008 (Dono ajusta o próprio ponto; sem tela do histórico de ajustes).
-Pendências: tirar o aviso "em breve" da tela inicial (S13); prefixo `pontos` no proxy HTTPS (S14); E2E 360 px formal (S13); retenção de ponto (S14).
-Verificação: `verify` exit 0. Mutação (30 s, 403, sequência na exclusão, exclusão lógica na batida) pega; revertida. Playwright 360×640, tema escuro: adicionar, editar e excluir com confirmação, 0 rolagem, 0 alvo < 48 px (campos subiram para `lg`). PR #21 (4 commits: compras/vendas, E2E, identidade, S12).
-
 ### S13a — Qualidade final: contrato da API — 2026-11-12 — Claude Sonnet 5.5
 Gate: CI/qualidade + correções do fuzz, **tier B**; CI-*, TEST-*, SEC-01/04, ENV-02, MC. Branch `feature/s13-qualidade-final` (S12 na main, PR #21; ADR 008 **aceito** pelo Pedro). Plano fatiado: S13 virou S13a/b/c.
 Feito: Spectral 6.17.0 no `verify` (`lint:openapi`, falha em aviso) sobre `docs/openapi.json` gerado e versionado; `operationId`, `info`, `servers`, 200 binário (logo, etiquetas) e 400 em toda rota com entrada. Schemathesis 4.33.2 (`scripts/contrato.sh`, Postgres em contêiner, job `contrato` no CI). Achados reais: U+0000 → 500 (agora 400 em qualquer rota) e `PUT /empresa/logo` malformado → 500/406 (agora 400). Postgres embutido nascia em WIN1252 (emoji → 500 local): agora UTF-8 ICU pt-BR (L-0018).
@@ -37,3 +29,11 @@ Causa: 7-9 conexões em `Lock/transactionid` no `INSERT INTO venda_sequencia` (n
 Números: API 753 -> 761 testes; web 250, shared 237; OpenAPI 0.13.0 sem diff.
 Decisões (Pedro): como destravar RNF-01/02 (numeração da venda é decisão estrutural -> ADR; tamanho do pool; custo da resposta de `/produtos`); o think time do k6 (0,3-0,7 s) é agressivo para balcão; limite p99 do estresse (3 s) foi escolha minha.
 Verificação: `verify` exit 0; `contrato.sh` 3485/3485; `alertas.sh` ok. Canários: alerta 0,72 em vez de 0,072 reprovou o promtool; `P95_VENDA_MS=1` fez o k6 sair 99. Lição L-0019 (espera do Postgres).
+
+### S13b2 — Desempenho da venda (RNF-01/02) + docs da S13c — 2026-11-12 — Claude Sonnet 5.5
+Gate: perf/banco, **tier B**; TEST-*, ARQ-* (ADR 009), OPS-11, SEC-01/04, L-0006/0012/0017. Branch `feature/s13b2-desempenho-venda`, **sem commit** (aguarda pedido). S13b chegou na main pelo PR #23.
+Feito: ADR 009 **aceito, opção A** (Pedro). Número da venda alocado por último, num só comando que grava `vendas` e devolve o número; resposta montada antes; migração `20261117120000_vendas-fk-adiavel` (FKs adiáveis, reversível); movimentos e lançamentos novos gravam só "Venda" e a leitura compõe "Venda N". `DB_POOL_MAX` (1-50; padrão 10). Thresholds intactos. Docs da S13c: threat model, C4 + mapa de contextos, checklist PRD §10, harness-adoption; aviso "em breve" condicional.
+Números (k6 50 VUs, 2 rodadas): venda p95 1807 -> 309 / 333 ms; busca p95 957 -> 246 / 268 ms; erro 0%; iterações 2534 -> ~5600. Só a alocação por último: 511 / 294 ms. Pool 20: busca 315 ms (reprova), então fica 10. Estresse: 25 VUs venda 1482 -> 169 ms; 300 VUs p95 ~3,4 s; reprova o p99 < 3 s do próprio estresse.
+Decisões (Pedro): aceitar "Venda"+leitura composta nos textos novos; limite p99 do estresse; `GET /produtos` não foi otimizado (passa a meta; média no k6 580 -> 156 ms só com a cauda curta); runbooks e E2E da S13c ficaram de fora (dependem de VPS/stack ao vivo).
+Verificação: `verify` exit 0 (API 761 -> 766, web 250, shared 237; OpenAPI sem diff); `contrato.sh` 3485/3485; `alertas.sh` ok. Vermelho antes: teste de ordem das instruções; o teste existente do extrato pegou o estorno que eu não tinha coberto na composição.
+Pendências: S13c (E2E no CI dos 4 fluxos, runbooks, tirar o aviso de vez), S14 (rate limit, TOTP, `main` protegida).
