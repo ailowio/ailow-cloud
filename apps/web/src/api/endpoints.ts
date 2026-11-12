@@ -2,6 +2,7 @@ import type {
   AjusteEstoque,
   AlertaEstoque,
   Categoria,
+  Cliente as ClienteFicha,
   ContaAPagar,
   DespesaEntrada,
   Empresa,
@@ -23,6 +24,12 @@ export type UsuarioAdminItem = QuemUsaItem & { ativo: boolean };
 // O tipo só vale na criação (a API não deixa trocá-lo depois); sem tipo, é categoria de produto.
 export type CategoriaCorpo = Pick<Categoria, 'nome' | 'atributos'> & { tipo?: TipoCategoria };
 export type CategoriaAlterar = Pick<Categoria, 'nome' | 'atributos' | 'ativa'>;
+// O celular segue como a pessoa digitou (máscara, +55); a API devolve só os dígitos.
+export interface ClienteCorpo {
+  nome: string;
+  celular: string;
+  aviso_lgpd: boolean;
+}
 
 export function criarApi(c: Cliente) {
   const p = c.pedir;
@@ -77,6 +84,15 @@ export function criarApi(c: Cliente) {
     alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),
     // --- etiquetas (S08, só Dono): o PDF volta como Blob.
     etiquetasPdf: (itens: EtiquetasPedido['itens']) => c.baixar('/etiquetas', { itens }),
+    // --- clientes (S09). Dono e Vendedor cadastram, buscam e registram o aviso; só o Dono anonimiza.
+    clientes: (q?: string) => {
+      const busca = q?.trim() ?? '';
+      return p<{ clientes: ClienteFicha[]; truncado: boolean }>('GET', busca === '' ? '/clientes' : `/clientes?q=${encodeURIComponent(busca)}`);
+    },
+    criarCliente: (n: ClienteCorpo) => p<{ id: string }>('POST', '/clientes', n),
+    cliente: (id: string) => p<ClienteFicha>('GET', `/clientes/${id}`),
+    avisarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/aviso-lgpd`),
+    anonimizarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/anonimizar`),
   };
 }
 

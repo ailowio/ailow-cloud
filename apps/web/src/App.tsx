@@ -12,6 +12,7 @@ import { Inicio } from './telas/Inicio';
 import { Moldura } from './telas/Moldura';
 import { PinTela } from './telas/PinTela';
 import { QuemUsa } from './telas/QuemUsa';
+import { Clientes } from './telas/clientes/Clientes';
 import { Configuracoes } from './telas/config/Configuracoes';
 import { Financeiro } from './telas/financeiro/Financeiro';
 import { Produtos } from './telas/produtos/Produtos';
@@ -194,6 +195,10 @@ function Logado(props: {
   // Produtos abre para o Dono e para o Vendedor; a tela e a API cuidam do que cada um vê (RF-PRO-07).
   if (props.modulo === 'produtos') {
     return <Produtos api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
+  }
+  // Clientes abre para o Dono e para o Vendedor; só o Dono apaga os dados de um cliente (RF-CLI-04).
+  if (props.modulo === 'clientes') {
+    return <Clientes api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
   }
   if (props.modulo === 'financeiro' && props.usuario.perfil === 'dono') {
     return <Financeiro api={props.api} aoVoltar={() => props.aoAbrir(null)} />;

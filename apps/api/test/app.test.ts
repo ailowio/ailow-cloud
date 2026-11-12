@@ -106,6 +106,17 @@ describe('API', () => {
       const bruto = JSON.stringify(log.registros().filter((r) => r.request_id === 'req-log-2'));
       expect(bruto).not.toContain('segredo-super-secreto');
     });
+
+    // S09 / SEC-04: a busca de clientes manda nome ou celular na URL; isso é dado pessoal e não vai para o log.
+    it('não registra a query string (busca por nome ou celular) nos logs', async () => {
+      await app.inject({ method: 'GET', url: '/health?q=11987654321&nome=Maria-da-Silva', headers: { 'x-request-id': 'req-log-3' } });
+      const registros = log.registros().filter((r) => r.request_id === 'req-log-3');
+      expect(registros.length).toBeGreaterThanOrEqual(2);
+      const bruto = JSON.stringify(registros);
+      expect(bruto).not.toContain('11987654321');
+      expect(bruto).not.toContain('Maria-da-Silva');
+      expect(bruto).toContain('/health');
+    });
   });
 
   describe('OpenAPI (DOC-05)', () => {

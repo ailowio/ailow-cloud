@@ -4,7 +4,13 @@ import { LOGO_MAX_BYTES } from '@ailow/shared';
 import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
 import fastifySwagger from '@fastify/swagger';
-import fastify, { type FastifyError, type FastifyInstance, type FastifyServerOptions, LogController } from 'fastify';
+import fastify, {
+  type FastifyError,
+  type FastifyInstance,
+  type FastifyRequest,
+  type FastifyServerOptions,
+  LogController,
+} from 'fastify';
 import {
   hasZodFastifySchemaValidationErrors,
   jsonSchemaTransform,
@@ -17,6 +23,7 @@ import { criarGuardas } from './acesso/guardas.js';
 import { registrarRotasAcesso } from './acesso/rotas.js';
 import { criarHasher } from './acesso/senhas.js';
 import { registrarRotasAdmin } from './admin/rotas.js';
+import { registrarRotasClientes } from './clientes/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
 import { registrarRotasProdutos } from './produtos/rotas.js';
@@ -36,6 +43,18 @@ export interface AppDeps {
 // (evita log injection: o Fastify não valida o cabeçalho por conta própria).
 const REQUEST_ID_VALIDO = /^[A-Za-z0-9._-]{1,64}$/;
 
+// Igual ao serializador padrão do Fastify (menos `version`, que o app não usa), mas sem a query string: a busca de
+// clientes (S09) leva nome ou celular na URL, e dado pessoal não vai para o log.
+function serializarReq(req: FastifyRequest) {
+  return {
+    method: req.method,
+    url: req.url.split('?')[0],
+    host: req.host,
+    remoteAddress: req.ip,
+    remotePort: req.socket?.remotePort,
+  };
+}
+
 class LogComRequestId extends LogController {
   constructor() {
     super({ requestIdLogLabel: 'request_id' });
@@ -52,7 +71,7 @@ export async function buildApp({
   const app = fastify({
     logger:
       logger && typeof logger === 'object'
-        ? { ...logger, redact: ['req.headers.authorization', 'req.headers.cookie'] }
+        ? { ...logger, redact: ['req.headers.authorization', 'req.headers.cookie'], serializers: { req: serializarReq } }
         : logger,
     logController: new LogComRequestId(),
     genReqId: (req) => {
@@ -67,7 +86,7 @@ export async function buildApp({
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Ailow Cloud API', version: '0.7.0' },
+      info: { title: 'Ailow Cloud API', version: '0.8.0' },
       tags: [
         { name: 'acesso', description: 'Entrar, aparelho vinculado, PIN e sessão' },
         { name: 'usuarios', description: 'Gestão de usuários da empresa (somente Dono)' },
@@ -75,6 +94,7 @@ export async function buildApp({
         { name: 'configuracoes', description: 'Dados da empresa, markup, logo e categorias (somente Dono; GET logo com sessão)' },
         { name: 'financeiro', description: 'Despesas, contas a pagar, estorno e relatórios (somente Dono)' },
         { name: 'produtos', description: 'Produtos, SKUs, busca e estoque (o Vendedor só consulta, sem custo)' },
+        { name: 'clientes', description: 'Clientes: cadastro, busca, ficha, aviso LGPD e anonimização (só o Dono anonimiza)' },
       ],
       // Autenticação por cookie de sessão no servidor (ADR 004); nenhum token é exposto ao JavaScript.
       components: {
@@ -146,6 +166,7 @@ export async function buildApp({
   await registrarRotasConfiguracoes(app, deps, guardas);
   await registrarRotasFinanceiro(app, deps, guardas);
   await registrarRotasProdutos(app, deps, guardas);
+  await registrarRotasClientes(app, deps, guardas);
 
   app.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 
