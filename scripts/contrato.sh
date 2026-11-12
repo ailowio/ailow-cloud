@@ -37,11 +37,17 @@ echo "== Postgres efêmero (${IMAGEM_POSTGRES}) na porta ${PORTA_PG}"
 docker rm -f "${BANCO}" >/dev/null 2>&1 || true
 docker run -d --name "${BANCO}" -e POSTGRES_USER=ailow -e POSTGRES_DB=ailow -e "POSTGRES_PASSWORD=${SENHA_PG}" \
   -p "127.0.0.1:${PORTA_PG}:5432" "${IMAGEM_POSTGRES}" >/dev/null
-for _ in $(seq 1 40); do
-  docker exec "${BANCO}" pg_isready -U ailow -d ailow >/dev/null 2>&1 && break
+# A imagem sobe um servidor TEMPORÁRIO para o initdb e o reinicia: pg_isready já responde nele. Espera o fim da
+# inicialização no log e só então confere o servidor definitivo (pela porta publicada, como a API vai usar).
+for _ in $(seq 1 60); do
+  docker logs "${BANCO}" 2>&1 | grep -q "PostgreSQL init process complete" && break
   sleep 1
 done
-docker exec "${BANCO}" pg_isready -U ailow -d ailow >/dev/null
+for _ in $(seq 1 60); do
+  docker exec "${BANCO}" pg_isready -h 127.0.0.1 -U ailow -d ailow >/dev/null 2>&1 && break
+  sleep 1
+done
+docker exec "${BANCO}" pg_isready -h 127.0.0.1 -U ailow -d ailow >/dev/null
 
 echo "== Migrações"
 npm run build:shared >/dev/null
