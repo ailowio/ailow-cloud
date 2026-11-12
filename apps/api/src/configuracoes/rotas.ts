@@ -136,7 +136,15 @@ export async function registrarRotasConfiguracoes(app: FastifyInstance, deps: De
     },
     async (request, reply) => {
       const s = sessaoDe(request);
-      const arquivo = await request.file();
+      // Corpo que não é multipart válido (sem boundary, JSON, texto) é erro de quem chama: 400, nunca 500 nem 406.
+      const naoEMultipart = () => reply.code(400).send({ erro: 'requisicao_invalida', mensagem: 'envie o arquivo em multipart/form-data' });
+      if (!request.isMultipart()) return naoEMultipart();
+      let arquivo: Awaited<ReturnType<typeof request.file>>;
+      try {
+        arquivo = await request.file();
+      } catch {
+        return naoEMultipart();
+      }
       if (!arquivo) {
         return reply.code(400).send({ erro: 'requisicao_invalida', mensagem: 'envie o arquivo no campo file' });
       }

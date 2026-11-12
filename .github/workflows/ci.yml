@@ -1,6 +1,7 @@
 # CI do Ailow Cloud (tier B). Regras: CI-01..18, SEC-05/10/12/14, TEST-12, ENV-11.
 # Nomes dos jobs são ESTÁVEIS: são os checks obrigatórios da branch protection
 # (verify, seguranca-segredos, seguranca-sast, seguranca-sca, imagem, compose). Não renomear sem atualizar a proteção.
+# `contrato` (S13a) roda em todo PR mas ainda não é obrigatório.
 # Todas as actions de terceiros estão fixadas por SHA de commit (CI-18); o comentário diz a versão.
 name: CI
 
@@ -52,6 +53,28 @@ jobs:
       - run: npm ci
       # lint + tipos + testes (incluindo RLS contra o Postgres acima) + build de shared, api e web.
       - run: npm run verify
+      # S13a: `verify` roda o Spectral e REGENERA docs/openapi.json; o contrato versionado tem de ser o que a API publica.
+      - name: docs/openapi.json está em dia
+        run: git diff --exit-code docs/openapi.json
+
+  # S13a (PRD §10.6): teste de contrato com Schemathesis contra a API real e um Postgres efêmero em contêiner.
+  # Mesmo comando da máquina do Pedro (scripts/contrato.sh). Ainda NÃO é check obrigatório da branch protection
+  # (a proteção é decisão do Pedro na S14); o resultado aparece no PR.
+  contrato:
+    name: contrato
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: schemathesis
+        run: bash scripts/contrato.sh
 
   seguranca-segredos:
     name: seguranca-segredos

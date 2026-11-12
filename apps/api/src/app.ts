@@ -13,7 +13,6 @@ import fastify, {
 } from 'fastify';
 import {
   hasZodFastifySchemaValidationErrors,
-  jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
@@ -25,6 +24,8 @@ import { criarHasher } from './acesso/senhas.js';
 import { registrarRotasAdmin } from './admin/rotas.js';
 import { registrarRotasClientes } from './clientes/rotas.js';
 import { registrarRotasCompras } from './compras/rotas.js';
+import { transformarContrato } from './contrato.js';
+import { contemNul } from './entrada-segura.js';
 import { registrarRotasPessoas } from './pessoas/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
@@ -102,8 +103,17 @@ export async function buildApp({
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Ailow Cloud API', version: '0.13.0' },
+      info: {
+        title: 'Ailow Cloud API',
+        version: '0.13.0',
+        description:
+          'API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).',
+        contact: { name: 'Ailow Cloud', url: 'https://github.com/ailowio/ailow-cloud' },
+      },
+      // Mesma origem do app web (o proxy HTTPS da produção e o do Vite repassam a API).
+      servers: [{ url: '/', description: 'Mesma origem do app' }],
       tags: [
+        { name: 'saude', description: 'Saúde da API e do banco (sem sessão)' },
         { name: 'acesso', description: 'Entrar, aparelho vinculado, PIN e sessão' },
         { name: 'usuarios', description: 'Gestão de usuários da empresa (somente Dono)' },
         { name: 'admin', description: 'Administração da plataforma (Admin com TOTP)' },
@@ -124,7 +134,7 @@ export async function buildApp({
         },
       },
     },
-    transform: jsonSchemaTransform,
+    transform: transformarContrato,
   });
 
   await app.register(fastifyCookie);
@@ -153,6 +163,12 @@ export async function buildApp({
     return reply.code(status).send({ erro: error.code ?? 'requisicao_invalida' });
   });
 
+  app.addHook('preValidation', async (request, reply) => {
+    if (contemNul(request.query) || contemNul(request.params) || contemNul(request.body)) {
+      return reply.code(400).send({ erro: 'requisicao_invalida', mensagem: 'texto com caractere nulo (U+0000) não é aceito' });
+    }
+  });
+
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
   });
@@ -163,6 +179,7 @@ export async function buildApp({
     '/health',
     {
       schema: {
+        tags: ['saude'],
         summary: 'Saúde da API e do banco',
         response: { 200: healthResponseSchema, 503: healthResponseSchema },
       },

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import EmbeddedPostgres from 'embedded-postgres';
 import { runner } from 'node-pg-migrate';
+import { INITDB_FLAGS } from '../scripts/embedded-flags.js';
 
 // TEST-12: os testes de integração usam Postgres REAL.
 // - No CI: DATABASE_URL_TEST aponta para o serviço Postgres efêmero do job.
@@ -34,6 +35,7 @@ export default async function setup(): Promise<() => Promise<void>> {
       password: 'ailow_test',
       port,
       persistent: false,
+      initdbFlags: INITDB_FLAGS,
       onLog: () => {},
       onError: () => {},
     });

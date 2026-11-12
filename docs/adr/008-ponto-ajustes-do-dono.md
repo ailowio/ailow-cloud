@@ -1,6 +1,6 @@
 # ADR 008: Ponto — o Dono adiciona, edita e exclui, sem reescrever a história
 
-- **Status:** proposto (a assinar pelo Pedro). Pedido do Pedro em 2026-11-12: "adicionar, editar e excluir ponto, apenas para o dono". O **como** abaixo é proposta, com alternativas.
+- **Status:** aceito (Pedro, 2026-11-12). Pedido do Pedro: "adicionar, editar e excluir ponto, apenas para o dono"; o **como** abaixo foi proposto com alternativas e aceito.
 - **Data:** 2026-11-12 (S12)
 - **Decisores:** Pedro (dono do produto); proposta redigida com apoio de IA
 - **Tier do app:** B

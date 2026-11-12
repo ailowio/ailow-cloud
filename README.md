@@ -19,7 +19,9 @@ Requisitos: Node 22+. Docker só é necessário para o Compose. No Windows (WSL2
 
 ```bash
 npm ci
-npm run verify              # lint + tipos + testes + build (api, web e shared)
+npm run verify              # lint + Spectral (OpenAPI) + tipos + testes + build (api, web e shared)
+npm run openapi:gerar       # reescreve docs/openapi.json (o `verify` já faz; o CI exige que esteja em dia)
+bash scripts/contrato.sh    # teste de contrato (Schemathesis) contra a API real; precisa de Docker (~3 min)
 ```
 
 ### Desenvolver o app completo SEM Docker
