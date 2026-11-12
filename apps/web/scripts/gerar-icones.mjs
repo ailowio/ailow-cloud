@@ -1,5 +1,7 @@
 // Gera os ícones do PWA (PNG) sem dependências: `node apps/web/scripts/gerar-icones.mjs`.
-// Desenho: quadrado arredondado azul Ailow (#2448FF) com um "A" branco e um ponto laranja (#FF7043).
+// NOTA (2026-11-11): a marca oficial é `public/logo.png` (A ciano #07BDD5). Os ícones
+// em `public/icons/` foram regenerados a partir dela (fundo #0b1126). Este script ainda
+// desenha o placeholder antigo; rode-o só se precisar do fallback procedural.
 // O ícone "maskable" ocupa a área inteira e mantém o desenho na zona segura central (80%).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

@@ -11,4 +11,10 @@ describe('textos da venda', () => {
   it('sem estoque diz para chamar o Dono', () => {
     expect(mensagemVenda(new ErroApi(409, 'estoque_insuficiente'))).toContain(MENSAGEM_SEM_ESTOQUE.replace(/\.$/, ''));
   });
+
+  it('celular cadastrado por outro balcão no meio da venda pede para finalizar de novo, sem chamar o Dono', () => {
+    const texto = mensagemVenda(new ErroApi(409, 'cliente_ja_cadastrado'));
+    expect(texto).toContain('Finalizar de novo');
+    expect(texto).not.toContain('inativo');
+  });
 });

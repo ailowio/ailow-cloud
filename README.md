@@ -2,13 +2,13 @@
 
 ERP mobile multi-tenant para lojistas pequenos: vender pelo celular com QR code, estoque e financeiro integrados, botões grandes para quem não é da tecnologia. Primeiro cliente e caso de uso: Marcant Moda Íntima (`acervo/marcant/`).
 
-**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S11 Compras na branch; S10 Vendas, S09b/S09 Clientes e S08 Etiquetas na main; próxima: **S12 Pessoas**).
+**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S12 Pessoas na branch; S11 Compras, S10 Vendas, S09b/S09 Clientes e S08 Etiquetas na main; próxima: **S13 Qualidade final**).
 
 ## Estrutura
 
 ```
 apps/api         API Node/TS (Fastify + Zod → OpenAPI 3.1), migrações SQL, testes com Postgres real
-apps/web         PWA Vite + React + Mantine (acesso, tela inicial, Configurações, Financeiro, Produtos, Etiquetas, Clientes, Vendas e Compras; catálogo do DS em /?catalogo só em dev)
+apps/web         PWA Vite + React + Mantine (acesso, tela inicial, Configurações, Financeiro, Produtos, Etiquetas, Clientes, Vendas, Compras e Pessoas; catálogo do DS em /?catalogo só em dev)
 packages/shared  schemas Zod compartilhados entre API e web
 compose.yaml     Postgres 18 + migração + API (local)
 ```
@@ -80,7 +80,7 @@ Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` 
 | Doc | Onde |
 |---|---|
 | PRD | `docs/prd/PRD-ailow-cloud-v1.md` |
-| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP · 005 Financeiro: lançamentos imutáveis e interface pública · 006 Produtos: SKU e estoque com movimentos imutáveis, proposto · 003 Etiquetas: PDF com QR na API, proposto · 007 Clientes: celular único, edição, inativar e excluir, aceito) |
+| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP · 005 Financeiro: lançamentos imutáveis e interface pública · 006 Produtos: SKU e estoque com movimentos imutáveis, proposto · 003 Etiquetas: PDF com QR na API, proposto · 007 Clientes: celular único, edição, inativar e excluir, aceito · 008 Ponto: ajustes do Dono sem reescrever a história, proposto) |
 | Instruções para agentes de IA | `CLAUDE.md` / `AGENTS.md` |
 | Como contribuir | `CONTRIBUTORS.md`, `.github/pull_request_template.md` |
 | Matriz de acessos (auditoria) | `docs/auditoria/matriz-acessos.md` |

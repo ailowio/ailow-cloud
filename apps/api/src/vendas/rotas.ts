@@ -22,7 +22,11 @@ function responderErro(reply: FastifyReply, err: unknown) {
   if (err instanceof ErroVenda) {
     if (err.codigo === 'nao_encontrado') return naoEncontrado(reply);
     if (err.codigo === 'venda_de_outro') return semPermissao(reply);
-    const conflito = err.codigo === 'estoque_insuficiente' || err.codigo === 'cliente_inativo' || err.codigo === 'ja_cancelada';
+    const conflito =
+      err.codigo === 'estoque_insuficiente' ||
+      err.codigo === 'cliente_inativo' ||
+      err.codigo === 'cliente_ja_cadastrado' ||
+      err.codigo === 'ja_cancelada';
     return reply.code(conflito ? 409 : 400).send({ erro: err.codigo });
   }
   throw err;

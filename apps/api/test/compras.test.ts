@@ -247,5 +247,88 @@ describe('Compras (API)', () => {
         ]),
       );
     });
+
+    it('a soma do mês pode passar de 2,1 bilhões de centavos (dois pedidos no teto) sem derrubar o relatório', async () => {
+      const loja = await montar('Relatório teto');
+      const f = await fornecedor(loja);
+      const p = await peca(loja, 1);
+      const TETO = 2_000_000_000;
+      for (let i = 0; i < 2; i++) {
+        const ped = await loja.dono.post('/compras', {
+          fornecedor_id: f.id,
+          itens: [{ sku_id: p.skuId, quantidade: 1, custo_centavos: TETO }],
+        });
+        expect(ped.statusCode).toBe(201);
+        const { id } = ped.json() as { id: string };
+        await loja.dono.post(`/compras/${id}/enviar`);
+        const rec = await loja.dono.post(`/compras/${id}/receber`, { parcelas: [{ valor_centavos: TETO, vencimento: '2026-11-30' }] });
+        expect(rec.statusCode).toBe(200);
+      }
+      const rel = await loja.dono.get(`/compras/relatorio?periodo=mes&data=${MES}`);
+      expect(rel.statusCode).toBe(200);
+      expect(rel.json()).toMatchObject({ pedidos: 2, total_centavos: 2 * TETO });
+    });
+  });
+
+  describe('edição (RF-COM-01/02) e concorrência (RN-11)', () => {
+    it('edita o rascunho (itens, fornecedor, total) e deixa rastro; depois de enviado não edita mais', async () => {
+      const loja = await montar('Edita pedido');
+      const f1 = await fornecedor(loja);
+      const f2 = await fornecedor(loja);
+      const p = await peca(loja);
+      const ped = await loja.dono.post('/compras', {
+        fornecedor_id: f1.id,
+        itens: [{ sku_id: p.skuId, quantidade: 1, custo_centavos: 4500 }],
+      });
+      const { id } = ped.json() as { id: string };
+
+      const editado = await loja.dono.put(`/compras/${id}`, {
+        fornecedor_id: f2.id,
+        itens: [{ sku_id: p.skuId, quantidade: 3, custo_centavos: 4000 }],
+      });
+      expect(editado.statusCode).toBe(200);
+      expect(editado.json()).toMatchObject({ status: 'rascunho', total_centavos: 12000, fornecedor: { id: f2.id } });
+      expect((editado.json() as { itens: unknown[] }).itens).toHaveLength(1);
+
+      const eventos = await owner.query('SELECT tipo FROM eventos_acesso WHERE alvo_id = $1 ORDER BY criado_em, id', [id]);
+      expect(eventos.rows.map((r) => r.tipo)).toContain('pedido_compra_editado');
+
+      await loja.dono.post(`/compras/${id}/enviar`);
+      const tarde = await loja.dono.put(`/compras/${id}`, {
+        fornecedor_id: f1.id,
+        itens: [{ sku_id: p.skuId, quantidade: 1, custo_centavos: 100 }],
+      });
+      expect(tarde.statusCode).toBe(409);
+    });
+
+    it('edita o fornecedor e recusa o WhatsApp de outro fornecedor da mesma loja', async () => {
+      const loja = await montar('Edita fornecedor');
+      const f1 = await fornecedor(loja);
+      const f2 = await fornecedor(loja);
+      const ok = await loja.dono.put(`/fornecedores/${f1.id}`, { nome: 'Nome novo', whatsapp: f1.whatsapp, cnpj: null });
+      expect(ok.statusCode).toBe(200);
+      expect(ok.json()).toMatchObject({ nome: 'Nome novo' });
+      const repetido = await loja.dono.put(`/fornecedores/${f1.id}`, { nome: 'Nome novo', whatsapp: f2.whatsapp, cnpj: null });
+      expect(repetido.statusCode).toBe(409);
+    });
+
+    it('dois recebimentos juntos do mesmo pedido: um vale, o outro é recusado, e estoque e contas entram uma vez só', async () => {
+      const loja = await montar('Recebe junto');
+      const f = await fornecedor(loja);
+      const p = await peca(loja, 3);
+      const ped = await loja.dono.post('/compras', {
+        fornecedor_id: f.id,
+        itens: [{ sku_id: p.skuId, quantidade: 2, custo_centavos: 4500 }],
+      });
+      const { id } = ped.json() as { id: string };
+      await loja.dono.post(`/compras/${id}/enviar`);
+      const corpo = { parcelas: [{ valor_centavos: 9000, vencimento: '2026-11-30' }] };
+      const [x, y] = await Promise.all([loja.dono.post(`/compras/${id}/receber`, corpo), loja.dono.post(`/compras/${id}/receber`, corpo)]);
+      expect([x.statusCode, y.statusCode].sort()).toEqual([200, 409]);
+      expect(await estoqueDe(loja, p.codigo)).toBe(5);
+      const contas = await loja.dono.get('/financeiro/contas-a-pagar');
+      const deste = (contas.json() as { contas: { origem_id: string }[] }).contas.filter((l) => l.origem_id === id);
+      expect(deste).toHaveLength(1);
+    });
   });
 });

@@ -5,7 +5,7 @@ const PERIODO = 30;
 
 const novoTotp = (segredo: string, conta = 'admin') =>
   new OTPAuth.TOTP({
-    issuer: 'Ailow Cloud',
+    issuer: 'Ailow ERP',
     label: conta,
     algorithm: 'SHA1',
     digits: 6,

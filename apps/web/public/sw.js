@@ -1,5 +1,5 @@
 /*
- * Service worker mínimo do Ailow Cloud. Objetivo: o app ser instalável e abrir a casca sem rede.
+ * Service worker mínimo do Ailow ERP. Objetivo: o app ser instalável e abrir a casca sem rede.
  * REGRA DE SEGURANÇA: só atende (1) a página inicial "/" e (2) arquivos estáticos do app (/assets/, /icons/).
  * Nada da API (sessão, usuários, empresa, categorias…) passa por aqui nem vai para o cache:
  * qualquer outra requisição segue direto para a rede, como se não houvesse service worker.

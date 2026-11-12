@@ -24,3 +24,7 @@ acervo/
 
 # Ambiente de desenvolvimento sem Docker (banco e segredos locais gerados por npm run dev:db)
 .dev-data/
+
+# Playwright (E2E)
+test-results/
+playwright-report/

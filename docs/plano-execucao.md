@@ -70,10 +70,11 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
 - [x] WSL2 + Docker Desktop + Compose local (2026-11-12); guia `docs/dev-windows.md`.
 - [ ] **Impressão física das etiquetas (S08, Pedro):** comprar a bobina 33 × 22 mm de 3 colunas, informar o modelo da impressora, imprimir o PDF em tamanho real (100%), calibrar espaço entre colunas/margem (`GEOMETRIA_PADRAO`, ADR 003) e fotografar a leitura pela câmera do celular. É o "pronto quando" da S08; não bloqueia a S09.
 
-### Estado de retomada — 2026-11-11 (pós-S11; sobrescrever a cada sessão)
-- **Git:** S11 na branch `feature/s11-compras` (PR #20 aberto, aguardando o merge do Pedro); `main` em `fc1b0c6` (S10 mergeada, PR #19). Depois do merge: `git checkout main && git pull --ff-only`.
-- **Ambiente:** parar Postgres (`pg_ctl stop -D .dev-data/pg -m fast`) e liberar 54329/3000/5173 (L-0012). `.dev-data/`: PIN do Dono = **2468**. Testes: API 703, web 248, shared 222; OpenAPI 0.11.0; migração nova `20261115120000_compras`.
-- **Próxima:** S12 Pessoas. Não começar antes do merge deste PR.
+### Estado de retomada — 2026-11-12 (pós-S12; sobrescrever a cada sessão)
+- **Git:** a S12 está na branch `feature/s12-pessoas`, **PR #21 aberto, aguardando o merge do Pedro** (um PR só) com 4 commits: correções de compras/vendas (concorrência, soma bigint), E2E Playwright (RNF-04), identidade "Ailow ERP" e a S12 (ponto + ajustes do Dono). `main` em `12eb2f7` (S11 mergeada, PR #20). Depois do merge: `git checkout main && git pull --ff-only`.
+- **Ambiente:** parar Postgres (`pg_ctl stop -D .dev-data/pg -m fast`) e liberar 54329/3000/3001/5173 (L-0012). Pode haver uma API de dev antiga na 3000 (confira por `netstat -ano`). `.dev-data/`: PIN do Dono = **2468**. Testes: API 740, web 250, shared 237; OpenAPI 0.13.0; migrações novas `20261116120000_pessoas` e `20261116180000_pontos-ajustes` (já aplicadas no Postgres de dev que está de pé).
+- **Próxima:** S13 Qualidade final (portão: o PR da S12 precisa estar na main).
 - **Pendência da S08 (Pedro):** impressão física + modelo da impressora + calibração + foto (ver Pendências transversais).
 - **Decisões:** ADR 003 e ADR 006 seguem propostos. ADR 007 aceito. Compras sem ADR próprio (PRD + ADR 005/006). Contract `produtos.fornecedor` texto → FK fica para depois (ADR 006 §7).
-- **Em aberto (não bloqueiam a S12):** `npm run dev:parar` quebrado na `main`; Zod no bundle web; edição/desativação de produto; reescrita do histórico (acervo); proxy HTTPS da S14 (prefixos `fornecedores`/`compras`/`vendas`); E2E 360 px (L-0015, S13); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos (P1 §6); retenção de backup com dado pessoal (S14, ADR 007).
+- **Decisões da S12:** 30 s entre batidas, turno no dia/mês da entrada e "em aberto" sem horas **confirmados**; ajuste de ponto só pelo Dono **pedido pelo Pedro** (RF-PES-03). **ADR 008 (proposto) espera a assinatura do Pedro.** Aviso "em breve" da tela inicial ficou sem uso (remover na S13).
+- **Em aberto (não bloqueiam a S13):** `npm run dev:parar` quebrado na `main`; Zod no bundle web; edição/desativação de produto; reescrita do histórico (acervo); proxy HTTPS da S14 (prefixos `fornecedores`/`compras`/`vendas`/`pontos`); E2E 360 px (L-0015, S13); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos (P1 §6); retenção de backup com dado pessoal (S14, ADR 007).

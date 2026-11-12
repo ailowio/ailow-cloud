@@ -1,8 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Logo (placeholder)">
-  <!-- PLACEHOLDER: substitua este arquivo pela logo definitiva (SVG com viewBox, sem script nem link externo). -->
-  <rect width="64" height="64" rx="14" fill="#2448ff"/>
-  <g stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none">
-    <path d="M32 12.8 17.9 49.9M32 12.8 46.1 49.9M23 38.4h18"/>
-  </g>
-  <circle cx="50.6" cy="16" r="4.2" fill="#ff7043"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 378 378" role="img" aria-label="Ailow">
+  <!-- Marca Ailow: A ciano com cortes em circuito. Fundo transparente. -->
+  <path fill="#07BDD5" fill-rule="evenodd" d="
+    M189 42
+    L318 336
+    H268
+    L243 278
+    H135
+    L110 336
+    H60
+    Z
+    M154 234
+    H224
+    L189 152
+    Z
+    M78 168
+    H168
+    A22 22 0 1 1 168 212
+    H78
+    A22 22 0 0 1 78 168
+    Z
+    M78 112
+    H138
+    A18 18 0 1 1 138 148
+    H78
+    A18 18 0 0 1 78 112
+    Z
+  "/>
 </svg>

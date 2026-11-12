@@ -43,6 +43,6 @@ describe('TOTP do Admin (RFC 6238)', () => {
   it('a URI de provisionamento traz emissor e conta', () => {
     const uri = uriTotp('admin@ailow.com', segredo);
     expect(uri.startsWith('otpauth://totp/')).toBe(true);
-    expect(uri).toContain('issuer=Ailow%20Cloud');
+    expect(uri).toContain('issuer=Ailow%20ERP');
   });
 });

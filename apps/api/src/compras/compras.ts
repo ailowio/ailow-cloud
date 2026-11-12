@@ -16,7 +16,7 @@ import { registrarEvento } from '../acesso/comum.js';
 import { FUSO, registrarLancamento } from '../financeiro/lancamentos.js';
 import { ErroEstoque, registrarMovimento } from '../produtos/estoque.js';
 import { type SkuParaVenda, travarSkusParaVenda } from '../produtos/produtos.js';
-import { ErroFornecedor, buscarFornecedor } from './fornecedores.js';
+import { buscarFornecedor } from './fornecedores.js';
 
 // Compras (S11). Estoque e lançamento entram pela interface pública, na MESMA transação (RN-11).
 // Este arquivo só escreve em pedidos_compra, itens_pedido_compra, parcelas_pedido_compra e a sequência.
@@ -188,6 +188,14 @@ export async function editarPedido(c: pg.PoolClient, ctx: Ctx, pedidoId: string,
     dados.fornecedor_id,
     total,
   ]);
+  await registrarEvento(c, {
+    empresaId: ctx.empresaId,
+    atorTipo: 'usuario',
+    atorId: ctx.autorId,
+    alvoId: pedidoId,
+    tipo: 'pedido_compra_editado',
+    em: ctx.agora,
+  });
   return (await montar(c, pedidoId)) as Pedido;
 }
 
@@ -347,7 +355,7 @@ export async function relatorioCompras(c: pg.PoolClient, data: string): Promise<
   const r = await c.query(
     `SELECT f.id AS fornecedor_id, f.nome,
             count(*)::int AS pedidos,
-            coalesce(sum(p.total_centavos), 0)::int AS total_centavos
+            coalesce(sum(p.total_centavos), 0)::bigint AS total_centavos
        FROM pedidos_compra p
        JOIN fornecedores f ON f.empresa_id = p.empresa_id AND f.id = p.fornecedor_id
       WHERE p.status = 'recebido'
@@ -357,7 +365,11 @@ export async function relatorioCompras(c: pg.PoolClient, data: string): Promise<
       ORDER BY lower(f.nome), f.id`,
     [data, FUSO],
   );
-  const por = r.rows as { fornecedor_id: string; nome: string; pedidos: number; total_centavos: number }[];
+  // bigint volta como texto no driver; a soma de um mês passa de 2^31 centavos com pedidos grandes.
+  const por = (r.rows as { fornecedor_id: string; nome: string; pedidos: number; total_centavos: string }[]).map((x) => ({
+    ...x,
+    total_centavos: Number(x.total_centavos),
+  }));
   return {
     periodo: 'mes',
     data,
@@ -366,6 +378,3 @@ export async function relatorioCompras(c: pg.PoolClient, data: string): Promise<
     por_fornecedor: por,
   };
 }
-
-// Reexport para a rota traduzir ErroFornecedor sem import circular estranho.
-export { ErroFornecedor };

@@ -149,6 +149,7 @@ NFC-e/fiscal e exportação ao contador · recebível de cartão (taxa, D+1/D+30
 |---|---|---|
 | RF-PES-01 | **Bater ponto**: 1 botão grande alterna entrada/saída do usuário do PIN, com horário do servidor. | D, V |
 | RF-PES-02 | **Espelho de ponto**: Vendedor vê o próprio; Dono vê o de todos, por dia e mês. | D, V |
+| RF-PES-03 | **Ajustar ponto** *(pedido do Pedro em 2026-11-12; ADR 008)*: só o Dono adiciona, edita o horário e exclui um ponto, sempre com motivo; a sequência entrada/saída continua válida; nada se apaga do histórico. | D |
 
 ## 6. Regras de negócio (cada uma vira teste antes do código)
 

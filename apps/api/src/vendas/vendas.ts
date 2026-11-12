@@ -24,6 +24,7 @@ export class ErroVenda extends Error {
       | 'estoque_insuficiente'
       | 'nome_obrigatorio'
       | 'cliente_inativo'
+      | 'cliente_ja_cadastrado'
       | 'pagamentos_divergem'
       | 'desconto_acima_do_subtotal'
       | 'total_acima_do_limite'
@@ -135,7 +136,8 @@ async function resolverCliente(c: pg.PoolClient, ctx: Ctx, pedido: VendaFinaliza
     const novo = await criarCliente(c, ctx, { nome, celular: pedido.cliente.celular, aviso_lgpd: false });
     return novo.id;
   } catch (err) {
-    if (err instanceof ErroCliente && err.codigo === 'celular_ja_cadastrado') throw new ErroVenda('cliente_inativo');
+    // Outro balcão cadastrou este celular entre a busca e o cadastro: a transação cai, refazer a venda acha o cliente.
+    if (err instanceof ErroCliente && err.codigo === 'celular_ja_cadastrado') throw new ErroVenda('cliente_ja_cadastrado');
     throw err;
   }
 }

@@ -17,6 +17,7 @@ import { Configuracoes } from './telas/config/Configuracoes';
 import { Financeiro } from './telas/financeiro/Financeiro';
 import { Produtos } from './telas/produtos/Produtos';
 import { Compras } from './telas/compras/Compras';
+import { Pessoas } from './telas/pessoas/Pessoas';
 import { Vendas } from './telas/vendas/Vendas';
 
 // Um estado por tela. `inicio` guarda a sessão aberta e o limite de inatividade vindo do servidor.
@@ -127,7 +128,7 @@ export function App() {
   switch (estado.tela) {
     case 'carregando':
       return (
-        <Moldura titulo="Ailow Cloud">
+        <Moldura titulo="Ailow ERP">
           <Stack align="center" py="xl" role="status" aria-label="Carregando">
             <Loader />
           </Stack>
@@ -205,6 +206,10 @@ function Logado(props: {
   // Clientes abre para o Dono e para o Vendedor; só o Dono apaga os dados de um cliente (RF-CLI-04).
   if (props.modulo === 'clientes') {
     return <Clientes api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
+  }
+  // Pessoas abre para o Dono e para o Vendedor; a API entrega ao Vendedor só o espelho dele (RF-PES-02).
+  if (props.modulo === 'pessoas') {
+    return <Pessoas api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
   }
   if (props.modulo === 'compras' && props.usuario.perfil === 'dono') {
     return <Compras api={props.api} aoVoltar={() => props.aoAbrir(null)} />;

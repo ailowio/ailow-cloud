@@ -1,21 +1,28 @@
 import type {
+  AjusteEditar,
   AjusteEstoque,
+  AjusteExcluir,
+  AjusteNovo,
   AlertaEstoque,
   Categoria,
   Cliente as ClienteFicha,
   ContaAPagar,
   DespesaEntrada,
   Empresa,
+  Espelho,
   EtiquetasPedido,
   FormaPagamento,
   Fornecedor,
   FornecedorNovo,
   Lancamento,
+  Marca,
   Movimento,
   Pedido,
   PedidoEnviado,
   PedidoNovo,
   PedidoReceber,
+  PontoBatido,
+  PontoEstado,
   Produto,
   ProdutoNovo,
   Relatorio,
@@ -151,6 +158,17 @@ export function criarApi(c: Cliente) {
     enviarPedidoCompra: (id: string) => p<PedidoEnviado>('POST', `/compras/${id}/enviar`),
     receberPedidoCompra: (id: string, corpo: PedidoReceber) => p<Pedido>('POST', `/compras/${id}/receber`, corpo),
     relatorioCompras: (data: string) => p<RelatorioCompras>('GET', `/compras/relatorio?periodo=mes&data=${data}`),
+    // --- pessoas / ponto (S12): a hora é do servidor, o corpo da batida é vazio
+    estadoDoPonto: () => p<PontoEstado>('GET', '/pontos/estado'),
+    baterPonto: () => p<PontoBatido>('POST', '/pontos'),
+    // Ajustes do Dono (RF-PES-03): dia + HH:MM de São Paulo e motivo; o servidor converte e valida a sequência.
+    adicionarPonto: (n: AjusteNovo) => p<Marca>('POST', '/pontos/manual', n),
+    editarPonto: (id: string, e: AjusteEditar) => p<Marca>('PUT', `/pontos/${id}`, e),
+    excluirPonto: (id: string, e: AjusteExcluir) => p('POST', `/pontos/${id}/excluir`, e),
+    espelhoDePonto: (mes: string, usuarioId?: string) => {
+      const filtro = usuarioId ? `&usuario_id=${usuarioId}` : '';
+      return p<Espelho>('GET', `/pontos/espelho?mes=${mes}${filtro}`);
+    },
   };
 }
 
