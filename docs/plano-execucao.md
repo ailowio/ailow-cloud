@@ -71,7 +71,7 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
 - [ ] **Impressão física das etiquetas (S08, Pedro):** comprar a bobina 33 × 22 mm de 3 colunas, informar o modelo da impressora, imprimir o PDF em tamanho real (100%), calibrar espaço entre colunas/margem (`GEOMETRIA_PADRAO`, ADR 003) e fotografar a leitura pela câmera do celular. É o "pronto quando" da S08; não bloqueia a S09.
 
 ### Estado de retomada — 2026-11-11 (pós-S11; sobrescrever a cada sessão)
-- **Git:** S11 na branch `feature/s11-compras` (ainda sem PR/commit pedido); `main` em `fc1b0c6` (S10 mergeada, PR #19). Depois do merge: `git checkout main && git pull --ff-only`.
+- **Git:** S11 na branch `feature/s11-compras` (PR #20 aberto, aguardando o merge do Pedro); `main` em `fc1b0c6` (S10 mergeada, PR #19). Depois do merge: `git checkout main && git pull --ff-only`.
 - **Ambiente:** parar Postgres (`pg_ctl stop -D .dev-data/pg -m fast`) e liberar 54329/3000/5173 (L-0012). `.dev-data/`: PIN do Dono = **2468**. Testes: API 703, web 248, shared 222; OpenAPI 0.11.0; migração nova `20261115120000_compras`.
 - **Próxima:** S12 Pessoas. Não começar antes do merge deste PR.
 - **Pendência da S08 (Pedro):** impressão física + modelo da impressora + calibração + foto (ver Pendências transversais).
