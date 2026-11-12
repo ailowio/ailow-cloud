@@ -70,10 +70,10 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
 - [x] WSL2 + Docker Desktop + Compose local (2026-11-12); guia `docs/dev-windows.md`.
 - [ ] **Impressão física das etiquetas (S08, Pedro):** comprar a bobina 33 × 22 mm de 3 colunas, informar o modelo da impressora, imprimir o PDF em tamanho real (100%), calibrar espaço entre colunas/margem (`GEOMETRIA_PADRAO`, ADR 003) e fotografar a leitura pela câmera do celular. É o "pronto quando" da S08; não bloqueia a S09.
 
-### Estado de retomada — 2026-11-11 (pós-S10; sobrescrever a cada sessão)
-- **Git:** S10 na branch `feature/s10-vendas` (PR aberto, aguardando o merge do Pedro); `main` em `b2508d1` (S09b mergeada, PR #18). Depois do merge: `git checkout main && git pull --ff-only`.
-- **Ambiente:** servidores de dev parados ao fechar; conferir portas 54329/3000/5173 livres (L-0012). `.dev-data/`: PIN do Dono de exemplo = **2468**. Testes: API 685, web 246, shared 213; OpenAPI 0.10.0; migração nova `20261114120000_vendas`.
-- **Próxima:** S11 Compras. Não começar antes do merge deste PR.
+### Estado de retomada — 2026-11-11 (pós-S11; sobrescrever a cada sessão)
+- **Git:** S11 na branch `feature/s11-compras` (PR #20 aberto, aguardando o merge do Pedro); `main` em `fc1b0c6` (S10 mergeada, PR #19). Depois do merge: `git checkout main && git pull --ff-only`.
+- **Ambiente:** parar Postgres (`pg_ctl stop -D .dev-data/pg -m fast`) e liberar 54329/3000/5173 (L-0012). `.dev-data/`: PIN do Dono = **2468**. Testes: API 703, web 248, shared 222; OpenAPI 0.11.0; migração nova `20261115120000_compras`.
+- **Próxima:** S12 Pessoas. Não começar antes do merge deste PR.
 - **Pendência da S08 (Pedro):** impressão física + modelo da impressora + calibração + foto (ver Pendências transversais).
-- **Decisões:** ADR 003 e ADR 006 seguem propostos. ADR 007 aceito. RNF-04: toque = clique em controle, não tecla (5 cliques no caminho Pix; 19 teclas de busca e celular, medidas à parte).
-- **Em aberto (não bloqueiam a S11):** `npm run dev:parar` quebrado na `main` (falta aspa em `scripts/dev-parar.mjs:8`); Zod no bundle web (5 marcas); edição/desativação de produto; reescrita do histórico (acervo); proxy HTTPS da S14 (prefixos, agora também `vendas`); E2E 360 px (L-0015, S13); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos (P1 §6); retenção de backup com dado pessoal (S14, ADR 007).
+- **Decisões:** ADR 003 e ADR 006 seguem propostos. ADR 007 aceito. Compras sem ADR próprio (PRD + ADR 005/006). Contract `produtos.fornecedor` texto → FK fica para depois (ADR 006 §7).
+- **Em aberto (não bloqueiam a S12):** `npm run dev:parar` quebrado na `main`; Zod no bundle web; edição/desativação de produto; reescrita do histórico (acervo); proxy HTTPS da S14 (prefixos `fornecedores`/`compras`/`vendas`); E2E 360 px (L-0015, S13); texto 13–14 px; Safari/iOS; perguntas Q1–Q5 para o Marcos (P1 §6); retenção de backup com dado pessoal (S14, ADR 007).

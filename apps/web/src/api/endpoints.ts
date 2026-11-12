@@ -8,13 +8,21 @@ import type {
   Empresa,
   EtiquetasPedido,
   FormaPagamento,
+  Fornecedor,
+  FornecedorNovo,
   Lancamento,
   Movimento,
+  Pedido,
+  PedidoEnviado,
+  PedidoNovo,
+  PedidoReceber,
   Produto,
   ProdutoNovo,
   Relatorio,
+  RelatorioCompras,
   RelatorioVendas,
   SkuParaVenda,
+  StatusPedido,
   TipoCategoria,
   UsuarioPublico,
   Venda,
@@ -113,6 +121,36 @@ export function criarApi(c: Cliente) {
         'GET',
         `/vendas/por-cliente/${id}`,
       ),
+    // --- compras (S11, só Dono)
+    fornecedores: (q?: string) => {
+      const busca = q?.trim() ?? '';
+      return p<{ fornecedores: Fornecedor[]; truncado: boolean }>(
+        'GET',
+        busca === '' ? '/fornecedores' : `/fornecedores?q=${encodeURIComponent(busca)}`,
+      );
+    },
+    criarFornecedor: (n: FornecedorNovo) => p<{ id: string }>('POST', '/fornecedores', n),
+    fornecedor: (id: string) => p<Fornecedor>('GET', `/fornecedores/${id}`),
+    editarFornecedor: (id: string, n: FornecedorNovo) => p<Fornecedor>('PUT', `/fornecedores/${id}`, n),
+    pedidosCompra: (status?: StatusPedido) =>
+      p<{
+        pedidos: {
+          id: string;
+          numero: number;
+          status: StatusPedido;
+          total_centavos: number;
+          fornecedor_nome: string;
+          criado_em: string;
+          enviado_em: string | null;
+          recebido_em: string | null;
+        }[];
+      }>('GET', status ? `/compras?status=${status}` : '/compras'),
+    criarPedidoCompra: (corpo: PedidoNovo) => p<Pedido>('POST', '/compras', corpo),
+    pedidoCompra: (id: string) => p<Pedido>('GET', `/compras/${id}`),
+    editarPedidoCompra: (id: string, corpo: PedidoNovo) => p<Pedido>('PUT', `/compras/${id}`, corpo),
+    enviarPedidoCompra: (id: string) => p<PedidoEnviado>('POST', `/compras/${id}/enviar`),
+    receberPedidoCompra: (id: string, corpo: PedidoReceber) => p<Pedido>('POST', `/compras/${id}/receber`, corpo),
+    relatorioCompras: (data: string) => p<RelatorioCompras>('GET', `/compras/relatorio?periodo=mes&data=${data}`),
   };
 }
 
