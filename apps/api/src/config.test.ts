@@ -36,6 +36,15 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...base, METRICS_TOKEN: 'curto-segredo' })).not.toThrow(/curto-segredo/);
   });
 
+  it('DB_POOL_MAX é opcional (ausente ou vazio = padrão do pool, 10) e, se vier, é inteiro de 1 a 50', () => {
+    expect(loadConfig(base).DB_POOL_MAX).toBeUndefined();
+    expect(loadConfig({ ...base, DB_POOL_MAX: '' }).DB_POOL_MAX).toBeUndefined();
+    expect(loadConfig({ ...base, DB_POOL_MAX: '20' }).DB_POOL_MAX).toBe(20);
+    for (const ruim of ['0', '51', '2.5', 'dez', '-1']) {
+      expect(() => loadConfig({ ...base, DB_POOL_MAX: ruim })).toThrow(/DB_POOL_MAX/);
+    }
+  });
+
   it('COOKIE_SECURE aceita true/false e rejeita outro valor', () => {
     expect(loadConfig({ ...base, COOKIE_SECURE: 'false' }).COOKIE_SECURE).toBe(false);
     expect(loadConfig({ ...base, COOKIE_SECURE: 'true' }).COOKIE_SECURE).toBe(true);

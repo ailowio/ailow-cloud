@@ -10,7 +10,7 @@ try {
   console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 }
-const pool = createPool(config.DATABASE_URL);
+const pool = createPool(config.DATABASE_URL, config.DB_POOL_MAX);
 const app = await buildApp({
   pool,
   logger: { level: config.LOG_LEVEL },
