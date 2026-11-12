@@ -1,0 +1,60 @@
+# SLO de "finalizar venda" (RNF-03, S13b): 99,5% em 30 dias. Orçamento de erro = 0,5% (≈ 3 h 36 min de indisponibilidade).
+# SLI: POST /vendas com status < 500 sobre o total. 409 (sem estoque) e 4xx são resultados legítimos, NÃO são
+# indisponibilidade; só 5xx queima o orçamento. Fonte: http_requests_total da API (rota TEMPLATE, apps/api/src/metricas.ts).
+# Alertas de taxa de queima (burn rate) em duas janelas cada (longa confirma, curta confirma que ainda está acontecendo):
+#   rápido  14,4x  1h + 5m   -> consome 2% do orçamento em 1h   -> acorda alguém (page)
+#   lento     6x   6h + 30m  -> consome 5% do orçamento em 6h   -> acorda alguém (page)
+#   ticket    1x   3d + 6h   -> queima no ritmo de esgotar o orçamento -> abre tarefa (ticket)
+# Validar: bash scripts/alertas.sh (promtool check rules + test rules). Não há Prometheus no ar neste repositório
+# ainda (deploy é a S14); este arquivo é o contrato pronto para quando houver.
+groups:
+  - name: slo-finalizar-venda-sli
+    interval: 1m
+    rules:
+      - record: sli:vendas_erro:razao_5m
+        expr: >-
+          sum(rate(http_requests_total{method="POST",route="/vendas",status_class="5xx"}[5m]))
+          / sum(rate(http_requests_total{method="POST",route="/vendas"}[5m]))
+      - record: sli:vendas_erro:razao_30m
+        expr: >-
+          sum(rate(http_requests_total{method="POST",route="/vendas",status_class="5xx"}[30m]))
+          / sum(rate(http_requests_total{method="POST",route="/vendas"}[30m]))
+      - record: sli:vendas_erro:razao_1h
+        expr: >-
+          sum(rate(http_requests_total{method="POST",route="/vendas",status_class="5xx"}[1h]))
+          / sum(rate(http_requests_total{method="POST",route="/vendas"}[1h]))
+      - record: sli:vendas_erro:razao_6h
+        expr: >-
+          sum(rate(http_requests_total{method="POST",route="/vendas",status_class="5xx"}[6h]))
+          / sum(rate(http_requests_total{method="POST",route="/vendas"}[6h]))
+      - record: sli:vendas_erro:razao_3d
+        expr: >-
+          sum(rate(http_requests_total{method="POST",route="/vendas",status_class="5xx"}[3d]))
+          / sum(rate(http_requests_total{method="POST",route="/vendas"}[3d]))
+
+  - name: slo-finalizar-venda-alertas
+    rules:
+      # 14,4 x 0,005 = 0,072
+      - alert: FinalizarVendaQueimaRapida
+        expr: sli:vendas_erro:razao_1h > 0.072 and sli:vendas_erro:razao_5m > 0.072
+        for: 2m
+        labels: { severity: page, slo: finalizar-venda }
+        annotations:
+          summary: "Finalizar venda queimando o orçamento de erro 14x mais rápido que o sustentável"
+          description: "Mais de 7,2% das vendas falham com 5xx na última hora e nos últimos 5 min. Runbook: docs/runbooks (S13c)."
+      # 6 x 0,005 = 0,03
+      - alert: FinalizarVendaQueimaLenta
+        expr: sli:vendas_erro:razao_6h > 0.03 and sli:vendas_erro:razao_30m > 0.03
+        for: 15m
+        labels: { severity: page, slo: finalizar-venda }
+        annotations:
+          summary: "Finalizar venda queimando o orçamento de erro 6x mais rápido que o sustentável"
+          description: "Mais de 3% das vendas falham com 5xx nas últimas 6 h e nos últimos 30 min."
+      # 1 x 0,005
+      - alert: FinalizarVendaOrcamentoEmRisco
+        expr: sli:vendas_erro:razao_3d > 0.005 and sli:vendas_erro:razao_6h > 0.005
+        for: 1h
+        labels: { severity: ticket, slo: finalizar-venda }
+        annotations:
+          summary: "Finalizar venda gastando o orçamento de erro no ritmo de esgotá-lo em 30 dias"
+          description: "Mais de 0,5% de 5xx em 3 dias e em 6 h. Abrir tarefa; não acordar ninguém."

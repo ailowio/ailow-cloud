@@ -12,6 +12,12 @@ const configSchema = z.object({
   // Cookies só trafegam por HTTPS. Em desenvolvimento local sem HTTPS: COOKIE_SECURE=false.
   COOKIE_SECURE: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  // Token Bearer de GET /metrics (S13b). Ausente = a rota não existe (404). Aleatório, 16+ caracteres, FORA do repositório.
+  // Vazio (cópia do .env.example) vale como ausente.
+  METRICS_TOKEN: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().min(16, { error: 'deve ter ao menos 16 caracteres' }).optional(),
+  ),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

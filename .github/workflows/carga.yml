@@ -1,0 +1,36 @@
+# Carga e estresse com k6 (S13b, PRD §10.7, RNF-01/02), SÓ sob demanda: nada agendado (não cria rotina nova, AUD).
+# Roda no runner do GitHub, contra um ambiente efêmero subido pelo script. Os números NÃO são os da VPS.
+# Uso: Actions > Carga > Run workflow > escolha o perfil.
+name: Carga
+
+on:
+  workflow_dispatch:
+    inputs:
+      perfil:
+        description: Perfil do k6
+        type: choice
+        options: [carga, estresse]
+        default: carga
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6 ${{ inputs.perfil }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: k6 ${{ inputs.perfil }}
+        env:
+          # Entrada do usuário vai por variável de ambiente, nunca interpolada no script (injeção de comando).
+          PERFIL: ${{ inputs.perfil }}
+        run: bash scripts/carga.sh "$PERFIL"

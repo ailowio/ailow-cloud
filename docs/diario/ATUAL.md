@@ -13,14 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S11 — Compras — 2026-11-11 — Composer
-Gate: feature + migração + UI, **tier B**. TEST-01..08/17, CODE-*, SEC-01/03/04, OPS-11, ARQ-05, AUD-03, CI-01, RN-10/11. Branch `feature/s11-compras` (S10 já na main, PR #19). Desenho do PRD §5.7/§7 + ADR 005/006 (sem ADR novo).
-Feito: `fornecedores` + pedidos (`rascunho` → `enviado` → `recebido`); enviar = `wa.me` com código/cor/qtd; receber atômico (`registrarMovimento` tipo `compra` + parcelas → lançamentos saída); relatório do mês por fornecedor; só Dono. OpenAPI 0.11.0. Migração `20261115120000_compras`. Telas Pedidos/Fornecedores/Relatório. `produtos.fornecedor` texto permanece (contract ADR 006 depois).
-Números: API 685 -> 703, web 246 -> 248, shared 213 -> 222.
-Decisões: parcela na UI começa em 1× o total (API aceita até 24); WhatsApp do fornecedor = celular BR; sem ADR próprio.
-Verificação: `verify` exit 0. Mutação: `!==`→`>` em `parcelasFecham` (teste a menos reforçado) e status do receber enfraquecido — ambas pegas. Playwright (Chromium, 2 temas): menu/pedidos/fornecedores/novo/relatório — 0 rolagem, 0 alvo < 48 px, 0 texto cortado (viewport CSS efetivo 480 no MCP; `setViewportSize(360)` reportado, `innerWidth` 480). PR #20.
-Pendências: impressão S08 (Pedro); S12 Pessoas; proxy HTTPS S14 (`fornecedores`/`compras`); contract texto→FK fornecedor.
-
 ### S12 — Pessoas (ponto) — 2026-11-12 — Claude Sonnet 5.5
 Gate: feature + migração + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-01/04, OPS-11, ARQ-05, AUD-03, CI-01, RN-10. Branch `feature/s12-pessoas` (S11 já na main, PR #20). Sem ADR (PRD §5.8/§7 + ADR 004).
 Feito: bater ponto (`GET /pontos/estado`, `POST /pontos`) e espelho do mês (`GET /pontos/espelho`); tela Pessoas; módulo pronto para Dono e Vendedor. **Pedido do Pedro:** só o Dono adiciona, edita e exclui ponto (`POST /pontos/manual`, `PUT /pontos/{id}`, `POST /pontos/{id}/excluir`), com motivo; exclusão lógica + log imutável `pontos_ajustes`; sequência entrada/saída validada sob lock; marca "ajustado". **ADR 008 proposto.** OpenAPI 0.13.0. Migrações `20261116120000_pessoas` + `20261116180000_pontos-ajustes` (sai `seq`/paridade).
@@ -36,3 +28,12 @@ Números: Spectral 144 avisos -> 0; Schemathesis 53 falhas -> 0 (68/69 operaçõ
 Decisões (Pedro confirma): `contrato` ainda **não** é check obrigatório; exclusões do Schemathesis (`/acesso/sair`, `positive_data_acceptance`, `unsupported_method` = 404 em vez de 405); semente fixa; `operation-description` desligada.
 Pendências: recriar `.dev-data/pg` (L-0018); S13b k6 + SLO; S13c E2E + docs.
 Verificação: `verify` exit 0. Canários: Spectral reprovou (2 erros) e o Schemathesis reprovou sem a doc do 400 (10 × ST103); o do NUL **não** reprovou com semente fixa (o teste `entrada-segura` guarda essa classe).
+
+### S13b — Qualidade final: carga e SLO — 2026-11-12 — Claude Sonnet 5.5
+Gate: qualidade/observabilidade, **tier B**; OBS-*, TEST-*, SEC-01/04, CI-*, AUD (interface nova `/metrics`), L-0006/0012. Branch `feature/s13b-carga-slo`, **sem commit** (aguarda pedido).
+Feito: `prom-client` 15.1.3, `apps/api/src/metricas.ts` (RED por rota template, `GET /metrics` com Bearer `METRICS_TOKEN`, 404 sem token, fora do OpenAPI); `ops/prometheus/alertas.yml` (burn 14,4x 1h+5m, 6x 6h+30m, 1x 3d+6h) + testes `promtool`; k6 2.3.0 (`ops/k6/carga.js`, `scripts/carga.sh`) sobre o lib `scripts/lib/ambiente-efemero.sh`, que `contrato.sh` também usa; CI `carga-smoke` e `alertas` em todo PR, `carga.yml` manual; inventários de auditoria.
+**Resultado (máquina local, NÃO a VPS; pool 10, API+PG+k6 na mesma máquina):** smoke 1 VU passa (busca p95 71 ms, venda p95 113 ms). **Carga 50 VUs REPROVA RNF-01/02:** busca p95 1145-1355 ms, venda p95 2334-2604 ms, erro 0%. Estresse: já a 25 VUs a venda passa de 500 ms (p95 1482); a 300 VUs p95 ~10 s; erro 0% em todos os degraus; reprova o próprio p99 < 3 s.
+Causa: 7-9 conexões em `Lock/transactionid` no `INSERT INTO venda_sequencia` (numeração sem buracos serializa todas as vendas da empresa). Experimentos descartáveis (código restaurado): sem o lock, venda p95 889 ms e 3402 iterações (era ~1900), API a 88 s de CPU, ainda reprova; pool 50 faz a busca passar (p95 114 ms) e a venda piorar (p95 8,4 s).
+Números: API 753 -> 761 testes; web 250, shared 237; OpenAPI 0.13.0 sem diff.
+Decisões (Pedro): como destravar RNF-01/02 (numeração da venda é decisão estrutural -> ADR; tamanho do pool; custo da resposta de `/produtos`); o think time do k6 (0,3-0,7 s) é agressivo para balcão; limite p99 do estresse (3 s) foi escolha minha.
+Verificação: `verify` exit 0; `contrato.sh` 3485/3485; `alertas.sh` ok. Canários: alerta 0,72 em vez de 0,072 reprovou o promtool; `P95_VENDA_MS=1` fez o k6 sair 99. Lição L-0019 (espera do Postgres).

@@ -26,6 +26,7 @@ import { registrarRotasClientes } from './clientes/rotas.js';
 import { registrarRotasCompras } from './compras/rotas.js';
 import { transformarContrato } from './contrato.js';
 import { contemNul } from './entrada-segura.js';
+import { registrarMetricas } from './metricas.js';
 import { registrarRotasPessoas } from './pessoas/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
@@ -41,6 +42,8 @@ export interface AppDeps {
   cookieSecure?: boolean;
   // Relógio injetável: os testes avançam o tempo sem dormir.
   agora?: () => Date;
+  // Liga GET /metrics (Bearer). Ausente = a rota não existe.
+  metricsToken?: string;
 }
 
 // Só aceita ids curtos e "inofensivos" vindos do cliente; qualquer outra coisa vira UUID novo
@@ -84,6 +87,7 @@ export async function buildApp({
   authPepper,
   cookieSecure = true,
   agora = () => new Date(),
+  metricsToken,
 }: AppDeps): Promise<FastifyInstance> {
   const app = fastify({
     logger:
@@ -172,6 +176,9 @@ export async function buildApp({
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
   });
+
+  // Antes de qualquer rota: o hook onResponse só vale para as rotas registradas depois dele.
+  registrarMetricas(app, { token: metricsToken });
 
   const rotas = app.withTypeProvider<ZodTypeProvider>();
 

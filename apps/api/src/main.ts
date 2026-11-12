@@ -16,6 +16,7 @@ const app = await buildApp({
   logger: { level: config.LOG_LEVEL },
   authPepper: config.AUTH_PEPPER,
   cookieSecure: config.COOKIE_SECURE,
+  metricsToken: config.METRICS_TOKEN,
 });
 
 // Encerramento limpo (SIGTERM do Docker): para de aceitar conexões e fecha o pool.

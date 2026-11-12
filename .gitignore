@@ -28,3 +28,6 @@ acervo/
 # Playwright (E2E)
 test-results/
 playwright-report/
+
+# Resultados locais do k6 (S13b): evidência colada no diário/PR, não versionada
+ops/k6/resultados/

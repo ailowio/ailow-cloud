@@ -1,0 +1,66 @@
+# Testes unitários das regras (promtool test rules). Rodam em scripts/alertas.sh e no CI.
+rule_files:
+  - alertas.yml
+evaluation_interval: 1m
+tests:
+  # 10% de 5xx em /vendas por 90 min: a queima rápida (limiar 7,2%) tem de disparar.
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="2xx"}'
+        values: '0+90x120'
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="5xx"}'
+        values: '0+10x120'
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: FinalizarVendaQueimaRapida
+        exp_alerts:
+          - exp_labels: { severity: page, slo: finalizar-venda }
+            exp_annotations:
+              summary: "Finalizar venda queimando o orçamento de erro 14x mais rápido que o sustentável"
+              description: "Mais de 7,2% das vendas falham com 5xx na última hora e nos últimos 5 min. Runbook: docs/runbooks (S13c)."
+  # 5% de 5xx por 7 h: abaixo do limiar rápido (7,2%), acima do lento (3%).
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="2xx"}'
+        values: '0+95x420'
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="5xx"}'
+        values: '0+5x420'
+    alert_rule_test:
+      - eval_time: 400m
+        alertname: FinalizarVendaQueimaRapida
+        exp_alerts: []
+      - eval_time: 400m
+        alertname: FinalizarVendaQueimaLenta
+        exp_alerts:
+          - exp_labels: { severity: page, slo: finalizar-venda }
+            exp_annotations:
+              summary: "Finalizar venda queimando o orçamento de erro 6x mais rápido que o sustentável"
+              description: "Mais de 3% das vendas falham com 5xx nas últimas 6 h e nos últimos 30 min."
+  # 409/4xx não é indisponibilidade: 30% de 409 e 0 de 5xx não aciona nada.
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="2xx"}'
+        values: '0+70x420'
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="4xx"}'
+        values: '0+30x420'
+    alert_rule_test:
+      - eval_time: 400m
+        alertname: FinalizarVendaQueimaRapida
+        exp_alerts: []
+      - eval_time: 400m
+        alertname: FinalizarVendaQueimaLenta
+        exp_alerts: []
+      - eval_time: 400m
+        alertname: FinalizarVendaOrcamentoEmRisco
+        exp_alerts: []
+  # Falha em OUTRA rota (ex.: /health) não conta no SLI de finalizar venda.
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{method="POST",route="/vendas",status_class="2xx"}'
+        values: '0+100x120'
+      - series: 'http_requests_total{method="GET",route="/health",status_class="5xx"}'
+        values: '0+100x120'
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: FinalizarVendaQueimaRapida
+        exp_alerts: []
