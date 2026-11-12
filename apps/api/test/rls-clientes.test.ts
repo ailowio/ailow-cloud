@@ -129,44 +129,60 @@ describe('clientes: isolamento e restrições (banco)', () => {
     });
   });
 
-  describe('anonimização (RF-CLI-04)', () => {
-    const anonimizar = (empresaId: string, id: string, quando = '2026-11-11T12:00:00Z') =>
-      withEmpresa(app, empresaId, (c) =>
-        c.query(`UPDATE clientes SET nome = 'Cliente anonimizado', celular = NULL, anonimizado_em = $2 WHERE id = $1`, [id, quando]),
-      );
+  describe('celular obrigatório e sem restos da anonimização (S09b)', () => {
+    it('cliente sem celular é recusado (not null)', async () => {
+      await expect(inserir(empresaA, { celular: null })).rejects.toMatchObject({ code: '23502' });
+    });
 
-    it('anonimizar mantém a linha, apaga o celular e libera o número para outro cliente', async () => {
+    it('a coluna anonimizado_em não existe mais', async () => {
+      const r = await admin.query(`SELECT 1 FROM information_schema.columns WHERE table_name = 'clientes' AND column_name = 'anonimizado_em'`);
+      expect(r.rowCount).toBe(0);
+    });
+  });
+
+  describe('inativar e excluir (RF-CLI-04)', () => {
+    const marcar = (empresaId: string, id: string, ativo: boolean) =>
+      withEmpresa(app, empresaId, (c) => c.query('UPDATE clientes SET ativo = $2 WHERE id = $1', [id, ativo]));
+    const existe = (empresaId: string, id: string) =>
+      withEmpresa(app, empresaId, async (c) => (await c.query('SELECT 1 FROM clientes WHERE id = $1', [id])).rowCount === 1);
+
+    it('o cliente nasce ativo', async () => {
+      const id = await inserir(empresaA, {});
+      const r = await withEmpresa(app, empresaA, async (c) => (await c.query('SELECT ativo FROM clientes WHERE id = $1', [id])).rows[0]);
+      expect(r.ativo).toBe(true);
+    });
+
+    it('inativar e reativar mudam só a situação; o número continua reservado', async () => {
       const numero = celular();
       const id = await inserir(empresaA, { celular: numero });
-      await anonimizar(empresaA, id);
-      const linha = await withEmpresa(app, empresaA, async (c) => (await c.query('SELECT nome, celular, anonimizado_em FROM clientes WHERE id = $1', [id])).rows[0]);
-      expect(linha.celular).toBeNull();
-      expect(linha.nome).toBe('Cliente anonimizado');
-      expect(linha.anonimizado_em).not.toBeNull();
+      await marcar(empresaA, id, false);
+      const r = await withEmpresa(app, empresaA, async (c) => (await c.query('SELECT ativo, celular FROM clientes WHERE id = $1', [id])).rows[0]);
+      expect(r).toEqual({ ativo: false, celular: numero });
+      await expect(inserir(empresaA, { celular: numero })).rejects.toMatchObject({ code: '23505' });
+      await marcar(empresaA, id, true);
+      expect(await withEmpresa(app, empresaA, async (c) => (await c.query('SELECT ativo FROM clientes WHERE id = $1', [id])).rows[0].ativo)).toBe(true);
+    });
+
+    it('excluir tira a linha do banco e libera o número', async () => {
+      const numero = celular();
+      const id = await inserir(empresaA, { celular: numero });
+      await withEmpresa(app, empresaA, (c) => c.query('DELETE FROM clientes WHERE id = $1', [id]));
+      expect(await existe(empresaA, id)).toBe(false);
+      expect((await admin.query('SELECT 1 FROM clientes WHERE id = $1', [id])).rowCount).toBe(0);
       await expect(inserir(empresaA, { celular: numero })).resolves.toEqual(expect.any(String));
     });
 
-    it('vários clientes anonimizados convivem (celular nulo não colide)', async () => {
-      const ids = [await inserir(empresaA, {}), await inserir(empresaA, {})];
-      for (const id of ids) await anonimizar(empresaA, id);
-      const n = await withEmpresa(app, empresaA, async (c) => (await c.query('SELECT count(*)::int AS n FROM clientes WHERE id = ANY($1::uuid[]) AND celular IS NULL', [ids])).rows[0].n);
-      expect(n).toBe(2);
-    });
-
-    it('cliente ativo sem celular é recusado', async () => {
-      await expect(inserir(empresaA, { celular: null })).rejects.toMatchObject({ code: '23514' });
-    });
-
-    it('cliente anonimizado com celular é recusado', async () => {
-      await expect(inserir(empresaA, { anonimizado_em: '2026-11-11T12:00:00Z' })).rejects.toMatchObject({ code: '23514' });
+    it('a empresa A não exclui nem inativa o cliente da B (a RLS esconde a linha)', async () => {
+      const id = await inserir(empresaB, {});
+      const apagadas = await withEmpresa(app, empresaA, async (c) => (await c.query('DELETE FROM clientes WHERE id = $1', [id])).rowCount);
+      const alteradas = await withEmpresa(app, empresaA, async (c) => (await c.query('UPDATE clientes SET ativo = false WHERE id = $1', [id])).rowCount);
+      expect(apagadas).toBe(0);
+      expect(alteradas).toBe(0);
+      expect(await existe(empresaB, id)).toBe(true);
     });
   });
 
   describe('o que o papel de runtime pode fazer (menor privilégio)', () => {
-    it('não apaga cliente (as vendas da S10 apontam para ele)', async () => {
-      await expect(withEmpresa(app, empresaA, (c) => c.query('DELETE FROM clientes WHERE id = $1', [clienteA]))).rejects.toMatchObject({ code: '42501' });
-    });
-
     it('não esvazia a tabela', async () => {
       await expect(withEmpresa(app, empresaA, (c) => c.query('TRUNCATE clientes'))).rejects.toMatchObject({ code: '42501' });
     });
@@ -176,6 +192,23 @@ describe('clientes: isolamento e restrições (banco)', () => {
       await expect(
         withEmpresa(app, empresaA, (c) => c.query(`UPDATE clientes SET ${coluna} = ${valor} WHERE id = $1`, [clienteA])),
       ).rejects.toMatchObject({ code: '42501' });
+    });
+
+    it('corrige nome e celular (RF-CLI-05)', async () => {
+      const id = await inserir(empresaA, {});
+      const novo = celular();
+      await withEmpresa(app, empresaA, (c) => c.query(`UPDATE clientes SET nome = 'Ana Corrigida', celular = $2 WHERE id = $1`, [id, novo]));
+      const r = await withEmpresa(app, empresaA, async (c) => (await c.query('SELECT nome, celular FROM clientes WHERE id = $1', [id])).rows[0]);
+      expect(r).toEqual({ nome: 'Ana Corrigida', celular: novo });
+    });
+
+    it('trocar o celular para o de outro cliente da mesma empresa é recusado', async () => {
+      const numero = celular();
+      await inserir(empresaA, { celular: numero });
+      const outro = await inserir(empresaA, {});
+      await expect(
+        withEmpresa(app, empresaA, (c) => c.query('UPDATE clientes SET celular = $2 WHERE id = $1', [outro, numero])),
+      ).rejects.toMatchObject({ code: '23505' });
     });
 
     it('registra a data do aviso de finalidade (LGPD)', async () => {

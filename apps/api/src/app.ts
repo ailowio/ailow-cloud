@@ -55,6 +55,19 @@ function serializarReq(req: FastifyRequest) {
   };
 }
 
+// O Postgres põe os valores da linha em `detail` ("Failing row contains (...)", "Key (celular)=(...)") e `where`.
+// Num 500 isso iria para o log com nome e celular de cliente (S09b, SEC-04): o erro é registrado sem esses dois campos
+// e o resto (mensagem, código, restrição, pilha) segue disponível para diagnóstico.
+function semValoresDaLinha(error: Error): Error {
+  const copia = new Error(error.message);
+  copia.name = error.name;
+  copia.stack = error.stack;
+  for (const [campo, valor] of Object.entries(error)) {
+    if (campo !== 'detail' && campo !== 'where') (copia as unknown as Record<string, unknown>)[campo] = valor;
+  }
+  return copia;
+}
+
 class LogComRequestId extends LogController {
   constructor() {
     super({ requestIdLogLabel: 'request_id' });
@@ -86,7 +99,7 @@ export async function buildApp({
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Ailow Cloud API', version: '0.8.0' },
+      info: { title: 'Ailow Cloud API', version: '0.9.0' },
       tags: [
         { name: 'acesso', description: 'Entrar, aparelho vinculado, PIN e sessão' },
         { name: 'usuarios', description: 'Gestão de usuários da empresa (somente Dono)' },
@@ -94,7 +107,7 @@ export async function buildApp({
         { name: 'configuracoes', description: 'Dados da empresa, markup, logo e categorias (somente Dono; GET logo com sessão)' },
         { name: 'financeiro', description: 'Despesas, contas a pagar, estorno e relatórios (somente Dono)' },
         { name: 'produtos', description: 'Produtos, SKUs, busca e estoque (o Vendedor só consulta, sem custo)' },
-        { name: 'clientes', description: 'Clientes: cadastro, busca, ficha, aviso LGPD e anonimização (só o Dono anonimiza)' },
+        { name: 'clientes', description: 'Clientes: cadastro, edição, busca, ficha e aviso LGPD (Dono e Vendedor); inativar, reativar e excluir (só o Dono)' },
       ],
       // Autenticação por cookie de sessão no servidor (ADR 004); nenhum token é exposto ao JavaScript.
       components: {
@@ -128,7 +141,7 @@ export async function buildApp({
     }
     const status = typeof error.statusCode === 'number' ? error.statusCode : 500;
     if (status >= 500) {
-      request.log.error({ err: error }, 'erro inesperado');
+      request.log.error({ err: semValoresDaLinha(error) }, 'erro inesperado');
       return reply.code(500).send({ erro: 'erro_interno' });
     }
     return reply.code(status).send({ erro: error.code ?? 'requisicao_invalida' });

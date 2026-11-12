@@ -27,17 +27,26 @@ export const clienteNovoSchema = z.strictObject({
 });
 export type ClienteNovo = z.infer<typeof clienteNovoSchema>;
 
-export const clientesQuerySchema = z.object({ q: z.string().trim().max(80).optional() });
+// RF-CLI-05: nome e celular se corrigem; o aviso LGPD tem rota própria (a data do 1º aviso é evidência).
+export const clienteEditarSchema = z.strictObject({ nome: nomeSchema, celular: celularSchema });
+export type ClienteEditar = z.infer<typeof clienteEditarSchema>;
+
+// A lista mostra os clientes ativos; os inativados (RF-CLI-04) ficam numa aba à parte, só para o Dono.
+export const SITUACOES_CLIENTE = ['ativos', 'inativos'] as const;
+export const clientesQuerySchema = z.object({
+  q: z.string().trim().max(80).optional(),
+  situacao: z.enum(SITUACOES_CLIENTE).default('ativos'),
+});
 export const clienteIdParamsSchema = z.object({ id: z.uuid() });
 
 // ------------------------------------------------------------------ saída
-// Depois de anonimizado (RF-CLI-04) o cliente continua existindo para as vendas, sem celular e sem o nome.
+// `ativo: false` = inativado pelo Dono (RF-CLI-04): some da busca padrão e pode ser reativado.
 export const clienteSchema = z.object({
   id: z.uuid(),
   nome: z.string(),
-  celular: z.string().nullable(),
+  celular: z.string(),
   aviso_lgpd_em: z.string().nullable(),
-  anonimizado_em: z.string().nullable(),
+  ativo: z.boolean(),
   criado_em: z.string(),
 });
 export type Cliente = z.infer<typeof clienteSchema>;

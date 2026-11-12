@@ -54,9 +54,35 @@ describe('endpoints de Clientes', () => {
     expect(chamadas[0]).toMatchObject({ url: `/clientes/${ID}/aviso-lgpd`, metodo: 'POST' });
   });
 
-  it('anonimiza: POST /clientes/:id/anonimizar', async () => {
+  it('lista os inativos (só o Dono): GET /clientes?situacao=inativos, com ou sem busca', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { clientes: [], truncado: false } });
+    await api.clientes(undefined, 'inativos');
+    await api.clientes('Ana', 'inativos');
+    expect(chamadas.map((c) => c.url)).toEqual(['/clientes?situacao=inativos', `/clientes?q=Ana&situacao=inativos`]);
+  });
+
+  it('a lista padrão não manda situação (a API assume ativos)', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { clientes: [], truncado: false } });
+    await api.clientes('Ana', 'ativos');
+    expect(chamadas[0]?.url).toBe('/clientes?q=Ana');
+  });
+
+  it('edita: PUT /clientes/:id com nome e celular', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { id: ID } });
-    await api.anonimizarCliente(ID);
-    expect(chamadas[0]).toMatchObject({ url: `/clientes/${ID}/anonimizar`, metodo: 'POST' });
+    await api.editarCliente(ID, { nome: 'Ana', celular: '(21) 98888-0001' });
+    expect(chamadas).toEqual([{ url: `/clientes/${ID}`, metodo: 'PUT', corpo: { nome: 'Ana', celular: '(21) 98888-0001' } }]);
+  });
+
+  it('inativa e reativa: POST /clientes/:id/inativar e /reativar', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { id: ID } });
+    await api.inativarCliente(ID);
+    await api.reativarCliente(ID);
+    expect(chamadas.map((c) => `${c.metodo} ${c.url}`)).toEqual([`POST /clientes/${ID}/inativar`, `POST /clientes/${ID}/reativar`]);
+  });
+
+  it('exclui: DELETE /clientes/:id (204 sem corpo)', async () => {
+    const { api, chamadas } = apiComEspiao({ status: 204 });
+    await api.excluirCliente(ID);
+    expect(chamadas[0]).toMatchObject({ url: `/clientes/${ID}`, metodo: 'DELETE' });
   });
 });

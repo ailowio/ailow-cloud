@@ -84,15 +84,19 @@ export function criarApi(c: Cliente) {
     alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),
     // --- etiquetas (S08, só Dono): o PDF volta como Blob.
     etiquetasPdf: (itens: EtiquetasPedido['itens']) => c.baixar('/etiquetas', { itens }),
-    // --- clientes (S09). Dono e Vendedor cadastram, buscam e registram o aviso; só o Dono anonimiza.
-    clientes: (q?: string) => {
-      const busca = q?.trim() ?? '';
-      return p<{ clientes: ClienteFicha[]; truncado: boolean }>('GET', busca === '' ? '/clientes' : `/clientes?q=${encodeURIComponent(busca)}`);
+    // --- clientes (S09/S09b). Dono e Vendedor cadastram, editam, buscam e registram o aviso; só o Dono inativa/reativa/exclui.
+    clientes: (q?: string, situacao: 'ativos' | 'inativos' = 'ativos') => {
+      // A API assume "ativos"; só os inativos (aba do Dono) levam a situação na URL.
+      const partes = [q?.trim() ? `q=${encodeURIComponent(q.trim())}` : '', situacao === 'inativos' ? 'situacao=inativos' : ''].filter(Boolean);
+      return p<{ clientes: ClienteFicha[]; truncado: boolean }>('GET', `/clientes${partes.length ? `?${partes.join('&')}` : ''}`);
     },
     criarCliente: (n: ClienteCorpo) => p<{ id: string }>('POST', '/clientes', n),
     cliente: (id: string) => p<ClienteFicha>('GET', `/clientes/${id}`),
+    editarCliente: (id: string, d: Pick<ClienteCorpo, 'nome' | 'celular'>) => p<ClienteFicha>('PUT', `/clientes/${id}`, d),
     avisarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/aviso-lgpd`),
-    anonimizarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/anonimizar`),
+    inativarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/inativar`),
+    reativarCliente: (id: string) => p<ClienteFicha>('POST', `/clientes/${id}/reativar`),
+    excluirCliente: (id: string) => p('DELETE', `/clientes/${id}`),
   };
 }
 

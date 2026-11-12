@@ -15,19 +15,20 @@ describe('textos de Clientes', () => {
 
   it('celular repetido diz o que fazer, sem código de erro', () => {
     const m = mensagemClientes(new ErroApi(409, 'celular_ja_cadastrado'));
-    expect(m).toBe('Já existe um cliente com este celular. Busque pelo número para abrir a ficha.');
+    expect(m).toBe('Já existe um cliente com este celular. Busque pelo número; se não aparecer, ele pode estar inativo: peça ao Dono.');
   });
 
-  it('dados já apagados', () => {
-    expect(mensagemClientes(new ErroApi(409, 'cliente_anonimizado'))).toBe('Os dados deste cliente já foram apagados.');
+  it('inativar quem já está inativo (ou reativar quem está ativo) pede para atualizar a tela', () => {
+    expect(mensagemClientes(new ErroApi(409, 'cliente_ja_inativo'))).toBe('Este cliente já está inativo. Atualize a tela.');
+    expect(mensagemClientes(new ErroApi(409, 'cliente_ja_ativo'))).toBe('Este cliente já está ativo. Atualize a tela.');
   });
 
-  it('cliente que sumiu pede para atualizar a tela', () => {
+  it('cliente que sumiu (excluído ou de outra loja) pede para atualizar a tela', () => {
     expect(mensagemClientes(new ErroApi(404, 'nao_encontrado'))).toBe('Não encontramos este cliente. Atualize a tela.');
   });
 
-  it('o Vendedor que tenta apagar dados recebe a explicação', () => {
-    expect(mensagemClientes(new ErroApi(403, 'permissao_negada'))).toBe('Só o Dono pode apagar os dados de um cliente.');
+  it('o Vendedor que tenta inativar ou excluir recebe a explicação', () => {
+    expect(mensagemClientes(new ErroApi(403, 'sem_permissao'))).toBe('Só o Dono pode inativar, reativar ou excluir um cliente.');
   });
 
   it('sem internet e erro nosso caem nas frases gerais', () => {

@@ -35,3 +35,13 @@ PendÃªncias / riscos honestos:
 - O dev local (`.dev-data/`) ganhou categorias e 1 produto de teste (`Tomara que caia EssÃªnciaâ€¦`, nÂº 0001); apague a pasta para recomeÃ§ar. Servidores de dev parados por PID/`pg_ctl` e portas conferidas livres (L-0012).
 Aprendizado: **L-0014** (testes com ordem/busca dependentes de uuid/hex aleatÃ³rio, achados antes do merge; liÃ§Ã£o ativa 11) e recorrÃªncia da L-0011; o guarda do proxy (L-0009) e o contrato OpenAPI funcionaram como desenhados. Falhas minhas no caminho, todas corrigidas antes do commit: expectativa de cÃ³digo de erro do banco errada no teste (`23001`, nÃ£o `23503`); teste que procurava o cÃ³digo de B na A (o cÃ³digo Ã© Ãºnico por empresa); conversÃ£o centavosâ†’texto improvisada (virou funÃ§Ã£o com teste); um lote de testes de rÃ³tulos foi escrito junto com a implementaÃ§Ã£o, **sem observar o vermelho separadamente**. `node harness/scripts/check-harness.mjs` -> Harness OK (14 liÃ§Ãµes).
 VerificaÃ§Ã£o: `npm run verify` exit 0; mutaÃ§Ã£o 17/17; Playwright 360Ã—640 nos 2 temas; decodificaÃ§Ã£o do QR; `check-harness`.
+
+### Limpeza de pendências (pós-plano; paralelo à S07 no Claude Code) — 2026-11-12 — Composer
+Gate: feature logo + bugfix PIN + tooling + docs, **tier B**. Branch `chore/limpeza-pendencias-pos-s07` (worktree; S07 ainda WIP fora desta branch).
+Feito:
+- **ADR 004 aceito** (código já na main desde S04).
+- **RF-CFG-02 logo via UI:** migração `logo_bytes`/`logo_mime` (PNG/JPEG/WebP = 512 KiB, sem SVG); `PUT/DELETE/GET /empresa/logo`; Configurações > Empresa envia/troca/remove; OpenAPI 0.5.1; `@fastify/multipart`.
+- **L-0011:** asserção SEC-16 parseia JSON do log (não substring solta em `time`/UUID).
+- **`npm run dev:parar`** (L-0012 ação 3).
+- **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS ? S14; Safari/iOS ? só Chromium por ora; texto 13–14 px aceito; nested virt aceito.
+Verificação: `npm run verify` (ver PR).

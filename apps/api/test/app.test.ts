@@ -119,6 +119,32 @@ describe('API', () => {
     });
   });
 
+  // S09b / SEC-04: o Postgres põe os valores da linha no `detail` ("Failing row contains (...)", "Key (celular)=(...)").
+  // Num 500 isso iria para o log com nome e celular de cliente; o log guarda o erro sem esses campos.
+  describe('erros do banco no log (SEC-04)', () => {
+    it('um 500 com `detail` do Postgres não grava os valores da linha, mas guarda o código para diagnóstico', async () => {
+      const log2 = coletor();
+      const app2 = await buildApp({ pool, logger: { level: 'info', stream: log2.stream }, authPepper: TEST_PEPPER });
+      app2.get('/_falha-de-teste', async () => {
+        throw Object.assign(new Error('new row violates check constraint "clientes_celular_check"'), {
+          code: '23514',
+          detail: 'Failing row contains (Maria da Silva Sigilosa, 11987654321).',
+          where: 'valor 11987654321',
+        });
+      });
+      await app2.ready();
+      const res = await app2.inject({ method: 'GET', url: '/_falha-de-teste', headers: { 'x-request-id': 'req-log-4' } });
+      expect(res.statusCode).toBe(500);
+      expect(res.json()).toEqual({ erro: 'erro_interno' });
+      const bruto = JSON.stringify(log2.registros().filter((r) => r.request_id === 'req-log-4'));
+      expect(bruto).not.toContain('Maria da Silva Sigilosa');
+      expect(bruto).not.toContain('11987654321');
+      expect(bruto).toContain('23514');
+      expect(bruto).toContain('clientes_celular_check');
+      await app2.close();
+    });
+  });
+
   describe('OpenAPI (DOC-05)', () => {
     it('publica /openapi.json em OpenAPI 3.1 descrevendo /health', async () => {
       const res = await app.inject({ method: 'GET', url: '/openapi.json' });

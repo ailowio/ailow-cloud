@@ -2,7 +2,7 @@
 
 ERP mobile multi-tenant para lojistas pequenos: vender pelo celular com QR code, estoque e financeiro integrados, botões grandes para quem não é da tecnologia. Primeiro cliente e caso de uso: Marcant Moda Íntima (`acervo/marcant/`).
 
-**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S09 Clientes em revisão no PR; S08 Etiquetas QR e S07 Produtos na main; próxima: **S10 Vendas**, após o portão).
+**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S09b Clientes editar/inativar/excluir em revisão no PR; S09 Clientes e S08 Etiquetas na main; próxima: **S10 Vendas**, após o portão).
 
 ## Estrutura
 
@@ -80,7 +80,7 @@ Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` 
 | Doc | Onde |
 |---|---|
 | PRD | `docs/prd/PRD-ailow-cloud-v1.md` |
-| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP · 005 Financeiro: lançamentos imutáveis e interface pública · 006 Produtos: SKU e estoque com movimentos imutáveis, proposto · 003 Etiquetas: PDF com QR na API, proposto · 007 Clientes: celular único e anonimização no lugar de exclusão, proposto) |
+| Decisões de arquitetura (ADR) | `docs/adr/` (001 stack · 002 multi-tenant com RLS · 004 acesso: sessão, aparelho, PIN, TOTP · 005 Financeiro: lançamentos imutáveis e interface pública · 006 Produtos: SKU e estoque com movimentos imutáveis, proposto · 003 Etiquetas: PDF com QR na API, proposto · 007 Clientes: celular único, edição, inativar e excluir, aceito) |
 | Instruções para agentes de IA | `CLAUDE.md` / `AGENTS.md` |
 | Como contribuir | `CONTRIBUTORS.md`, `.github/pull_request_template.md` |
 | Matriz de acessos (auditoria) | `docs/auditoria/matriz-acessos.md` |
