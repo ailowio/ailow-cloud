@@ -33,7 +33,8 @@ export function criarCifraTotp(chaveBase64: string): CifraTotp {
       if (!guardado.startsWith(VERSAO)) throw new Error('segredo TOTP em formato desconhecido (esperado v1.)');
       const bruto = Buffer.from(guardado.slice(VERSAO.length), 'base64url');
       if (bruto.length <= TAM_IV + TAM_TAG) throw new Error('segredo TOTP em formato inválido (curto demais)');
-      const d = createDecipheriv('aes-256-gcm', chave, bruto.subarray(0, TAM_IV));
+      // authTagLength fixa o tamanho esperado da tag: o Node recusa tag mais curta (anti-forja, regra do Semgrep).
+      const d = createDecipheriv('aes-256-gcm', chave, bruto.subarray(0, TAM_IV), { authTagLength: TAM_TAG });
       d.setAuthTag(bruto.subarray(TAM_IV, TAM_IV + TAM_TAG));
       return Buffer.concat([d.update(bruto.subarray(TAM_IV + TAM_TAG)), d.final()]).toString('utf8');
     },
