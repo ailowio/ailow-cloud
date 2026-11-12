@@ -35,4 +35,4 @@ Feito: bater ponto (`GET /pontos/estado`, `POST /pontos`) e espelho do mês (`GE
 Números: API 703 -> 740 (30 da S12; o resto são testes de concorrência de compras/vendas do mesmo PR), web 248 -> 250 (sem `toques.test`, trocado pelo E2E), shared 222 -> 237.
 Decisões (Pedro): 30 s entre batidas, turno no dia/mês da entrada e "em aberto" sem horas: confirmados. Falta assinar o ADR 008 (Dono ajusta o próprio ponto; sem tela do histórico de ajustes).
 Pendências: tirar o aviso "em breve" da tela inicial (S13); prefixo `pontos` no proxy HTTPS (S14); E2E 360 px formal (S13); retenção de ponto (S14).
-Verificação: `verify` exit 0. Mutação (30 s, 403, sequência na exclusão, exclusão lógica na batida) pega; revertida. Playwright 360×640, tema escuro: adicionar, editar e excluir com confirmação, 0 rolagem, 0 alvo < 48 px (campos subiram para `lg`).
+Verificação: `verify` exit 0. Mutação (30 s, 403, sequência na exclusão, exclusão lógica na batida) pega; revertida. Playwright 360×640, tema escuro: adicionar, editar e excluir com confirmação, 0 rolagem, 0 alvo < 48 px (campos subiram para `lg`). PR #21 (4 commits: compras/vendas, E2E, identidade, S12).
