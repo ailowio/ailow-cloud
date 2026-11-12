@@ -38,6 +38,7 @@ Conventional Commits · branch curta + PR pequena com template · CI verde (`ver
 - `npm ci && npm run verify` roda tudo; os testes da API sobem um Postgres embutido temporário (ou usam `DATABASE_URL_TEST`).
 - Depois de mexer em `packages/shared`, rode `npm run build:shared` (a API e o web consomem o `dist`).
 - Contrato da API: `npm run lint:openapi` (Spectral, falha em aviso; já está no `verify`) e `bash scripts/contrato.sh` (Schemathesis com Postgres em contêiner, precisa de Docker; semente fixa, `SEED=… ` para caçar bug novo). `docs/openapi.json` é gerado: não edite à mão.
+- Carga e SLO (S13b): `bash scripts/carga.sh smoke|carga|estresse` (k6 em contêiner, ambiente efêmero igual ao do contrato, `scripts/lib/ambiente-efemero.sh`; exit 99 = threshold reprovou; números da máquina local, não da VPS) e `bash scripts/alertas.sh` (promtool nas regras de `ops/prometheus/`). `GET /metrics` (RED por rota template) só existe com `METRICS_TOKEN`.
 - O Postgres embutido (testes e `dev:db`) nasce em UTF-8 com ICU pt-BR (`apps/api/scripts/embedded-flags.ts`); um `.dev-data/pg` antigo continua em WIN1252 até ser recriado (L-0018).
 - E2E (navegador real, 360×640, RNF-04): com `dev:db`, `dev:api` e `dev:web` no ar, `npm run e2e -w @ailow/web`. Ainda não roda no CI nem no `verify` (S13). Na 1ª vez: `npx playwright install chromium-headless-shell`.
 - App completo sem Docker: `npm run dev:db` → `dev:seed` (1ª vez) → `dev:api` → `dev:web` (README); segredos de dev ficam em `.dev-data/` (gitignored).
