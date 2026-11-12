@@ -36,20 +36,31 @@ PendÃªncias / riscos honestos:
 Aprendizado: **L-0014** (testes com ordem/busca dependentes de uuid/hex aleatÃ³rio, achados antes do merge; liÃ§Ã£o ativa 11) e recorrÃªncia da L-0011; o guarda do proxy (L-0009) e o contrato OpenAPI funcionaram como desenhados. Falhas minhas no caminho, todas corrigidas antes do commit: expectativa de cÃ³digo de erro do banco errada no teste (`23001`, nÃ£o `23503`); teste que procurava o cÃ³digo de B na A (o cÃ³digo Ã© Ãºnico por empresa); conversÃ£o centavosâ†’texto improvisada (virou funÃ§Ã£o com teste); um lote de testes de rÃ³tulos foi escrito junto com a implementaÃ§Ã£o, **sem observar o vermelho separadamente**. `node harness/scripts/check-harness.mjs` -> Harness OK (14 liÃ§Ãµes).
 VerificaÃ§Ã£o: `npm run verify` exit 0; mutaÃ§Ã£o 17/17; Playwright 360Ã—640 nos 2 temas; decodificaÃ§Ã£o do QR; `check-harness`.
 
-### Limpeza de pendências (pós-plano; paralelo à S07 no Claude Code) — 2026-11-12 — Composer
+### Limpeza de pendï¿½ncias (pï¿½s-plano; paralelo ï¿½ S07 no Claude Code) ï¿½ 2026-11-12 ï¿½ Composer
 Gate: feature logo + bugfix PIN + tooling + docs, **tier B**. Branch `chore/limpeza-pendencias-pos-s07` (worktree; S07 ainda WIP fora desta branch).
 Feito:
-- **ADR 004 aceito** (código já na main desde S04).
-- **RF-CFG-02 logo via UI:** migração `logo_bytes`/`logo_mime` (PNG/JPEG/WebP = 512 KiB, sem SVG); `PUT/DELETE/GET /empresa/logo`; Configurações > Empresa envia/troca/remove; OpenAPI 0.5.1; `@fastify/multipart`.
-- **L-0011:** asserção SEC-16 parseia JSON do log (não substring solta em `time`/UUID).
-- **`npm run dev:parar`** (L-0012 ação 3).
-- **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS ? S14; Safari/iOS ? só Chromium por ora; texto 13–14 px aceito; nested virt aceito.
-Verificação: `npm run verify` (ver PR).
+- **ADR 004 aceito** (cï¿½digo jï¿½ na main desde S04).
+- **RF-CFG-02 logo via UI:** migraï¿½ï¿½o `logo_bytes`/`logo_mime` (PNG/JPEG/WebP = 512 KiB, sem SVG); `PUT/DELETE/GET /empresa/logo`; Configuraï¿½ï¿½es > Empresa envia/troca/remove; OpenAPI 0.5.1; `@fastify/multipart`.
+- **L-0011:** asserï¿½ï¿½o SEC-16 parseia JSON do log (nï¿½o substring solta em `time`/UUID).
+- **`npm run dev:parar`** (L-0012 aï¿½ï¿½o 3).
+- **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS ? S14; Safari/iOS ? sï¿½ Chromium por ora; texto 13ï¿½14 px aceito; nested virt aceito.
+Verificaï¿½ï¿½o: `npm run verify` (ver PR).
 
 ### S08 ? Etiquetas QR ? 2026-11-11 ? Claude Opus 5.5
-Gate: feature API + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-03, ARQ (ADR 003), CI-01, MC. Decisão do Pedro na sessão: **bobina 33 × 22 mm em 3 colunas** (não 40 × 25), PDF **na API com pdfkit**.
-Feito (branch `feature/s08-etiquetas`): `POST /etiquetas` (só Dono) devolve PDF com **uma fileira de 3 por página**; QR vetorial só com o código (versão 1, correção M, zona de 4 módulos, módulo 0,5 mm = 4 pontos a 203 dpi); texto: nome, tamanho em destaque, cor, preço, código; **sem custo nem fornecedor**. Até 999 por PDF; SKU de outra empresa, inexistente ou de produto inativo = 404. Tela "Etiquetas" em Produtos: busca, quantidade por SKU, "Usar o estoque", resumo de fileiras/em branco, download com o dia de São Paulo. ADR 003 **proposto**.
-Números: testes API 535 -> 571, web 195 -> 215, shared 136 -> 151; OpenAPI 0.6.0 -> 0.7.0; bundle web +7,5 kB.
-Evidência: `verify` exit 0; PDF lido por leitor independente (`pdfjs-dist`); PDF **baixado pelo navegador** rasterizado a 203 dpi: **71/71 QRs decodificados** (`jsqr`, fora do repo); mutação **15/15** pegas; Playwright 360×640 nos 2 temas: 0 rolagem, 0 alvo < 48 px, 0 texto cortado (3 cortes achados só no navegador e corrigidos: L-0015). Pedro testou o PDF: "gerou rápido e funcionou".
-Pendências: **(1) impressão física (única):** comprar a bobina, informar o modelo da impressora, imprimir, calibrar (espaço entre colunas 2 mm e margem 1 mm são estimativas; papel 105 × 22 mm; tamanho real 100%) e fotografar a leitura pela câmera, que é o "pronto quando" da S08. (2) Zod já vaza no bundle web da `main` (5 marcas, antes desta sessão). (3) PIN do Dono de dev redefinido para 2468 só no banco local (documentar no seed). (4) Prefixo `etiquetas` no proxy HTTPS da S14.
-Aprendizado: L-0015 (rótulo cortado em 360 px, recorrência 2; lição ativa 12; E2E na S13). Falhas corrigidas (detalhe no PR): opção inexistente do pdfjs 6, nome de arquivo só por caixa, data em UTC, heredoc (lição 1). `check-harness` OK.
+Gate: feature API + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-03, ARQ (ADR 003), CI-01, MC. Decisï¿½o do Pedro na sessï¿½o: **bobina 33 ï¿½ 22 mm em 3 colunas** (nï¿½o 40 ï¿½ 25), PDF **na API com pdfkit**.
+Feito (branch `feature/s08-etiquetas`): `POST /etiquetas` (sï¿½ Dono) devolve PDF com **uma fileira de 3 por pï¿½gina**; QR vetorial sï¿½ com o cï¿½digo (versï¿½o 1, correï¿½ï¿½o M, zona de 4 mï¿½dulos, mï¿½dulo 0,5 mm = 4 pontos a 203 dpi); texto: nome, tamanho em destaque, cor, preï¿½o, cï¿½digo; **sem custo nem fornecedor**. Atï¿½ 999 por PDF; SKU de outra empresa, inexistente ou de produto inativo = 404. Tela "Etiquetas" em Produtos: busca, quantidade por SKU, "Usar o estoque", resumo de fileiras/em branco, download com o dia de Sï¿½o Paulo. ADR 003 **proposto**.
+Nï¿½meros: testes API 535 -> 571, web 195 -> 215, shared 136 -> 151; OpenAPI 0.6.0 -> 0.7.0; bundle web +7,5 kB.
+Evidï¿½ncia: `verify` exit 0; PDF lido por leitor independente (`pdfjs-dist`); PDF **baixado pelo navegador** rasterizado a 203 dpi: **71/71 QRs decodificados** (`jsqr`, fora do repo); mutaï¿½ï¿½o **15/15** pegas; Playwright 360ï¿½640 nos 2 temas: 0 rolagem, 0 alvo < 48 px, 0 texto cortado (3 cortes achados sï¿½ no navegador e corrigidos: L-0015). Pedro testou o PDF: "gerou rï¿½pido e funcionou".
+Pendï¿½ncias: **(1) impressï¿½o fï¿½sica (ï¿½nica):** comprar a bobina, informar o modelo da impressora, imprimir, calibrar (espaï¿½o entre colunas 2 mm e margem 1 mm sï¿½o estimativas; papel 105 ï¿½ 22 mm; tamanho real 100%) e fotografar a leitura pela cï¿½mera, que ï¿½ o "pronto quando" da S08. (2) Zod jï¿½ vaza no bundle web da `main` (5 marcas, antes desta sessï¿½o). (3) PIN do Dono de dev redefinido para 2468 sï¿½ no banco local (documentar no seed). (4) Prefixo `etiquetas` no proxy HTTPS da S14.
+Aprendizado: L-0015 (rï¿½tulo cortado em 360 px, recorrï¿½ncia 2; liï¿½ï¿½o ativa 12; E2E na S13). Falhas corrigidas (detalhe no PR): opï¿½ï¿½o inexistente do pdfjs 6, nome de arquivo sï¿½ por caixa, data em UTC, heredoc (liï¿½ï¿½o 1). `check-harness` OK.
+
+
+
+### S09 â€” Clientes â€” 2026-11-13 â€” Claude Sonnet 5.5
+Gate: feature API + UI, **tier B**; TEST-01..08/17, SEC-01/04, AUD-10, OPS-11, MC. Branch `feature/s09-clientes` (S08 jÃ¡ mergeada, PR #16).
+Feito: tabela `clientes` (RLS, celular Ãºnico por empresa, sem `DELETE`); `GET/POST /clientes`, ficha, `POST â€¦/aviso-lgpd` (Dono e Vendedor) e `POST â€¦/anonimizar` (sÃ³ Dono); busca por nome (sem acento) ou celular; telas Clientes, Novo cliente e Ficha com botÃ£o WhatsApp, aviso com data e apagar com confirmaÃ§Ã£o; mÃ³dulo "Clientes" ativo na grade. ADR 007 **proposto**; OpenAPI 0.8.0.
+NÃºmeros: testes API 571 -> 634, web 215 -> 231, shared 151 -> 191; migraÃ§Ãµes +1 (`20261113120000_clientes`).
+DecisÃµes a confirmar (Pedro): (1) "excluir" = **anonimizar** (sem `DELETE`, a venda mantÃ©m o vÃ­nculo); (2) sem editar cliente (fora de RF-CLI-01â€¦04); (3) **histÃ³rico de compras vazio atÃ© a S10** (nÃ£o hÃ¡ vendas); (4) o log passa a descartar a query string (a busca leva nome/celular na URL).
+VerificaÃ§Ã£o: `verify` exit 0; mutaÃ§Ã£o 5/5 (a 1Âª rodada pegou 4/5: o teste de "lista sem anonimizados" era frouxo e foi reforÃ§ado); Playwright 360Ã—640 nos 2 temas: 11 telas, 0 rolagem lateral, 0 alvo < 48 px, 0 texto cortado (1 falso positivo: trilho do Switch).
+Aprendizado: **L-0016** (teste avanÃ§ou o relÃ³gio compartilhado em minutos e derrubou as sessÃµes; comentÃ¡rio no helper). O guard barrou um comando meu com ".env" e nÃ£o foi contornado. `check-harness` OK.
+PendÃªncias: prefixo `clientes` no proxy HTTPS da S14 (o do Vite jÃ¡ tem, por teste de guarda); impressÃ£o fÃ­sica das etiquetas (S08, Pedro).

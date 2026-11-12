@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react';
 // Depois do prefixo vale "/", "?" (query string: /categorias?tipo=...) ou o fim da URL; o Vite casa com a URL inteira.
 const alvo = process.env.API_URL ?? 'http://127.0.0.1:3000';
 const proxy = {
-  '^/(acesso|usuarios|empresa|categorias|financeiro|produtos|skus|estoque|etiquetas|clientes|vendas|admin|health|openapi\\.json)(/|\\?|$)': { target: alvo, changeOrigin: false },
+  '^/(acesso|usuarios|empresa|categorias|financeiro|produtos|skus|estoque|etiquetas|clientes|vendas|fornecedores|compras|admin|health|openapi\\.json)(/|\\?|$)': { target: alvo, changeOrigin: false },
 };
 
 export default defineConfig({

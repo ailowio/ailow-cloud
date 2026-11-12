@@ -15,6 +15,7 @@ const MOVIMENTOS: Record<TipoMovimento, string> = {
   ajuste: 'Ajuste',
   venda: 'Venda',
   estorno_venda: 'Venda estornada',
+  compra: 'Compra recebida',
 };
 export const rotuloMovimento = (t: TipoMovimento): string => MOVIMENTOS[t];
 

@@ -16,6 +16,7 @@ import { Clientes } from './telas/clientes/Clientes';
 import { Configuracoes } from './telas/config/Configuracoes';
 import { Financeiro } from './telas/financeiro/Financeiro';
 import { Produtos } from './telas/produtos/Produtos';
+import { Compras } from './telas/compras/Compras';
 import { Vendas } from './telas/vendas/Vendas';
 
 // Um estado por tela. `inicio` guarda a sessão aberta e o limite de inatividade vindo do servidor.
@@ -204,6 +205,9 @@ function Logado(props: {
   // Clientes abre para o Dono e para o Vendedor; só o Dono apaga os dados de um cliente (RF-CLI-04).
   if (props.modulo === 'clientes') {
     return <Clientes api={props.api} perfil={props.usuario.perfil} aoVoltar={() => props.aoAbrir(null)} />;
+  }
+  if (props.modulo === 'compras' && props.usuario.perfil === 'dono') {
+    return <Compras api={props.api} aoVoltar={() => props.aoAbrir(null)} />;
   }
   if (props.modulo === 'financeiro' && props.usuario.perfil === 'dono') {
     return <Financeiro api={props.api} aoVoltar={() => props.aoAbrir(null)} />;

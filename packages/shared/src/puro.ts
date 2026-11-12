@@ -4,3 +4,4 @@ export * from './produtos-calculos.js';
 export * from './etiquetas-calculos.js';
 export * from './clientes-calculos.js';
 export * from './vendas-calculos.js';
+export * from './compras-calculos.js';

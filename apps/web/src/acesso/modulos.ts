@@ -13,7 +13,7 @@ export interface Modulo {
 const TODOS: readonly Modulo[] = [
   { id: 'vendas', rotulo: 'Vendas', perfis: ['dono', 'vendedor'], pronto: true },
   { id: 'produtos', rotulo: 'Produtos', perfis: ['dono', 'vendedor'], pronto: true },
-  { id: 'compras', rotulo: 'Compras', perfis: ['dono'], pronto: false },
+  { id: 'compras', rotulo: 'Compras', perfis: ['dono'], pronto: true },
   { id: 'clientes', rotulo: 'Clientes', perfis: ['dono', 'vendedor'], pronto: true },
   { id: 'financeiro', rotulo: 'Financeiro', perfis: ['dono'], pronto: true },
   { id: 'pessoas', rotulo: 'Pessoas', perfis: ['dono', 'vendedor'], pronto: false },

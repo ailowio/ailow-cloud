@@ -68,6 +68,8 @@ describe('proxy do app web x rotas da API', () => {
       '/financeiro/relatorio?periodo=mes&data=2026-11-01',
       '/empresa',
       '/vendas/relatorio?periodo=dia&data=2026-11-11',
+      '/compras/relatorio?periodo=mes&data=2026-11-01',
+      '/fornecedores?q=atelier',
       '/skus/por-codigo?codigo=0001-M-PRE',
       '/health',
       '/openapi.json',

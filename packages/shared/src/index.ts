@@ -6,3 +6,4 @@ export * from './produtos.js';
 export * from './etiquetas.js';
 export * from './clientes.js';
 export * from './vendas.js';
+export * from './compras.js';

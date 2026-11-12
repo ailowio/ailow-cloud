@@ -19,7 +19,7 @@ export type Porte = z.infer<typeof porteSchema>;
 
 // Entrada de mercadoria e ajustes são do Dono (RF-PRO-04); 'inicial' nasce no cadastro e 'venda' /
 // 'estorno_venda' só a Vendas (S10) grava, pela interface pública de estoque.
-export const TIPOS_MOVIMENTO = ['inicial', 'entrada', 'ajuste', 'venda', 'estorno_venda'] as const;
+export const TIPOS_MOVIMENTO = ['inicial', 'entrada', 'ajuste', 'venda', 'estorno_venda', 'compra'] as const;
 export const tipoMovimentoSchema = z.enum(TIPOS_MOVIMENTO);
 export type TipoMovimento = z.infer<typeof tipoMovimentoSchema>;
 
@@ -110,15 +110,18 @@ export const movimentoNovoSchema = z
       .max(ESTOQUE_MAXIMO)
       .refine((q) => q !== 0, { error: 'a quantidade não pode ser zero' }),
     motivo: z.string().trim().min(3, { error: 'diga o motivo' }).max(200),
-    // Id da venda (RN-08): obrigatório na venda e no seu estorno, proibido nos demais tipos.
+    // Id da venda (RN-08) ou do pedido de compra (RN-11): obrigatório nesses tipos, proibido nos demais.
     origemId: z.uuid().nullish(),
   })
-  .refine((m) => (m.tipo === 'venda' || m.tipo === 'estorno_venda') === (m.origemId != null), {
-    error: 'venda e estorno de venda exigem o id da venda; os demais tipos não têm',
-    path: ['origemId'],
-  })
-  .refine((m) => !['inicial', 'entrada', 'estorno_venda'].includes(m.tipo) || m.quantidade > 0, {
-    error: 'estoque inicial, entrada e estorno de venda são quantidades positivas',
+  .refine(
+    (m) => (m.tipo === 'venda' || m.tipo === 'estorno_venda' || m.tipo === 'compra') === (m.origemId != null),
+    {
+      error: 'venda, estorno de venda e compra exigem o id de origem; os demais tipos não têm',
+      path: ['origemId'],
+    },
+  )
+  .refine((m) => !['inicial', 'entrada', 'estorno_venda', 'compra'].includes(m.tipo) || m.quantidade > 0, {
+    error: 'estoque inicial, entrada, estorno de venda e compra são quantidades positivas',
     path: ['quantidade'],
   })
   .refine((m) => m.tipo !== 'venda' || m.quantidade < 0, {
