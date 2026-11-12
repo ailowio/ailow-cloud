@@ -187,7 +187,8 @@ describe('Produtos (API)', () => {
       expect(p).toMatchObject({ nome, preco_centavos: 8990 });
       expect(p?.skus[0]).toMatchObject({ estoque: 5 });
       // Nem como null: a chave inteira some. Confere o texto cru da resposta, não só o objeto.
-      expect(r.corpo).not.toMatch(/custo|fornecedor|estoque_minimo|Pretty Paty|4321/);
+      // O valor do custo só é procurado como número JSON (":4321"): uuids aleatórios na resposta podem conter "4321" (L-0014).
+      expect(r.corpo).not.toMatch(/custo|fornecedor|estoque_minimo|Pretty Paty|:4321\b/);
       expect(Object.keys(p as object)).not.toContain('custo_centavos');
     });
   });
