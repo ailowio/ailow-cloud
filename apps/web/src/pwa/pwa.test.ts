@@ -26,7 +26,7 @@ describe('manifest do PWA (instalável)', () => {
   };
 
   it('tem os campos exigidos para instalar no Android/Chrome', () => {
-    expect(manifest.name).toBe('Ailow Cloud');
+    expect(manifest.name).toBe('Ailow ERP');
     expect(manifest.short_name.length).toBeLessThanOrEqual(12);
     expect(manifest.start_url).toBe('/');
     expect(manifest.scope).toBe('/');

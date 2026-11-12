@@ -41,9 +41,9 @@ export function Moldura(props: {
           <Group justify="space-between" wrap="nowrap" h={64}>
             <Group gap="xs" wrap="nowrap">
               <Logo altura={36} alt="" empresa={props.logoEmpresa === true} />
-              {/* Nome Ailow ao lado da marca (produto); a logo da empresa é só o ícone. */}
+              {/* Nome do produto ao lado da marca; a logo da empresa é só o ícone. */}
               <Text ff="var(--mantine-font-family-headings)" fw={700} fz={22} c="var(--ailow-primario-texto)">
-                Ailow
+                Ailow ERP
               </Text>
             </Group>
             <Group gap="xs" wrap="nowrap">
