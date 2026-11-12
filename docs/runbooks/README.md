@@ -11,6 +11,11 @@
 | [`deploy.md`](deploy.md) | Publicar uma versão (tag) na VPS |
 | [`rollback.md`](rollback.md) | Voltar para a versão anterior (app e, se for o caso, banco) |
 | [`migrar-vps.md`](migrar-vps.md) | Mudar o sistema para outra VPS (ou recriar a atual) |
+| [`backup.md`](backup.md) | Backup cifrado para o Drive, retenção e ensaio de restauração (S14b) |
+
+> **Atualização S14b (2026-11-12):** deploy e rollback agora descrevem a **stack do Swarm** (`ops/stack/ailow.yaml`),
+> exercitada por `scripts/stack-local.sh` e pelo job `stack` do CI. O que continua **não verificado** é tudo que depende da
+> VPS, do DNS, do certificado e do Drive real (S14c).
 
 ## Convenções comuns
 - **Segredos** (`POSTGRES_PASSWORD`, `AUTH_PEPPER`, `METRICS_TOKEN`) ficam só no arquivo de ambiente **da VPS**, fora do repositório. Nunca em chat, PR, log ou linha de comando. Conferir só **nomes e tamanho**, nunca valores (SEC-01, L-0003).

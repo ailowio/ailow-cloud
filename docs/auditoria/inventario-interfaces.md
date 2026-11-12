@@ -17,3 +17,13 @@ Nenhum nesta interface (Prometheus e Grafana serão auto-hospedados na VPS, S14;
 ## Ferramentas que falam com a API só em teste (não são interfaces de produção)
 - **k6** (`scripts/carga.sh`, `ops/k6/carga.js`): roda contra um ambiente **efêmero** (banco e API subidos pelo próprio script, segredos aleatórios descartados no fim). Nunca aponta para produção. No CI: job `carga-smoke` em todo PR; carga completa e estresse só por `workflow_dispatch` (manual). **Nada agendado.**
 - **Schemathesis** (`scripts/contrato.sh`): idem, ambiente efêmero.
+
+## Interfaces de deploy e backup (S14b; só existem em produção na S14c)
+| ID | Interface | Origem → Destino | Dados (classificação) | Protocolo | Frequência | Autenticação · escopo · rotação | Contrato | Dono | Criticidade |
+|----|-----------|------------------|-----------------------|-----------|-----------|----------------------------------|----------|------|-------------|
+| I-02 | Proxy do web para a API | nginx do `web` → `api` (rede `ailow_internal`) | todo o tráfego do app, **pessoal e financeiro** | HTTP interno | contínuo | rede overlay `internal` (sem rota externa); cookie de sessão atravessa. `/metrics` **não** é repassado (404 no nginx) | `ops/web/nginx.conf`; lista de prefixos idêntica à do Vite, travada por `apps/api/test/proxy-web.test.ts` | Pedro | Alta |
+| I-03 | Borda HTTPS | internet → Traefik → `web` (rede do proxy) | idem | HTTPS (TLS no Traefik; HSTS 1 ano) | contínuo | certificado Let's Encrypt (R-03); só o `web` entra na rede do Traefik | labels em `ops/stack/ailow.yaml` | Pedro | Alta |
+| I-04 | Imagens de contêiner | GitHub Actions → GHCR → host (pull) | binários da aplicação, **sem dados e sem segredos** | HTTPS (registro OCI) | por versão (tag) | push: `GITHUB_TOKEN` efêmero só em tag; pull: credencial de leitura (matriz de acessos) | `.github/workflows/publicar.yml`; scan Trivy antes do push | Pedro | Alta |
+| I-05 | Backup para o Drive | host → Google Drive (rclone) | **dump completo do banco, pessoal e financeiro, cifrado antes de sair** | HTTPS (API do Drive) via rclone `crypt` | diário | token OAuth `drive.file` + senha do `crypt` (matriz de acessos) | `ops/backup/backup.sh` | Pedro | Alta |
+
+Controles de integridade: I-02/I-03 sem estado próprio (proxy puro; erro da API passa como está). I-04: a tag só publica se apontar para commit da `main` e as duas imagens passarem no Trivy (CRITICAL/HIGH corrigíveis). I-05: o script recusa remoto sem `crypt`, recusa dump sem tabela com dados, confere o tamanho no remoto e só então aplica a retenção; conciliação = o ensaio de restauração (`backup.md §4`). **Fornecedores/terceiros (AUD-68):** Google (Drive e OAuth), GitHub (Actions, GHCR) e Let's Encrypt: nenhum recebe dado em claro; o Drive só vê dado cifrado.

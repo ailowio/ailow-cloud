@@ -1,0 +1,176 @@
+# Stack do Docker Swarm do Ailow Cloud (S14b, ADR 010). Parametrizada: o que muda de host para host são só as variáveis
+# de ops/stack/ailow.env.example (DOMINIO, TAG, CERT_RESOLVER, PROXY_NETWORK, ...). Falta uma obrigatória => o deploy falha
+# citando o nome (ENV-04/05).
+#
+# Uso (no host, com os 3 segredos já criados; ver docs/runbooks/deploy.md):
+#   set -a; . ./ailow.env; set +a
+#   docker stack config -c ailow.yaml            # confere a interpolação sem imprimir segredo (não há segredo aqui)
+#   docker stack deploy -c ailow.yaml --with-registry-auth ailow
+#
+# Comentários sempre em linha própria (L-0001).
+# NUNCA `docker stack rm` seguido de remover o volume `ailow_dbdata` sem backup restaurável (ENV-12).
+
+services:
+  db:
+    # Tag fixa, mesma do compose.yaml e dos testes (ENV-02).
+    image: postgres:18.6-alpine3.24
+    environment:
+      POSTGRES_USER: ailow
+      POSTGRES_DB: ailow
+      # O Postgres lê a senha do arquivo do Swarm secret: ela não aparece em `docker service inspect`.
+      POSTGRES_PASSWORD_FILE: /run/secrets/ailow_postgres_password
+    secrets:
+      - ailow_postgres_password
+    volumes:
+      # Postgres 18+: o volume é /var/lib/postgresql (não mais .../data).
+      - dbdata:/var/lib/postgresql
+    networks:
+      - ailow_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ailow -d ailow"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    deploy:
+      replicas: 1
+      # Parar antes de subir: dois Postgres nunca abrem o mesmo volume.
+      update_config:
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          memory: ${DB_MEM:-512M}
+          cpus: "${DB_CPUS:-1.0}"
+
+  api:
+    image: ${REGISTRY:-ghcr.io/ailowio}/ailow-cloud-api:${TAG:?defina TAG (a versão a implantar, ex v1.0.0)}
+    # A imagem de runtime não tem npm. Os segredos entram como variável só dentro do processo (leitura dos arquivos do
+    # Swarm secret); `$$` impede o Compose de interpolar. A migração roda antes da API; se ela falhar, a API não sobe
+    # (e o healthcheck/rollback do Swarm reverte o serviço).
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        export POSTGRES_PASSWORD="$$(cat /run/secrets/ailow_postgres_password)"
+        export AUTH_PEPPER="$$(cat /run/secrets/ailow_auth_pepper)"
+        export TOTP_CHAVE="$$(cat /run/secrets/ailow_totp_chave)"
+        export DATABASE_URL="postgresql://ailow:$${POSTGRES_PASSWORD}@db:5432/ailow"
+        node ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js -m migrations --migrations-table pgmigrations up
+        exec node dist/main.js
+    environment:
+      PORT: "3000"
+      # Atrás do Traefik e do nginx do web: só as faixas privadas do overlay são confiáveis (nunca "true"; SEC-07).
+      TRUST_PROXY: ${TRUST_PROXY:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      COOKIE_SECURE: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOGIN_RATE_MAX: ${LOGIN_RATE_MAX:-}
+      LOGIN_RATE_JANELA_S: ${LOGIN_RATE_JANELA_S:-}
+      DB_POOL_MAX: ${DB_POOL_MAX:-}
+    secrets:
+      - ailow_postgres_password
+      - ailow_auth_pepper
+      - ailow_totp_chave
+    networks:
+      - ailow_internal
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      # Dá tempo para a migração.
+      start_period: 60s
+    read_only: true
+    cap_drop: [ALL]
+    # `security_opt: no-new-privileges` existe no compose.yaml local, mas o `docker stack deploy` o ignora (conferido na
+    # 29.9.3): aqui a defesa é usuário não-root + cap_drop ALL + FS somente leitura. Não prometa o que o Swarm não aplica.
+    deploy:
+      replicas: 1
+      # Uma réplica só e migração no start: parar a antiga antes da nova evita duas migrações simultâneas.
+      update_config:
+        order: stop-first
+        failure_action: rollback
+        monitor: 60s
+      rollback_config:
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 5
+        window: 120s
+      resources:
+        limits:
+          memory: ${API_MEM:-256M}
+          cpus: "${API_CPUS:-1.0}"
+
+  web:
+    image: ${REGISTRY:-ghcr.io/ailowio}/ailow-cloud-web:${TAG:?defina TAG (a versão a implantar, ex v1.0.0)}
+    networks:
+      - ailow_internal
+      - proxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/index.html"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    read_only: true
+    cap_drop: [ALL]
+    # nginx-unprivileged escreve temporários e pid em /tmp. No Swarm a chave `tmpfs:` é ignorada: use volume do tipo tmpfs.
+    volumes:
+      - type: tmpfs
+        target: /tmp
+    deploy:
+      replicas: 1
+      update_config:
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+      rollback_config:
+        order: start-first
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          memory: ${WEB_MEM:-64M}
+          cpus: "${WEB_CPUS:-0.5}"
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${PROXY_NETWORK:?defina PROXY_NETWORK (nome da rede do Traefik)}
+        - traefik.http.routers.ailow-web.rule=Host(`${DOMINIO:?defina DOMINIO (ex cloud.ailow.com.br)}`)
+        - traefik.http.routers.ailow-web.entrypoints=${ENTRYPOINT:-websecure}
+        - traefik.http.routers.ailow-web.tls=true
+        - traefik.http.routers.ailow-web.tls.certresolver=${CERT_RESOLVER:?defina CERT_RESOLVER (nome do resolvedor ACME do Traefik)}
+        - traefik.http.routers.ailow-web.middlewares=ailow-hsts
+        - traefik.http.services.ailow-web.loadbalancer.server.port=8080
+        # HSTS de 1 ano só para este domínio (sem includeSubdomains: o domínio pai é compartilhado com outros sistemas).
+        - traefik.http.middlewares.ailow-hsts.headers.stsSeconds=31536000
+        - traefik.http.middlewares.ailow-hsts.headers.stsIncludeSubdomains=false
+
+networks:
+  # Banco e API. `internal`: sem rota para fora (a API não precisa de saída).
+  ailow_internal:
+    driver: overlay
+    internal: true
+  # Rede do Traefik que já existe no host (nome variável: a VPS atual e uma VPS nova podem ter nomes diferentes).
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?defina PROXY_NETWORK (nome da rede do Traefik)}
+
+volumes:
+  dbdata:
+    name: ailow_dbdata
+
+# Criados antes do deploy, uma vez (nunca em arquivo do repositório): `printf %s "$VALOR" | docker secret create <nome> -`.
+secrets:
+  ailow_postgres_password:
+    external: true
+  ailow_auth_pepper:
+    external: true
+  ailow_totp_chave:
+    external: true

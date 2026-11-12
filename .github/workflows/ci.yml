@@ -194,6 +194,30 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
+      # S14b: a imagem do web (nginx + dist do Vite) passa pelo mesmo scan; é ela que fica exposta atrás do Traefik.
+      - name: build da imagem do web
+        run: docker build -f apps/web/Dockerfile -t ailow-cloud-web:ci .
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ailow-cloud-web:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+  # S14b: a stack de produção (ops/stack/ailow.yaml) sobe de verdade num Swarm descartável e é conferida:
+  # rede isolada, sem saída da API, sem root, FS somente leitura, segredos fora do `service inspect`, /metrics 404.
+  stack:
+    name: stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: bash scripts/stack-local.sh
 
   compose:
     name: compose

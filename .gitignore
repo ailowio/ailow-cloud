@@ -31,3 +31,8 @@ playwright-report/
 
 # Resultados locais do k6 (S13b): evidência colada no diário/PR, não versionada
 ops/k6/resultados/
+
+# Variáveis da stack no host (S14b): só o .env.example é versionado
+ops/stack/ailow.env
+ops/backup/*.env
+*.dump

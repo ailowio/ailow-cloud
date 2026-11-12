@@ -4,6 +4,9 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### Adicionado
+- S14b, deploy portável (ADR 010; sem mudança de API, OpenAPI continua 0.14.0): **stack do Swarm** `ops/stack/ailow.yaml` (parametrizada por `TAG`, `DOMINIO`, `CERT_RESOLVER`, `PROXY_NETWORK`; segredos em Swarm secrets; rede `internal`; limites de memória/CPU), **imagem do web** (nginx sem root + `dist` do Vite, proxy da API, `/metrics` 404), Traefik mínimo para host novo (`ops/traefik/`), **backup cifrado** (`ops/backup/backup.sh`, rclone `crypt` → Drive) e **ensaio de restauração** (`restore-ensaio.sh`), `scripts/stack-local.sh` (valida a stack num Swarm descartável; job `stack` do CI), workflow `publicar.yml` (imagens no GHCR só em tag `vX.Y.Z`, com Trivy), job `imagem` agora escaneia também o web, runbooks (`backup.md`, deploy e rollback para Swarm) e inventários de auditoria (rotinas, interfaces, acessos). Teste novo trava a lista de rotas do nginx = a do Vite.
+
 ### Segurança
 - S14, threat model #3 e #5 (SEC-07, SEC-17; OpenAPI 0.14.0): **rate limit por IP** em `POST /acesso/entrar` e `POST /admin/login` (`@fastify/rate-limit` 11.2.2; padrão 10 por 60 s; resposta `429 {erro: "muitas_tentativas"}` com `Retry-After`; `LOGIN_RATE_MAX`, `LOGIN_RATE_JANELA_S`) e **segredo TOTP do Admin cifrado em repouso** (AES-256-GCM, chave `TOTP_CHAVE` **obrigatória**, formato `v1.`). `TRUST_PROXY` (IPs/CIDRs) para ler o IP real atrás do proxy: o Fastify 5 não aceita número de saltos. **Quebra:** `criarAdmin` recebe a cifra; Admins de dev criados antes têm o segredo em claro e precisam ser recriados (`npm run admin:criar`). ADR 010 (hospedagem portável) aceito.
 

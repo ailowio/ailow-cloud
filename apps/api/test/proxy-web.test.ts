@@ -55,6 +55,27 @@ describe('proxy do app web x rotas da API', () => {
     expect(prefixosDoProxy()).toContain('financeiro');
   });
 
+  // Em produção (S14b) quem repassa é o nginx do web (ops/web/nginx.conf), não o Vite. As duas listas são cópias uma da
+  // outra: se divergirem, o app funciona no dev/E2E e dá 404 na loja. Este teste as mantém idênticas.
+  describe('nginx do web (produção) x proxy do Vite (dev)', () => {
+    const nginx = () => readFileSync(join(import.meta.dirname, '..', '..', '..', 'ops', 'web', 'nginx.conf'), 'utf8');
+
+    function prefixosDoNginx(): string[] {
+      const achado = /location ~ \^\/\(([^)]+)\)/.exec(nginx());
+      if (!achado?.[1]) throw new Error('lista de prefixos não encontrada em ops/web/nginx.conf');
+      return achado[1].split('|').map((p) => p.replace(/\\\./g, '.'));
+    }
+
+    it('repassa exatamente os mesmos prefixos que o proxy do Vite', () => {
+      expect([...prefixosDoNginx()].sort()).toEqual([...prefixosDoProxy()].sort());
+    });
+
+    it('nunca repassa /metrics para a internet (404 no próprio nginx)', () => {
+      expect(prefixosDoNginx()).not.toContain('metrics');
+      expect(nginx()).toMatch(/location \^~ \/metrics \{\s*return 404;\s*\}/);
+    });
+  });
+
   // O Vite casa o padrão com a URL INCLUINDO a query string. Um padrão que só aceitasse "/" ou o fim depois do
   // prefixo deixava "/categorias?tipo=financeira" cair no app (sem conexão na tela), com a API e os testes verdes.
   describe('o padrão do proxy casa com a URL como o navegador a envia', () => {
