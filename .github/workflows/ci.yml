@@ -76,6 +76,37 @@ jobs:
       - name: schemathesis
         run: bash scripts/contrato.sh
 
+  # S13b (PRD §10.7): k6 smoke (1 VU, ~20 s) contra a API real com Postgres efêmero; os thresholds de RNF-01/02 valem.
+  # Carga (50 VUs) e estresse NÃO rodam aqui: ficam no workflow manual carga.yml (nada agendado). Ainda NÃO é check
+  # obrigatório (a proteção da branch é decisão do Pedro na S14). Os números do runner não são os da VPS.
+  carga-smoke:
+    name: carga-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: k6 smoke
+        run: bash scripts/carga.sh smoke
+
+  # S13b (RNF-03): regras de alerta do SLO validadas pelo promtool (sintaxe + testes unitários dos alertas).
+  alertas:
+    name: alertas
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: promtool
+        run: bash scripts/alertas.sh
+
   seguranca-segredos:
     name: seguranca-segredos
     runs-on: ubuntu-latest
