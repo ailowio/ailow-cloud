@@ -1,7 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
 // E2E em navegador real, no celular da loja (360×640, RNF-05). Não sobe nada sozinho: precisa do ambiente
-// de desenvolvimento no ar (`npm run dev:db`, `dev:api`, `dev:web`) com a empresa de exemplo (`dev:seed`).
+// de desenvolvimento no ar (`npm run dev:db`, `dev:api`, `dev:web`) com a empresa de exemplo (`dev:seed`) ou da stack
+// efêmera de `scripts/e2e.sh` (E2E_BASE_URL, E2E_EMAIL, E2E_SENHA).
 // Outro endereço: E2E_BASE_URL. Arquivos `*.e2e.ts` para o Vitest (`*.test.ts`) nunca os pegar.
 export default defineConfig({
   testDir: 'e2e',

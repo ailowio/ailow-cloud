@@ -6,7 +6,7 @@
 | # | Critério | Situação | Evidência / o que falta |
 |---|----------|----------|--------------------------|
 | 1 | Todos os RF de §5 demonstrados | 🟡 | Suítes de integração por módulo (API 766 testes, web 250, shared 237 no `verify` de 2026-11-12). Falta a matriz RF → teste, que não foi feita |
-| 2 | Jornada J1 (nova venda) cumpre RNF-04 | 🟡 | E2E `apps/web/e2e/venda-toques.e2e.ts` (360×640), rodado só localmente; **não roda no CI nem no `verify`** (S13c, E2E) |
+| 2 | Jornada J1 (nova venda) cumpre RNF-04 | 🟡 | E2E `apps/web/e2e/venda-toques.e2e.ts` (360×640), roda em `bash scripts/e2e.sh` (stack efêmera; 5 toques medidos no navegador) e no job `e2e` do CI com canário de limite 1 toque que TEM de reprovar; **marcar ✅ quando o job `e2e` ficar verde no PR da S13c** |
 | 3 | O Marcos faz sozinho: PIN, vender, relatório do dia, lista de reposição | ❓ | Depende de teste com o Marcos (humano) |
 
 ## Engenharia (harness tier B)
