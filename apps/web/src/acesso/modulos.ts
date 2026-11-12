@@ -16,7 +16,7 @@ const TODOS: readonly Modulo[] = [
   { id: 'compras', rotulo: 'Compras', perfis: ['dono'], pronto: true },
   { id: 'clientes', rotulo: 'Clientes', perfis: ['dono', 'vendedor'], pronto: true },
   { id: 'financeiro', rotulo: 'Financeiro', perfis: ['dono'], pronto: true },
-  { id: 'pessoas', rotulo: 'Pessoas', perfis: ['dono', 'vendedor'], pronto: false },
+  { id: 'pessoas', rotulo: 'Pessoas', perfis: ['dono', 'vendedor'], pronto: true },
   { id: 'configuracoes', rotulo: 'Configurações', perfis: ['dono'], pronto: true },
 ];
 

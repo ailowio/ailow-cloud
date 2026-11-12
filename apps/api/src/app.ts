@@ -25,6 +25,7 @@ import { criarHasher } from './acesso/senhas.js';
 import { registrarRotasAdmin } from './admin/rotas.js';
 import { registrarRotasClientes } from './clientes/rotas.js';
 import { registrarRotasCompras } from './compras/rotas.js';
+import { registrarRotasPessoas } from './pessoas/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
 import { registrarRotasProdutos } from './produtos/rotas.js';
@@ -101,7 +102,7 @@ export async function buildApp({
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Ailow Cloud API', version: '0.11.0' },
+      info: { title: 'Ailow Cloud API', version: '0.13.0' },
       tags: [
         { name: 'acesso', description: 'Entrar, aparelho vinculado, PIN e sessão' },
         { name: 'usuarios', description: 'Gestão de usuários da empresa (somente Dono)' },
@@ -112,6 +113,7 @@ export async function buildApp({
         { name: 'clientes', description: 'Clientes: cadastro, edição, busca, ficha e aviso LGPD (Dono e Vendedor); inativar, reativar e excluir (só o Dono)' },
         { name: 'vendas', description: 'Vendas: finalizar, comprovante, cancelar e relatório (Dono e Vendedor; o mês é só do Dono)' },
         { name: 'compras', description: 'Fornecedores e pedidos de compra (somente Dono); receber é atômico com estoque e parcelas' },
+        { name: 'pessoas', description: 'Ponto: bater entrada/saída (Dono e Vendedor) e espelho do mês (o Vendedor só o próprio)' },
       ],
       // Autenticação por cookie de sessão no servidor (ADR 004); nenhum token é exposto ao JavaScript.
       components: {
@@ -186,6 +188,7 @@ export async function buildApp({
   await registrarRotasClientes(app, deps, guardas);
   await registrarRotasVendas(app, deps, guardas);
   await registrarRotasCompras(app, deps, guardas);
+  await registrarRotasPessoas(app, deps, guardas);
 
   app.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

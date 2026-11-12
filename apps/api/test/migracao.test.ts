@@ -34,6 +34,8 @@ describe('migrações', () => {
     'parcelas_pedido_compra',
     'pedido_compra_sequencia',
     'pedidos_compra',
+    'pontos',
+    'pontos_ajustes',
     'produtos',
     'skus',
     'venda_sequencia',
@@ -45,7 +47,7 @@ describe('migrações', () => {
     await c.connect();
     try {
       const r = await c.query(
-        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos','produtos','skus','movimentos_estoque','vendas','itens_venda','pagamentos_venda','venda_sequencia','fornecedores','pedido_compra_sequencia','pedidos_compra','itens_pedido_compra','parcelas_pedido_compra') ORDER BY 1",
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos','produtos','skus','movimentos_estoque','vendas','itens_venda','pagamentos_venda','venda_sequencia','fornecedores','pedido_compra_sequencia','pedidos_compra','itens_pedido_compra','parcelas_pedido_compra','pontos','pontos_ajustes') ORDER BY 1",
       );
       return r.rows.map((x) => x.tablename);
     } finally {
