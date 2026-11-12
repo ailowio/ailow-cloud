@@ -25,7 +25,6 @@ import { type Guardas, sessaoDe } from '../acesso/guardas.js';
 import { withEmpresa } from '../db.js';
 import {
   ErroCompra,
-  ErroFornecedor,
   buscarPedido,
   criarPedido,
   editarPedido,
@@ -34,7 +33,7 @@ import {
   listarPedidos,
   relatorioCompras,
 } from './compras.js';
-import { buscarFornecedor, criarFornecedor, editarFornecedor, listarFornecedores } from './fornecedores.js';
+import { ErroFornecedor, buscarFornecedor, criarFornecedor, editarFornecedor, listarFornecedores } from './fornecedores.js';
 
 const sessaoCookie = [{ sessao: [] }];
 

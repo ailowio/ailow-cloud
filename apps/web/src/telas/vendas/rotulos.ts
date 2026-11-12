@@ -15,6 +15,7 @@ const ERROS: Record<string, string> = {
   estoque_insuficiente: 'Peça sem estoque — chame o Dono.',
   nome_obrigatorio: 'Cliente novo: diga o nome para finalizar.',
   cliente_inativo: 'Este celular está inativo — chame o Dono.',
+  cliente_ja_cadastrado: 'Este celular acabou de ser cadastrado. Toque em Finalizar de novo.',
   pagamentos_divergem: 'A soma dos pagamentos tem de ser igual ao total.',
   desconto_acima_do_subtotal: 'O desconto não pode passar do total da venda.',
   ja_cancelada: 'Esta venda já foi cancelada.',

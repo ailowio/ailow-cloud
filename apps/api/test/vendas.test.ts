@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPool } from '../src/db.js';
+import { ErroVenda, finalizarVenda } from '../src/vendas/vendas.js';
 import {
   Cliente,
   type EmpresaDeTeste,
@@ -372,6 +373,78 @@ describe('Vendas (API)', () => {
       expect(json).toMatchObject({ codigo: p.codigo, preco_centavos: 8990, estoque: expect.any(Number) });
       expect(JSON.stringify(json)).not.toContain('custo');
       expect((await b.dono.get(`/skus/por-codigo?codigo=${encodeURIComponent(p.codigo)}`)).statusCode).toBe(404);
+    });
+  });
+
+  // RN-07 / RN-08: "tudo ou nada" também com dois balcões ao mesmo tempo (TEST-12, concorrência).
+  describe('concorrência', () => {
+    it('duas vendas da última peça: uma entra, a outra é recusada e o saldo fica em 0', async () => {
+      const loja = await montar('Vendas última peça');
+      const p = await peca(loja, 1);
+      const [x, y] = await Promise.all([
+        loja.dono.post('/vendas', fechar(p, celular())),
+        loja.vendedor.post('/vendas', fechar(p, celular())),
+      ]);
+      expect([x.statusCode, y.statusCode].sort()).toEqual([201, 409]);
+      const recusada = x.statusCode === 409 ? x : y;
+      expect(recusada.json()).toMatchObject({ erro: 'estoque_insuficiente' });
+      expect((await estoqueDe(loja, p.codigo)).json.estoque).toBe(0);
+    });
+
+    it('dois cancelamentos da mesma venda: um vale, o outro é recusado e o estoque volta uma vez só', async () => {
+      const loja = await montar('Vendas cancela junto');
+      const p = await peca(loja);
+      const venda = await loja.dono.post('/vendas', fechar(p, celular()));
+      const { id } = venda.json() as { id: string };
+      const [x, y] = await Promise.all([
+        loja.dono.post(`/vendas/${id}/cancelar`, { motivo: 'Primeiro balcão' }),
+        loja.dono.post(`/vendas/${id}/cancelar`, { motivo: 'Segundo balcão' }),
+      ]);
+      expect([x.statusCode, y.statusCode].sort()).toEqual([200, 409]);
+      expect((await estoqueDe(loja, p.codigo)).json.estoque).toBe(5);
+    });
+
+    it('o mesmo celular novo em duas vendas abertas juntas: a 2ª diz "já cadastrado" e não grava nada', async () => {
+      const loja = await montar('Vendas celular junto');
+      const tel = celular();
+      const p1 = await peca(loja);
+      const p2 = await peca(loja);
+      const ctx = { empresaId: loja.dados.empresaId, autorId: loja.dados.donoId, perfil: 'dono' as const, agora: relogio.agora };
+      const abrir = async () => {
+        const c = await pool.connect();
+        await c.query('BEGIN');
+        await c.query('SET LOCAL ROLE ailow_app');
+        await c.query("SELECT set_config('app.empresa_id', $1, true)", [loja.dados.empresaId]);
+        const pid = (await c.query('SELECT pg_backend_pid() AS pid')).rows[0].pid as number;
+        return { c, pid };
+      };
+      const pedido = (peca: Peca) => fechar(peca, tel) as Parameters<typeof finalizarVenda>[2];
+
+      const um = await abrir();
+      const dois = await abrir();
+      try {
+        await finalizarVenda(um.c, ctx, pedido(p1));
+        // A 2ª já passou da busca do celular (ainda não existia) e espera o índice único da 1ª.
+        const segunda = finalizarVenda(dois.c, ctx, pedido(p2)).then(
+          () => null,
+          (err: unknown) => err,
+        );
+        for (let i = 0; i < 100; i++) {
+          const esperando = await owner.query("SELECT 1 FROM pg_stat_activity WHERE pid = $1 AND wait_event_type = 'Lock'", [dois.pid]);
+          if (esperando.rowCount) break;
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        await um.c.query('COMMIT');
+        const erro = await segunda;
+        expect(erro).toBeInstanceOf(ErroVenda);
+        expect((erro as ErroVenda).codigo).toBe('cliente_ja_cadastrado');
+      } finally {
+        await dois.c.query('ROLLBACK').catch(() => {});
+        await um.c.query('ROLLBACK').catch(() => {});
+        um.c.release();
+        dois.c.release();
+      }
+      expect((await estoqueDe(loja, p2.codigo)).json.estoque).toBe(5);
     });
   });
 });
