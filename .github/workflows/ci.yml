@@ -95,6 +95,28 @@ jobs:
       - name: k6 smoke
         run: bash scripts/carga.sh smoke
 
+  # S13c (TEST-*, RNF-04/05): E2E em navegador real (Chromium 360×640) dos 4 fluxos críticos — nova venda (≤ 8 toques),
+  # receber compra, ponto, cancelar venda — contra a stack efêmera de scripts/e2e.sh (Postgres em contêiner, API e web
+  # construídos, segredos descartáveis). E2E_CANARIO=1 refaz a venda com limite de 1 toque e EXIGE que reprove (L-0006).
+  # Ainda NÃO é check obrigatório (proteção da branch é decisão do Pedro na S14).
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: navegador do Playwright
+        run: npx playwright install --with-deps chromium-headless-shell
+      - name: e2e (4 fluxos + canário)
+        run: E2E_CANARIO=1 bash scripts/e2e.sh
+
   # S13b (RNF-03): regras de alerta do SLO validadas pelo promtool (sintaxe + testes unitários dos alertas).
   alertas:
     name: alertas

@@ -27,6 +27,6 @@
 | `main` protegida, checks obrigatórios, aprovação por pessoa ≠ autor (exceção EX-01) | CI-08, AUD-22 | S14 |
 | Rate limit em login/PIN; segredo TOTP do Admin em texto | SEC-07/17 | antes do go-live (threat model) |
 | Gate de cobertura não-regressiva: não encontrei configuração de `coverage` | TEST-14, CI-04 | a decidir (S14) |
-| E2E dos fluxos críticos no CI (hoje só `venda-toques`, local) | TEST-13 | S13c (pendente) |
-| Runbooks de deploy, rollback e migração de VPS | OPS-*, DOC-* | S14 (dependem da VPS) |
+| E2E dos 4 fluxos críticos no CI (`scripts/e2e.sh`, job `e2e`, canário L-0006) | TEST-13 | S13c (feito; verde no CI a confirmar no PR) |
+| Runbooks de deploy, rollback e migração de VPS | OPS-*, DOC-* | `docs/runbooks/` escritos (S13c); ensaio e tempos medidos na S14 (dependem da VPS) |
 | Backup restaurado com evidência (EX-02) | AUD-43 | antes de dados reais |

@@ -13,14 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S13a — Qualidade final: contrato da API — 2026-11-12 — Claude Sonnet 5.5
-Gate: CI/qualidade + correções do fuzz, **tier B**; CI-*, TEST-*, SEC-01/04, ENV-02, MC. Branch `feature/s13-qualidade-final` (S12 na main, PR #21; ADR 008 **aceito** pelo Pedro). Plano fatiado: S13 virou S13a/b/c.
-Feito: Spectral 6.17.0 no `verify` (`lint:openapi`, falha em aviso) sobre `docs/openapi.json` gerado e versionado; `operationId`, `info`, `servers`, 200 binário (logo, etiquetas) e 400 em toda rota com entrada. Schemathesis 4.33.2 (`scripts/contrato.sh`, Postgres em contêiner, job `contrato` no CI). Achados reais: U+0000 → 500 (agora 400 em qualquer rota) e `PUT /empresa/logo` malformado → 500/406 (agora 400). Postgres embutido nascia em WIN1252 (emoji → 500 local): agora UTF-8 ICU pt-BR (L-0018).
-Números: Spectral 144 avisos -> 0; Schemathesis 53 falhas -> 0 (68/69 operações, 3485 casos); API 740 -> 753, web 250, shared 237.
-Decisões (Pedro confirma): `contrato` ainda **não** é check obrigatório; exclusões do Schemathesis (`/acesso/sair`, `positive_data_acceptance`, `unsupported_method` = 404 em vez de 405); semente fixa; `operation-description` desligada.
-Pendências: recriar `.dev-data/pg` (L-0018); S13b k6 + SLO; S13c E2E + docs.
-Verificação: `verify` exit 0. Canários: Spectral reprovou (2 erros) e o Schemathesis reprovou sem a doc do 400 (10 × ST103); o do NUL **não** reprovou com semente fixa (o teste `entrada-segura` guarda essa classe).
-
 ### S13b — Qualidade final: carga e SLO — 2026-11-12 — Claude Sonnet 5.5
 Gate: qualidade/observabilidade, **tier B**; OBS-*, TEST-*, SEC-01/04, CI-*, AUD (interface nova `/metrics`), L-0006/0012. Branch `feature/s13b-carga-slo`, **sem commit** (aguarda pedido).
 Feito: `prom-client` 15.1.3, `apps/api/src/metricas.ts` (RED por rota template, `GET /metrics` com Bearer `METRICS_TOKEN`, 404 sem token, fora do OpenAPI); `ops/prometheus/alertas.yml` (burn 14,4x 1h+5m, 6x 6h+30m, 1x 3d+6h) + testes `promtool`; k6 2.3.0 (`ops/k6/carga.js`, `scripts/carga.sh`) sobre o lib `scripts/lib/ambiente-efemero.sh`, que `contrato.sh` também usa; CI `carga-smoke` e `alertas` em todo PR, `carga.yml` manual; inventários de auditoria.
@@ -37,3 +29,11 @@ Números (k6 50 VUs, 2 rodadas): venda p95 1807 -> 309 / 333 ms; busca p95 957 -
 Decisões (Pedro): aceitar "Venda"+leitura composta nos textos novos; limite p99 do estresse; `GET /produtos` não foi otimizado (passa a meta; média no k6 580 -> 156 ms só com a cauda curta); runbooks e E2E da S13c ficaram de fora (dependem de VPS/stack ao vivo).
 Verificação: `verify` exit 0 (API 761 -> 766, web 250, shared 237; OpenAPI sem diff); `contrato.sh` 3485/3485; `alertas.sh` ok. Vermelho antes: teste de ordem das instruções; o teste existente do extrato pegou o estorno que eu não tinha coberto na composição.
 Pendências: S13c (E2E no CI dos 4 fluxos, runbooks, tirar o aviso de vez), S14 (rate limit, TOTP, `main` protegida).
+
+### S13c — E2E no CI e runbooks — 2026-11-12 — Claude Sonnet 5.5
+Gate: teste/CI + docs de entrega, **tier B**; TEST-*, CI-*, OPS-04/05/06/08/11, SEC-01/04, AUD-90, L-0006/0012/0017. Branch `feature/s13c-e2e-ci-runbooks` (de `main` em 408b956, PR #24 mergeado), **sem commit** (aguarda pedido).
+Feito: `scripts/e2e.sh` (stack efêmera comum: Postgres em contêiner, migrações, empresa descartável, API e web construídos, `vite preview` com proxy; segredos gerados a cada execução) + job `e2e` no `ci.yml`. 4 fluxos em Chromium 360×640: nova venda (≤ 8 toques), receber compra, ponto, cancelar venda; cada um confere o efeito pela API (saldo, conta a pagar do pedido, estado do ponto). `apoio.ts` cria categoria/produto/cliente por teste (nomes únicos, L-0008). `docs/runbooks/` (deploy, rollback, migrar VPS): escritos, **nada ensaiado**; o que depende da VPS está marcado NÃO VERIFICADO.
+Números: E2E no CI 0 -> 4 fluxos; local `E2E_CANARIO=1 bash scripts/e2e.sh`: 4/4 verdes (venda: 5 toques) em 2 execuções.
+Decisões: `E2E_LIMITE_TOQUES` só pode apertar (`Math.min(8, …)`); o canário refaz a venda com limite 1 e exige falha (L-0006/L-0017). Job `e2e` ainda **não** obrigatório (S14).
+Pendências: CI verde do job `e2e` no PR (nunca rodou no GitHub; `playwright install --with-deps chromium-headless-shell` não testado lá) e então marcar ✅ o item 2 do checklist §10; gatilho numérico de reversão e tempos dos runbooks (S14).
+Verificação: `verify` exit 0 (API 766, web 250, shared 237); `check-harness` ok; ci.yml parseia (10 jobs).

@@ -1,0 +1,55 @@
+# Runbook: migrar o sistema para outra VPS (ou recriar a atual)
+
+- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-12 · **Ensaiado:** nunca **[NÃO VERIFICADO — S14]** · tempo medido: __ min
+- Regras: ENV-*, SEC-01/04, OPS-04/11, AUD-24 (mudança de infraestrutura é mudança registrada), AUD-90 (evidência).
+
+## 0. O que precisa viajar
+| Item | Onde está | Observação |
+|---|---|---|
+| Banco | volume `dbdata` do Compose (Postgres 18.6; diretório `/var/lib/postgresql`) | `pg_dump -Fc` / `pg_restore` (lógico, portável entre máquinas) |
+| `AUTH_PEPPER` | arquivo de ambiente da VPS | **Tem de ser o MESMO.** Os hashes de senha e PIN o misturam (ADR 004): pepper novo ⇒ ninguém consegue entrar. Copiar por canal seguro, nunca por chat/e-mail em claro |
+| `POSTGRES_PASSWORD` | arquivo de ambiente | Pode ser **nova** na VPS nova (o banco é recriado e restaurado); atualizar só no arquivo de ambiente |
+| `METRICS_TOKEN` | arquivo de ambiente | Pode ser novo; atualizar o scraper. Acesso novo ⇒ matriz de acessos |
+| Código | repositório (tag) | `git checkout vX.Y.Z` |
+| Proxy HTTPS / DNS / certificado | VPS | **[NÃO VERIFICADO — S14]** ainda não existe |
+| Arquivos enviados (logo da empresa) | confirmar onde ficam (banco ou disco) | **[NÃO VERIFICADO]** — conferir em `apps/api` antes do ensaio; se estiver em disco, copiar também |
+
+## 1. Antes
+1. VPS nova provisionada, Docker/Compose instalados, firewall só com 80/443 (e SSH restrito); acessos criados e registrados em `docs/auditoria/matriz-acessos.md` (nominais, MFA onde houver).
+2. Mesma versão (tag) que a de produção. Não migrar e atualizar na mesma janela.
+3. Combinar janela com o Dono da loja (o sistema fica fora durante a cópia). Reduzir o TTL do DNS com antecedência **[NÃO VERIFICADO]**.
+
+## 2. Ensaio obrigatório (tier B) — antes da janela real
+Na VPS nova, restaurar um backup **real recente** em um banco de teste e rodar o smoke (4 fluxos do `deploy.md §3`). Medir o tempo de dump + cópia + restore e anotar acima. Sem ensaio, não há migração.
+
+## 3. Backup (também usado pelo deploy e pelo rollback)
+```bash
+# Na VPS de origem, com a api parada para um corte consistente (ou aceitar o instantâneo do pg_dump):
+docker compose exec -T db pg_dump -U ailow -d ailow -Fc > ailow-AAAAMMDD-HHMM.dump
+sha256sum ailow-*.dump > ailow-AAAAMMDD-HHMM.sha256
+```
+O arquivo `.dump` contém **dados pessoais de clientes (LGPD)**: guardar criptografado, fora do repositório, com acesso restrito e prazo de retenção definido **[NÃO VERIFICADO — S14: retenção e local do backup]**. Backup só vale se for **restaurado ao menos uma vez com evidência** (piso do tier A): o ensaio do §2 é essa evidência.
+
+## 4. Janela de migração
+1. Avisar a loja. `docker compose stop api` na origem (o `db` continua).
+2. Backup (§3) e conferir o checksum. Copiar para a VPS nova por canal cifrado (`scp`/`rsync` por SSH) e conferir o checksum de lá.
+3. VPS nova: criar o arquivo de ambiente (mesmo `AUTH_PEPPER`; senhas novas), `git checkout vX.Y.Z`, subir só o banco: `docker compose up -d db`.
+4. Restaurar no banco vazio criado pelo Compose:
+   ```bash
+   docker compose exec -T db pg_restore -U ailow -d ailow --no-owner --exit-on-error < ailow-AAAAMMDD-HHMM.dump
+   ```
+   O papel `ailow_app` é criado por migração (`20261110120000_empresas-e-rls-base`) e papéis pertencem ao cluster: um `pg_dump` de um só banco não os carrega. Depois do restore, conferir `\du` e `\dp` (o `GRANT` e o RLS forçado) e, se faltar, rodar o `migrate` antes e restaurar só os dados **[NÃO VERIFICADO — ensaiar na S14]**.
+5. `docker compose up -d --build` (o `migrate` confirma que o schema está na versão certa e não aplica nada novo) e `curl -fsS …/health`.
+6. Smoke (`deploy.md §3`) **na VPS nova, por IP/hosts local**, antes de mexer no DNS.
+7. Virar o DNS/proxy para a VPS nova. Observar 15 min (gatilho do README). A origem continua **parada, intacta**.
+
+## 5. Reversão da migração
+Antes de virar o DNS: basta `docker compose start api` na origem. Depois de virar: voltar o DNS para a origem **só se a VPS nova ainda não recebeu vendas**; se recebeu, a origem está defasada — não voltar sem um novo dump da VPS nova (decisão do Pedro).
+
+## 6. Depois
+- Manter a origem parada e o dump por um prazo combinado (ex.: 7 dias), depois **destruir ambos** com registro (LGPD: dado de cliente não fica solto).
+- Revogar acessos e chaves da VPS antiga; atualizar `matriz-acessos.md` e `inventario-interfaces.md` (novo endereço do `/metrics`, DNS).
+- Release/CHANGELOG: nota da migração, tempo medido, resultado do smoke; lição se algo falhou.
+
+## Não verificado (depende da S14)
+Tudo em VPS; o conteúdo do dump quanto a papéis/GRANT/RLS; onde ficam os arquivos enviados; retenção e local do backup; TTL/DNS; tempo medido; contato de escalonamento.
