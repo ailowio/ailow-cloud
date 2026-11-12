@@ -108,9 +108,11 @@ export function Inicio(props: {
             />
           ))}
         </GradeModulos>
-        <Text size="sm" c="dimmed">
-          Os módulos marcados com “em breve” chegam nas próximas versões.
-        </Text>
+        {modulos.some((m) => !m.pronto) && (
+          <Text size="sm" c="dimmed">
+            Os módulos marcados com “em breve” chegam nas próximas versões.
+          </Text>
+        )}
       </Stack>
     </Moldura>
   );
