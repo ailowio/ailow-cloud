@@ -31,3 +31,12 @@ Evidência: `verify` exit 0; PDF lido por leitor independente (`pdfjs-dist`); PD
 Pendências: **(1) impressão física (única):** comprar a bobina, informar o modelo da impressora, imprimir, calibrar (espaço entre colunas 2 mm e margem 1 mm são estimativas; papel 105 × 22 mm; tamanho real 100%) e fotografar a leitura pela câmera, que é o "pronto quando" da S08. (2) Zod já vaza no bundle web da `main` (5 marcas, antes desta sessão). (3) PIN do Dono de dev redefinido para 2468 só no banco local (documentar no seed). (4) Prefixo `etiquetas` no proxy HTTPS da S14.
 Aprendizado: L-0015 (rótulo cortado em 360 px, recorrência 2; lição ativa 12; E2E na S13). Falhas corrigidas (detalhe no PR): opção inexistente do pdfjs 6, nome de arquivo só por caixa, data em UTC, heredoc (lição 1). `check-harness` OK.
 
+### S09 — Clientes — 2026-11-13 — Claude Sonnet 5.5
+Gate: feature API + UI, **tier B**; TEST-01..08/17, SEC-01/04, AUD-10, OPS-11, MC. Branch `feature/s09-clientes` (S08 já mergeada, PR #16).
+Feito: tabela `clientes` (RLS, celular único por empresa, sem `DELETE`); `GET/POST /clientes`, ficha, `POST …/aviso-lgpd` (Dono e Vendedor) e `POST …/anonimizar` (só Dono); busca por nome (sem acento) ou celular; telas Clientes, Novo cliente e Ficha com botão WhatsApp, aviso com data e apagar com confirmação; módulo "Clientes" ativo na grade. ADR 007 **proposto**; OpenAPI 0.8.0.
+Números: testes API 571 -> 634, web 215 -> 231, shared 151 -> 191; migrações +1 (`20261113120000_clientes`).
+Decisões a confirmar (Pedro): (1) "excluir" = **anonimizar** (sem `DELETE`, a venda mantém o vínculo); (2) sem editar cliente (fora de RF-CLI-01…04); (3) **histórico de compras vazio até a S10** (não há vendas); (4) o log passa a descartar a query string (a busca leva nome/celular na URL).
+Verificação: `verify` exit 0; mutação 5/5 (a 1ª rodada pegou 4/5: o teste de "lista sem anonimizados" era frouxo e foi reforçado); Playwright 360×640 nos 2 temas: 11 telas, 0 rolagem lateral, 0 alvo < 48 px, 0 texto cortado (1 falso positivo: trilho do Switch).
+Aprendizado: **L-0016** (teste avançou o relógio compartilhado em minutos e derrubou as sessões; comentário no helper). O guard barrou um comando meu com ".env" e não foi contornado. `check-harness` OK.
+Pendências: prefixo `clientes` no proxy HTTPS da S14 (o do Vite já tem, por teste de guarda); impressão física das etiquetas (S08, Pedro).
+

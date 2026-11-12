@@ -25,6 +25,8 @@ export async function criarEmpresa(admin: pg.Pool, nome: string): Promise<string
 export class Relogio {
   constructor(public agora = new Date('2026-11-11T12:00:00.000Z')) {}
   readonly fn = () => this.agora;
+  // CUIDADO (L-0016): o relógio vale para o arquivo inteiro e a sessão expira por inatividade. Para só diferenciar
+  // datas use `avancarSegundos`; minutos são para testar expiração, e derrubam os testes seguintes com 401.
   avancarMinutos(min: number) {
     this.agora = new Date(this.agora.getTime() + min * 60_000);
   }

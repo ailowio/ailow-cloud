@@ -2,3 +2,4 @@
 // O web continua importando apenas TIPOS de `@ailow/shared`; o que precisa executar vem daqui.
 export * from './produtos-calculos.js';
 export * from './etiquetas-calculos.js';
+export * from './clientes-calculos.js';
