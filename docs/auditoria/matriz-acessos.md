@@ -26,6 +26,7 @@ Joiner/leaver (AUD-04): o Dono cria o Vendedor (`usuario_criado`), desativa o de
 | Conta Admin da plataforma | admin (senha argon2id + TOTP) | Pedro | rotas `/admin/*` | sob demanda, via `npm run admin:criar` (CLI, fora da API) | a definir na S14 | senha: gerenciador de senhas do Pedro; TOTP: app autenticador; hash e segredo TOTP no Postgres |
 | `AUTH_PEPPER` | segredo de aplicação | Pedro | hashes de senha/PIN | S04 | trocar invalida todas as senhas e PINs (exige redefinição geral) — **procedimento a escrever (S13/S14)** | arquivo de ambiente local gitignored; na VPS, a definir (S14) |
 | Conexão da API ao Postgres | usuário dono do schema (superusuário na imagem) | Pedro | todo o banco | S03 | — | `DATABASE_URL` no ambiente. **Risco aceito até a S14** (ADR 002): criar papel de login dedicado |
+| `TOTP_CHAVE` | segredo de aplicação (AES-256 que cifra o segredo TOTP do Admin) | Pedro | decifrar o TOTP dos Admins; sozinha não dá acesso a nada sem o banco | S14 (obrigatória) | a definir: perdida = Admins refazem o TOTP; formato `v1.` permite rotação | arquivo de ambiente local gitignored; na VPS, no arquivo de ambiente (S14). **Nunca no banco nem no Drive de backup** |
 | `METRICS_TOKEN` | segredo de aplicação (Bearer de `GET /metrics`) | Pedro | ler métricas RED (sem PII); nenhuma escrita | S13b (opcional: ausente = rota 404) | a definir na S14 (trocar a variável e reiniciar a API) | arquivo de ambiente local gitignored; na VPS, a definir (S14) |
 | Cookies `sessao`, `aparelho`, `admin_sessao` | credenciais de usuário final | o titular | uma pessoa/aparelho | por login | sessão: 12 h absolutas + inatividade; aparelho: 365 dias; Admin: 15 min de inatividade / 8 h | navegador (httpOnly); servidor guarda só o SHA-256 |
 
@@ -33,4 +34,4 @@ Joiner/leaver (AUD-04): o Dono cria o Vendedor (`usuario_criado`), desativa o de
 - Conta nominal; sem compartilhamento: Dono e Admin têm e-mail próprio; Vendedor tem nome e PIN próprios.
 - Concessão de acesso privilegiado (Admin) só com pedido explícito do Pedro; o agente de IA não cria contas.
 - Acesso de emergência ao banco: fora do escopo da S04 (a definir na S14).
-- Lacunas conhecidas (ADR 004): sem limite de tentativas de senha, segredo TOTP sem cifra em repouso, sem revogação de aparelho.
+- Lacunas conhecidas (ADR 004): sem revogação de aparelho. Fechadas na S14: limite de tentativas de senha (por IP) e cifra do segredo TOTP em repouso.

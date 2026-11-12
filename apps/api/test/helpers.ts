@@ -1,12 +1,17 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import * as OTPAuth from 'otpauth';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import pg from 'pg';
 import { buildApp } from '../src/app.js';
 import { criarAdmin } from '../src/admin/criar-admin.js';
+import { criarCifraTotp } from '../src/acesso/cifra-totp.js';
 import { criarHasher } from '../src/acesso/senhas.js';
 
 export const TEST_PEPPER = 'pepper-de-teste-com-pelo-menos-32-caracteres';
+// Chave de cifra do segredo TOTP (SEC-17): sorteada a cada processo de teste, sem literal no repositório.
+export const TEST_TOTP_CHAVE = randomBytes(32).toString('base64');
+// Os testes fazem muitos logins do mesmo IP (127.0.0.1): o limite real (10/min) só vale nos testes de rate limit.
+export const LIMITE_LOGIN_FOLGADO = { max: 100_000, janelaMs: 60_000 };
 
 // Conexão do DONO do schema (migrador). Só os testes a usam, para semear dados.
 export function adminPool(): pg.Pool {
@@ -43,6 +48,8 @@ export async function appDeTeste(
   const app = await buildApp({
     pool,
     authPepper: TEST_PEPPER,
+    totpChave: TEST_TOTP_CHAVE,
+    limiteLogin: LIMITE_LOGIN_FOLGADO,
     cookieSecure: true,
     agora: relogio.fn,
     ...extra,
@@ -118,7 +125,7 @@ export interface AdminDeTeste {
 export async function semearAdmin(pool: pg.Pool): Promise<AdminDeTeste> {
   const email = `admin-${randomUUID()}@ailow.test`;
   const senha = `senha-admin-${randomUUID()}`;
-  const { segredo } = await criarAdmin(pool, criarHasher(TEST_PEPPER), { email, senha });
+  const { segredo } = await criarAdmin(pool, criarHasher(TEST_PEPPER), { email, senha }, criarCifraTotp(TEST_TOTP_CHAVE));
   return { email, senha, segredo };
 }
 

@@ -1,4 +1,14 @@
+import { isIP } from 'node:net';
 import { z } from 'zod';
+
+function ipOuCidrValido(texto: string): boolean {
+  const [ip, prefixo, ...resto] = texto.split('/');
+  if (resto.length > 0 || !ip) return false;
+  const versao = isIP(ip);
+  if (versao === 0) return false;
+  if (prefixo === undefined) return true;
+  return /^\d{1,3}$/.test(prefixo) && Number(prefixo) <= (versao === 4 ? 32 : 128);
+}
 
 // ENV-04/05: falha cedo, citando o NOME da variável (nunca o valor).
 const configSchema = z.object({
@@ -9,6 +19,28 @@ const configSchema = z.object({
   AUTH_PEPPER: z
     .string({ error: 'obrigatória' })
     .min(32, { error: 'deve ter ao menos 32 caracteres' }),
+  // Chave AES-256 que cifra o segredo TOTP do Admin no banco (SEC-17): base64 de 32 bytes (openssl rand -base64 32).
+  // Fora do banco e do repositório. Perdê-la = os Admins precisam refazer o TOTP; trocá-la exige recifrar (ADR 010).
+  TOTP_CHAVE: z
+    .string({ error: 'obrigatória' })
+    .refine((v) => {
+      const b = Buffer.from(v, 'base64');
+      return b.length === 32 && b.toString('base64') === v;
+    }, { error: 'deve ser base64 de exatamente 32 bytes' }),
+  // Rate limit das rotas de senha (SEC-07). Ausente ou vazio = 10 tentativas por 60 s por IP (padrão do buildApp).
+  LOGIN_RATE_MAX: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(1).optional()),
+  LOGIN_RATE_JANELA_S: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(1).optional()),
+  // IPs/CIDRs dos proxies confiáveis, separados por vírgula (ex.: a faixa privada da rede do Compose/Swarm). Ausente ou
+  // vazio = nenhum: o IP é o da conexão. "true"/"*" (confiar em todos) é recusado: deixaria forjar o IP de origem.
+  TRUST_PROXY: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine((v) => v.split(',').every((p) => ipOuCidrValido(p.trim())), {
+        error: 'deve ser uma lista de IPs ou CIDRs separada por vírgula (ex.: 10.0.0.0/8,172.16.0.0/12)',
+      })
+      .optional(),
+  ),
   // Cookies só trafegam por HTTPS. Em desenvolvimento local sem HTTPS: COOKIE_SECURE=false.
   COOKIE_SECURE: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),

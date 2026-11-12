@@ -15,8 +15,13 @@ const app = await buildApp({
   pool,
   logger: { level: config.LOG_LEVEL },
   authPepper: config.AUTH_PEPPER,
+  totpChave: config.TOTP_CHAVE,
   cookieSecure: config.COOKIE_SECURE,
   metricsToken: config.METRICS_TOKEN,
+  trustProxy: config.TRUST_PROXY,
+  ...(config.LOGIN_RATE_MAX !== undefined || config.LOGIN_RATE_JANELA_S !== undefined
+    ? { limiteLogin: { max: config.LOGIN_RATE_MAX ?? 10, janelaMs: (config.LOGIN_RATE_JANELA_S ?? 60) * 1000 } }
+    : {}),
 });
 
 // Encerramento limpo (SIGTERM do Docker): para de aceitar conexões e fecha o pool.

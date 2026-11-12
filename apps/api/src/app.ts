@@ -3,6 +3,7 @@ import { healthResponseSchema } from '@ailow/shared';
 import { LOGO_MAX_BYTES } from '@ailow/shared';
 import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySwagger from '@fastify/swagger';
 import fastify, {
   type FastifyError,
@@ -18,6 +19,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import type pg from 'pg';
+import { criarCifraTotp } from './acesso/cifra-totp.js';
 import { criarGuardas } from './acesso/guardas.js';
 import { registrarRotasAcesso } from './acesso/rotas.js';
 import { criarHasher } from './acesso/senhas.js';
@@ -44,6 +46,14 @@ export interface AppDeps {
   agora?: () => Date;
   // Liga GET /metrics (Bearer). Ausente = a rota não existe.
   metricsToken?: string;
+  // Chave AES-256 (base64, 32 bytes) que cifra o segredo TOTP do Admin no banco (SEC-17; config TOTP_CHAVE).
+  totpChave: string;
+  // Tentativas por IP nas rotas que conferem senha (SEC-07). Padrão: 10 por minuto.
+  limiteLogin?: { max: number; janelaMs: number };
+  // IPs/CIDRs dos proxies em que a API confia (lista separada por vírgula; config TRUST_PROXY). Vazio = nenhum: o IP é
+  // o da conexão e X-Forwarded-For é ignorado. Número de saltos NÃO funciona no Fastify 5 (falha fechado: todos os
+  // clientes cairiam no IP do proxy e dividiriam um balde de rate limit). Confiar em faixa demais deixa forjar o IP.
+  trustProxy?: string;
 }
 
 // Só aceita ids curtos e "inofensivos" vindos do cliente; qualquer outra coisa vira UUID novo
@@ -88,8 +98,13 @@ export async function buildApp({
   cookieSecure = true,
   agora = () => new Date(),
   metricsToken,
+  totpChave,
+  limiteLogin = { max: 10, janelaMs: 60_000 },
+  trustProxy = '',
 }: AppDeps): Promise<FastifyInstance> {
+  const cifraTotp = criarCifraTotp(totpChave);
   const app = fastify({
+    trustProxy: trustProxy === '' ? false : trustProxy,
     logger:
       logger && typeof logger === 'object'
         ? { ...logger, redact: ['req.headers.authorization', 'req.headers.cookie'], serializers: { req: serializarReq } }
@@ -109,7 +124,7 @@ export async function buildApp({
       openapi: '3.1.0',
       info: {
         title: 'Ailow Cloud API',
-        version: '0.13.0',
+        version: '0.14.0',
         description:
           'API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).',
         contact: { name: 'Ailow Cloud', url: 'https://github.com/ailowio/ailow-cloud' },
@@ -142,6 +157,17 @@ export async function buildApp({
   });
 
   await app.register(fastifyCookie);
+  // Rate limit só onde a rota pede (config.rateLimit): senha de Dono e de Admin. Contador em memória: vale para 1
+  // instância da API; com mais de uma, trocar por store compartilhado (Redis) antes de escalar (ADR 010).
+  await app.register(fastifyRateLimit, {
+    global: false,
+    errorResponseBuilder: () => ({
+      statusCode: 429,
+      code: 'muitas_tentativas',
+      error: 'Too Many Requests',
+      message: 'muitas tentativas; aguarde e tente de novo',
+    }),
+  });
   // Upload da logo (RF-CFG-02): um arquivo, até LOGO_MAX_BYTES; throwFileSizeLimit gera erro no toBuffer.
   await app.register(fastifyMultipart, {
     limits: { files: 1, fileSize: LOGO_MAX_BYTES },
@@ -202,7 +228,14 @@ export async function buildApp({
     },
   );
 
-  const deps = { pool, hasher: criarHasher(authPepper), agora, cookieSecure };
+  const deps = {
+    pool,
+    hasher: criarHasher(authPepper),
+    agora,
+    cookieSecure,
+    cifraTotp,
+    limiteSenha: { max: limiteLogin.max, timeWindow: limiteLogin.janelaMs },
+  };
   const guardas = criarGuardas(deps);
   await registrarRotasAcesso(app, deps, guardas);
   await registrarRotasAdmin(app, deps, guardas);

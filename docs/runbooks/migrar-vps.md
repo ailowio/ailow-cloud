@@ -8,6 +8,7 @@
 |---|---|---|
 | Banco | volume `dbdata` do Compose (Postgres 18.6; diretório `/var/lib/postgresql`) | `pg_dump -Fc` / `pg_restore` (lógico, portável entre máquinas) |
 | `AUTH_PEPPER` | arquivo de ambiente da VPS | **Tem de ser o MESMO.** Os hashes de senha e PIN o misturam (ADR 004): pepper novo ⇒ ninguém consegue entrar. Copiar por canal seguro, nunca por chat/e-mail em claro |
+| `TOTP_CHAVE` | arquivo de ambiente da VPS | **Tem de ser a MESMA** (como o pepper): o segredo TOTP dos Admins no dump está cifrado com ela; chave nova ⇒ os Admins não entram até refazer o TOTP (`npm run admin:criar`). Guardar **fora** do backup do Drive |
 | `POSTGRES_PASSWORD` | arquivo de ambiente | Pode ser **nova** na VPS nova (o banco é recriado e restaurado); atualizar só no arquivo de ambiente |
 | `METRICS_TOKEN` | arquivo de ambiente | Pode ser novo; atualizar o scraper. Acesso novo ⇒ matriz de acessos |
 | Código | repositório (tag) | `git checkout vX.Y.Z` |

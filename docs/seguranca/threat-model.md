@@ -29,9 +29,9 @@ ERP mobile multi-tenant para lojas pequenas: o Dono e os Vendedores usam o celul
 |---|---------------------------|-------|-----------|
 | 1 | RLS **forçada** em toda tabela de negócio, `withEmpresa()` como único acesso, `empresa_id` só da sessão, nunca do corpo | SEC-04 | `apps/api/test/autorizacao.test.ts` e testes de isolamento por módulo (2 empresas × 2 perfis) |
 | 2 | Bloqueio em 5 erros, argon2id + pepper, só o Dono desbloqueia | SEC-07 | testes da S04 (ADR 004) |
-| 3 | argon2id encarece cada tentativa. **ABERTO: não há rate limit.** | SEC-07 | — (ver riscos aceitos) |
+| 3 | argon2id encarece cada tentativa + **rate limit por IP** em `/acesso/entrar` e `/admin/login` (10/min por padrão; 429 `muitas_tentativas` com `Retry-After`; `TRUST_PROXY` por IP/CIDR para ler o IP real atrás do proxy). Contador em memória: vale para 1 instância da API. **Limite:** só por IP, não por e-mail (por e-mail permitiria a um atacante travar o Dono de propósito) | SEC-07 | `apps/api/test/rate-limit.test.ts` (6 casos, 2 reprovados de propósito com a mutação); S14 |
 | 4 | Cookie opaco `httpOnly`, `Secure`, `SameSite=Strict`; só o SHA-256 vai ao banco; expira por inatividade e em 12 h; revogável | SEC-07 | testes da S04 |
-| 5 | Hashes com pepper fora do banco. **ABERTO: segredo TOTP do Admin em texto** (inacessível ao papel de runtime) | SEC-17 | ADR 004 |
+| 5 | Hashes com pepper fora do banco; **segredo TOTP do Admin cifrado em repouso** (AES-256-GCM, chave `TOTP_CHAVE` no ambiente, formato versionado `v1.`, texto em claro é recusado) | SEC-17 | `src/acesso/cifra-totp.test.ts` (7), `test/criar-admin.test.ts`, `test/admin.test.ts`; S14 |
 | 6 | `exigirPerfil('dono')` como ponto único; custo nunca na resposta do Vendedor | SEC-04 | testes de autorização por perfil; `venda` sem `custo` (vendas.test.ts) |
 | 7 | `authorization` e `cookie` redigidos no log; rótulos de métrica só com rota template | SEC-16 | `apps/api/test/metricas.test.ts` |
 | 8 | SCA, scan de imagem e secret scan no CI | SEC-10 | jobs `seguranca-*` e `imagem` (nomes no CLAUDE.md; resultado do último run não verificado aqui) |
@@ -46,8 +46,8 @@ Testes que **falham** sem a mitigação (isolamento entre 2 empresas, 403 ao Ven
 ## Riscos aceitos / em aberto (com dono e data de revisão)
 | Risco | Decisão | Dono | Revisar |
 |-------|---------|------|---------|
-| Sem rate limit em login/PIN (#3) | Aberto. Tratar antes do go-live (S14): limite por IP/e-mail no proxy ou na API | Pedro | S14 |
-| Segredo TOTP do Admin em texto (#5) | Aberto. Cifrar com chave de ambiente antes do deploy | Pedro | S14 |
+| Rate limit só por IP e em memória (#3) | Fechado para o go-live com 1 instância (S14). Antes de rodar 2+ instâncias da API: store compartilhado (Redis) ou limite no proxy; o PIN já tem bloqueio por usuário (5 erros) | Pedro | ao escalar a API (ADR 010) |
+| Chave `TOTP_CHAVE` perdida ou trocada sem recifrar (#5) | Perdida = Admins refazem o TOTP (`admin:criar`); a chave viaja junto com o `AUTH_PEPPER` na migração. Rotação ainda sem procedimento (formato `v1.` já permite) | Pedro | 3 meses após o go-live |
 | Revogação do aparelho (#12) | Aberto, aceito no MVP | Pedro | 3 meses após o go-live |
 | Sem `helmet`/cabeçalhos de segurança e sem CORS configurado na API | Não verificado se o proxy da S14 cobre; confirmar | Pedro | S14 |
 | EX-01…EX-04 | Exceções do PRD §11 | Pedro | datas no PRD |

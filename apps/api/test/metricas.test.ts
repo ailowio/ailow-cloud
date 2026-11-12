@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
-import { TEST_PEPPER } from './helpers.js';
+import { TEST_PEPPER, TEST_TOTP_CHAVE } from './helpers.js';
 
 // S13b (RNF-03, OBS-*): métricas RED por rota TEMPLATE. Sem token configurado a rota nem existe (404).
 const TOKEN = 'token-de-teste-com-16+-caracteres';
@@ -15,8 +15,8 @@ describe('GET /metrics', () => {
 
   beforeAll(async () => {
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL_TEST, max: 2 });
-    app = await buildApp({ pool, logger: false, authPepper: TEST_PEPPER, metricsToken: TOKEN });
-    semToken = await buildApp({ pool, logger: false, authPepper: TEST_PEPPER });
+    app = await buildApp({ pool, logger: false, authPepper: TEST_PEPPER, totpChave: TEST_TOTP_CHAVE, metricsToken: TOKEN });
+    semToken = await buildApp({ pool, logger: false, authPepper: TEST_PEPPER, totpChave: TEST_TOTP_CHAVE });
     await Promise.all([app.ready(), semToken.ready()]);
   });
 
@@ -79,7 +79,7 @@ describe('GET /metrics', () => {
 
   it('a falha do SLI aparece como 5xx (503 do health sem banco)', async () => {
     const semBanco = new pg.Pool({ connectionString: 'postgresql://x:y@127.0.0.1:1/z', connectionTimeoutMillis: 300 });
-    const app2 = await buildApp({ pool: semBanco, logger: false, authPepper: TEST_PEPPER, metricsToken: TOKEN });
+    const app2 = await buildApp({ pool: semBanco, logger: false, authPepper: TEST_PEPPER, totpChave: TEST_TOTP_CHAVE, metricsToken: TOKEN });
     try {
       expect((await app2.inject({ method: 'GET', url: '/health' })).statusCode).toBe(503);
       const corpo = (await app2.inject({ method: 'GET', url: '/metrics', headers: { authorization: `Bearer ${TOKEN}` } })).body;
