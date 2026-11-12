@@ -10,6 +10,8 @@ import {
   produtosQuerySchema,
   produtosResponseSchema,
   skuIdParamsSchema,
+  skuParaVendaSchema,
+  skuPorCodigoQuerySchema,
 } from '@ailow/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -22,6 +24,7 @@ import { type DadosEtiqueta, gerarPdfEtiquetas } from './etiquetas.js';
 import {
   ErroProduto,
   alertasDeEstoque,
+  buscarSkuPorCodigo,
   criarProduto,
   dadosDasEtiquetas,
   listarProdutos,
@@ -50,6 +53,26 @@ export async function registrarRotasProdutos(app: FastifyInstance, deps: Deps, g
   const soDono = [g.exigirSessao, g.exigirPerfil('dono')];
   const logado = [g.exigirSessao];
   const erros = { 401: erroSchema, 403: erroSchema };
+
+  rotas.get(
+    '/skus/por-codigo',
+    {
+      preValidation: logado,
+      schema: {
+        tags: ['produtos'],
+        summary: 'Uma peça pelo código do QR, com preço e estoque e sem custo (Dono e Vendedor)',
+        security: sessaoCookie,
+        querystring: skuPorCodigoQuerySchema,
+        response: { 200: skuParaVendaSchema, 404: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const sku = await withEmpresa(pool, s.empresaId, (c) => buscarSkuPorCodigo(c, request.query.codigo));
+      if (!sku) return naoEncontrado(reply);
+      return sku;
+    },
+  );
 
   rotas.get(
     '/produtos',

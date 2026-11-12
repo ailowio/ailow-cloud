@@ -22,14 +22,14 @@ describe('migrações', () => {
       log: () => {},
     });
 
-  const TABELAS = ['categorias', 'empresas', 'lancamentos', 'movimentos_estoque', 'produtos', 'skus'];
+  const TABELAS = ['categorias', 'empresas', 'itens_venda', 'lancamentos', 'movimentos_estoque', 'pagamentos_venda', 'produtos', 'skus', 'venda_sequencia', 'vendas'];
 
   const tabelas = async () => {
     const c = new pg.Client({ connectionString: url.toString() });
     await c.connect();
     try {
       const r = await c.query(
-        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos','produtos','skus','movimentos_estoque') ORDER BY 1",
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos','produtos','skus','movimentos_estoque','vendas','itens_venda','pagamentos_venda','venda_sequencia') ORDER BY 1",
       );
       return r.rows.map((x) => x.tablename);
     } finally {

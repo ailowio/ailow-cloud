@@ -20,9 +20,9 @@ describe('módulos da tela inicial por perfil', () => {
     expect(new Set(rotulos).size).toBe(rotulos.length);
   });
 
-  it('nesta fase Produtos, Clientes, Financeiro e Configurações estão prontos; o resto avisa "em breve" em vez de fingir que abre', () => {
+  it('nesta fase Vendas, Produtos, Clientes, Financeiro e Configurações estão prontos; o resto avisa "em breve"', () => {
     const prontos = modulosPara('dono').filter((m) => m.pronto).map((m) => m.id);
-    expect(prontos).toEqual(['produtos', 'clientes', 'financeiro', 'configuracoes']);
+    expect(prontos).toEqual(['vendas', 'produtos', 'clientes', 'financeiro', 'configuracoes']);
   });
 
   it('o Vendedor abre Clientes (cadastra e consulta, RF-CLI-01/02)', () => {

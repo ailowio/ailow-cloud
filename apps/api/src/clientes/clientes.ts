@@ -93,6 +93,25 @@ export async function listarClientes(
   };
 }
 
+/** Celular já normalizado. Trava a linha até o fim da transação (a venda decide em cima dela). */
+export async function buscarPorCelular(
+  c: pg.PoolClient,
+  celular: string,
+): Promise<{ id: string; nome: string; ativo: boolean } | null> {
+  const r = await c.query('SELECT id, nome, ativo FROM clientes WHERE celular = $1 FOR UPDATE', [celular]);
+  return (r.rows[0] as { id: string; nome: string; ativo: boolean } | undefined) ?? null;
+}
+
+/** Nomes e celulares de uma lista de ids (a Vendas não lê a tabela). Quem foi apagado simplesmente não volta. */
+export async function resumoDosClientes(
+  c: pg.PoolClient,
+  ids: string[],
+): Promise<Map<string, { nome: string; celular: string }>> {
+  if (ids.length === 0) return new Map();
+  const r = await c.query('SELECT id, nome, celular FROM clientes WHERE id = ANY($1::uuid[])', [ids]);
+  return new Map(r.rows.map((row) => [row.id as string, { nome: row.nome as string, celular: row.celular as string }]));
+}
+
 export async function buscarCliente(c: pg.PoolClient, id: string): Promise<Cliente | null> {
   const r = await c.query(`SELECT ${COLUNAS} FROM clientes WHERE id = $1`, [id]);
   return r.rows[0] ? paraCliente(r.rows[0] as Linha) : null;

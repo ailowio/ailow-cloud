@@ -6,6 +6,7 @@ import { linkWhatsApp, mascararCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { fecharModal, useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { ComprasDoCliente } from './ComprasDoCliente';
 import { FormCliente } from './FormCliente';
 import { linhaDoAviso, mensagemClientes } from './rotulos';
 
@@ -118,14 +119,7 @@ function Conteudo(props: { api: Api; dono: boolean; cliente: Cliente; aoMudar: (
 
       <Aviso api={props.api} cliente={c} aoAvisar={props.aoMudar} />
 
-      <Stack gap="xs" className="ailow-cartao" p="md">
-        <Text fw={650} fz="lg">
-          Compras
-        </Text>
-        <Text c="dimmed" size="sm">
-          Nenhuma compra registrada ainda. Quando as vendas começarem, o que este cliente comprar aparece aqui.
-        </Text>
-      </Stack>
+      <ComprasDoCliente api={props.api} clienteId={c.id} />
 
       {props.dono && <AcoesDoDono api={props.api} cliente={c} aoMudar={props.aoMudar} aoExcluir={props.aoExcluir} />}
     </>

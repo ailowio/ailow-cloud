@@ -108,12 +108,12 @@ export function Carrinho(props: { itens: ItemCarrinho[]; onMudar: (codigo: strin
         <Stack key={i.codigo} gap={6} pb="sm" style={{ borderBottom: '1px solid var(--ailow-borda)' }}>
           {/* Nome nunca é truncado: o vendedor precisa saber o que está no carrinho. */}
           <Text fw={600} style={{ overflowWrap: 'anywhere' }}>{i.nome}</Text>
-          <Group justify="space-between" wrap="nowrap" gap="xs">
+          <Group justify="space-between" wrap="wrap" gap="xs">
             <Text size="sm" c="dimmed">{i.detalhe}</Text>
-            <Group gap={4} wrap="nowrap">
-              <ActionIcon variant="default" size={44} aria-label={`Menos ${i.nome}`} onClick={() => props.onMudar(i.codigo, -1)}>−</ActionIcon>
+            <Group gap={8} wrap="wrap">
+              <ActionIcon variant="default" size={48} aria-label={`Menos ${i.nome}`} onClick={() => props.onMudar(i.codigo, -1)}>−</ActionIcon>
               <Text w={28} ta="center" fw={650}>{i.qtd}</Text>
-              <ActionIcon variant="default" size={44} aria-label={`Mais ${i.nome}`} onClick={() => props.onMudar(i.codigo, 1)}>+</ActionIcon>
+              <ActionIcon variant="default" size={48} aria-label={`Mais ${i.nome}`} onClick={() => props.onMudar(i.codigo, 1)}>+</ActionIcon>
             </Group>
           </Group>
           <Group justify="space-between">

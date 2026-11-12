@@ -110,3 +110,17 @@ h1, h2, h3, h4 {
   min-width: 48px;
   min-height: 48px;
 }
+
+@media print {
+  .ailow-topo,
+  .nao-imprimir {
+    display: none !important;
+  }
+
+  body,
+  #conteudo,
+  .comprovante-folha {
+    background: #fff !important;
+    color: #111 !important;
+  }
+}

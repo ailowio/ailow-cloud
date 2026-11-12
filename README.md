@@ -2,7 +2,7 @@
 
 ERP mobile multi-tenant para lojistas pequenos: vender pelo celular com QR code, estoque e financeiro integrados, botões grandes para quem não é da tecnologia. Primeiro cliente e caso de uso: Marcant Moda Íntima (`acervo/marcant/`).
 
-**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S09b Clientes editar/inativar/excluir em revisão no PR; S09 Clientes e S08 Etiquetas na main; próxima: **S10 Vendas**, após o portão).
+**Tier do harness:** B · **Projeto Final (curso):** nível A · **Estado:** em construção (S10 Vendas em revisão no PR; S09b Clientes, S09 Clientes e S08 Etiquetas na main; próxima: **S11 Compras**, após o portão).
 
 ## Estrutura
 
