@@ -13,7 +13,10 @@
 | `METRICS_TOKEN` | arquivo de ambiente | Pode ser novo; atualizar o scraper. Acesso novo ⇒ matriz de acessos |
 | Código | repositório (tag) | `git checkout vX.Y.Z` |
 | Proxy HTTPS / DNS / certificado | VPS | **[NÃO VERIFICADO — S14]** ainda não existe |
-| Arquivos enviados (logo da empresa) | confirmar onde ficam (banco ou disco) | **[NÃO VERIFICADO]** — conferir em `apps/api` antes do ensaio; se estiver em disco, copiar também |
+| Arquivos enviados (logo da empresa) | **no banco** (`empresas.logo_bytes`, `bytea`; migração `20261112200000_empresa-logo`; conferido em 2026-11-12) | já viaja no `pg_dump`; não há arquivo em disco a copiar |
+| Segredos da stack | **Swarm secrets** `ailow_postgres_password`, `ailow_auth_pepper`, `ailow_totp_chave` (S14b) | recriar no host novo com `docker secret create` (`deploy.md §1.6`); `AUTH_PEPPER` e `TOTP_CHAVE` **os mesmos**, vindos do gerenciador de senhas |
+| Proxy do host novo | `ops/traefik/traefik.yaml` (S14b) | flags aceitas pelo Traefik v2.11.20; ACME e provider Swarm **não testados** (precisam de host real) |
+| Chave do `crypt` do backup | gerenciador de senhas (nunca na VPS de código) | necessária para ler o backup do Drive no host novo (`backup.md §2`) |
 
 ## 1. Antes
 1. VPS nova provisionada, Docker/Compose instalados, firewall só com 80/443 (e SSH restrito); acessos criados e registrados em `docs/auditoria/matriz-acessos.md` (nominais, MFA onde houver).

@@ -13,14 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S13b2 — Desempenho da venda (RNF-01/02) + docs da S13c — 2026-11-12 — Claude Sonnet 5.5
-Gate: perf/banco, **tier B**; TEST-*, ARQ-* (ADR 009), OPS-11, SEC-01/04, L-0006/0012/0017. Branch `feature/s13b2-desempenho-venda`, **sem commit** (aguarda pedido). S13b chegou na main pelo PR #23.
-Feito: ADR 009 **aceito, opção A** (Pedro). Número da venda alocado por último, num só comando que grava `vendas` e devolve o número; resposta montada antes; migração `20261117120000_vendas-fk-adiavel` (FKs adiáveis, reversível); movimentos e lançamentos novos gravam só "Venda" e a leitura compõe "Venda N". `DB_POOL_MAX` (1-50; padrão 10). Thresholds intactos. Docs da S13c: threat model, C4 + mapa de contextos, checklist PRD §10, harness-adoption; aviso "em breve" condicional.
-Números (k6 50 VUs, 2 rodadas): venda p95 1807 -> 309 / 333 ms; busca p95 957 -> 246 / 268 ms; erro 0%; iterações 2534 -> ~5600. Só a alocação por último: 511 / 294 ms. Pool 20: busca 315 ms (reprova), então fica 10. Estresse: 25 VUs venda 1482 -> 169 ms; 300 VUs p95 ~3,4 s; reprova o p99 < 3 s do próprio estresse.
-Decisões (Pedro): aceitar "Venda"+leitura composta nos textos novos; limite p99 do estresse; `GET /produtos` não foi otimizado (passa a meta; média no k6 580 -> 156 ms só com a cauda curta); runbooks e E2E da S13c ficaram de fora (dependem de VPS/stack ao vivo).
-Verificação: `verify` exit 0 (API 761 -> 766, web 250, shared 237; OpenAPI sem diff); `contrato.sh` 3485/3485; `alertas.sh` ok. Vermelho antes: teste de ordem das instruções; o teste existente do extrato pegou o estorno que eu não tinha coberto na composição.
-Pendências: S13c (E2E no CI dos 4 fluxos, runbooks, tirar o aviso de vez), S14 (rate limit, TOTP, `main` protegida).
-
 ### S13c — E2E no CI e runbooks — 2026-11-12 — Claude Sonnet 5.5
 Gate: teste/CI + docs de entrega, **tier B**; TEST-*, CI-*, OPS-04/05/06/08/11, SEC-01/04, AUD-90, L-0006/0012/0017. Branch `feature/s13c-e2e-ci-runbooks` (de `main` em 408b956, PR #24 mergeado), **sem commit** (aguarda pedido).
 Feito: `scripts/e2e.sh` (stack efêmera comum: Postgres em contêiner, migrações, empresa descartável, API e web construídos, `vite preview` com proxy; segredos gerados a cada execução) + job `e2e` no `ci.yml`. 4 fluxos em Chromium 360×640: nova venda (≤ 8 toques), receber compra, ponto, cancelar venda; cada um confere o efeito pela API (saldo, conta a pagar do pedido, estado do ponto). `apoio.ts` cria categoria/produto/cliente por teste (nomes únicos, L-0008). `docs/runbooks/` (deploy, rollback, migrar VPS): escritos, **nada ensaiado**; o que depende da VPS está marcado NÃO VERIFICADO.
@@ -37,3 +29,12 @@ Números: testes API 766 -> 781; web 250, shared 237.
 Decisões (Pedro): domínio `cloud.ailow.com.br` vai por último (A record, nslookup, deploy). Admins de dev antigos precisam de `npm run admin:criar`. No ambiente efêmero (contrato/carga/E2E) `LOGIN_RATE_MAX=100000`, thresholds intactos.
 Pendências para a próxima: ver Estado de retomada (stack, Traefik, web, GHCR, backup, inventários, protect `main`, VPS por último).
 Verificação: `verify` exit 0; canários: sem o limite na rota 5 testes reprovam, com `trustProxy: true` 2 reprovam (revertidos); `check-harness` ok; `docker compose config` ok.
+
+### S14b — Deploy portável, local (sem VPS) — 2026-11-12 — Claude Sonnet 5.5
+Gate: infra/CI/segurança, **tier B**; OPS-*, ENV-*, SEC-01/04/12, AUD-*, L-0001/0005/0006/0019. Branch `feature/s14b-deploy-portavel` (de `main` em db171df, PR #26 mergeado). **Nada tocou a VPS.** Retomada após queda do PC (sessão anterior parou no meio do reinício do Docker).
+Feito: imagem do web (nginx sem root), `ops/stack/ailow.yaml` (Swarm, secrets, rede `internal`), Traefik de host novo, `backup.sh` + `restore-ensaio.sh` (rclone `crypt`), `scripts/stack-local.sh` + job `stack`, `publicar.yml` (GHCR em tag), Trivy no web, runbooks (backup novo; deploy/rollback em Swarm), inventários (rotinas novo; interfaces e acessos), ADR 010 atualizado, teste nginx = Vite.
+Achados: Swarm ignora `tmpfs:` (usar volume `type: tmpfs`) e `security_opt` (removido); `diretorio_login` é exceção deliberada (ADR 004) que o ensaio de restore não conhecia; logo mora no banco; token do Drive em "Testing" expira em 7 dias (doc oficial).
+Números: API 781 -> 783 (testes do nginx), web 250, shared 237. Restore local: 1–2 s, 26 tabelas, 14 migrações (banco de dev, **não é RTO**). Canários: nginx sem `pontos`, rede sem `internal`, GRANT indevido em `diretorio_login`, dump adulterado: todos reprovaram.
+Decisões pendentes (Pedro): proteger `main` e checks obrigatórios (humano, EX-01); roteiro do vídeo e pacote do curso **não feitos**; DNS `cloud.ailow.com.br` ainda sem resposta (8.8.8.8, 2026-11-12).
+Lições: L-0019 rec. 2 (espera por TCP), L-0005 rec. 2 (SHA de action de memória), L-0002 rec. 4 (`node -e` com escapes).
+Verificação: `verify` exit 0; `check-harness` ok; `stack-local.sh` 2x ok.
