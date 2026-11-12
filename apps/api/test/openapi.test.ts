@@ -9,6 +9,10 @@ interface Operacao {
   security?: Record<string, unknown>[];
   tags?: string[];
   summary?: string;
+  operationId?: string;
+  requestBody?: unknown;
+  parameters?: { in: string }[];
+  responses?: Record<string, { content?: Record<string, unknown> } | undefined>;
 }
 interface Documento {
   openapi: string;
@@ -102,6 +106,8 @@ describe('OpenAPI do módulo de acesso', () => {
     'post /admin/empresas/{empresaId}/dono/senha',
   ];
   const publicas = new Set(['post /acesso/entrar', 'post /admin/login']);
+  // Corpo multipart (upload da logo) não passa pelo Zod, mas a rota responde 400 a corpo inválido.
+  const operacoesComCorpoLivre = new Set(['put /empresa/logo']);
 
   it('é OpenAPI 3.1 e declara os 3 esquemas de cookie', () => {
     expect(doc.openapi).toBe('3.1.0');
@@ -124,6 +130,29 @@ describe('OpenAPI do módulo de acesso', () => {
       if (publicas.has(chave)) expect(op?.security, chave).toBeUndefined();
       else expect(op?.security?.length, chave).toBeGreaterThan(0);
     }
+  });
+
+  // S13a (Schemathesis ST103): a validação de entrada responde 400 em toda rota com corpo, caminho ou query.
+  it('toda operação com entrada documenta o 400 de validação (e nenhuma sem entrada o inventa)', () => {
+    for (const [caminho, ops] of Object.entries(doc.paths)) {
+      for (const [metodo, op] of Object.entries(ops)) {
+        const comEntrada = Boolean(op.requestBody) || (op.parameters ?? []).some((p) => p.in !== 'cookie');
+        const tem400 = op.responses?.['400'] !== undefined;
+        expect(tem400, `${metodo} ${caminho}`).toBe(comEntrada || operacoesComCorpoLivre.has(`${metodo} ${caminho}`));
+      }
+    }
+  });
+
+  it('todo operationId existe e é único; logo e etiquetas documentam o 200 binário', () => {
+    const ids = Object.values(doc.paths).flatMap((ops) => Object.values(ops).map((o) => o.operationId));
+    expect(ids.every(Boolean)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(Object.keys(doc.paths['/empresa/logo']?.get?.responses?.['200']?.content ?? {})).toEqual([
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+    ]);
+    expect(Object.keys(doc.paths['/etiquetas']?.post?.responses?.['200']?.content ?? {})).toEqual(['application/pdf']);
   });
 
   it('nenhuma rota fora da lista esperada surgiu sem ser documentada aqui', () => {

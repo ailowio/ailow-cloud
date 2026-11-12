@@ -183,6 +183,18 @@ describe('configurações da empresa (Dono)', () => {
       expect((await a.dono.get('/empresa/logo')).statusCode).toBe(404);
     });
 
+    it('corpo que não é multipart válido dá 400 (nunca 500 nem 406): sem boundary, JSON e texto', async () => {
+      const esperado = { erro: 'requisicao_invalida', mensagem: 'envie o arquivo em multipart/form-data' };
+      const semBoundary = await a.dono.req('PUT', '/empresa/logo', Buffer.from('x'), { 'content-type': 'multipart/form-data' });
+      expect(semBoundary.statusCode).toBe(400);
+      expect(semBoundary.json()).toEqual(esperado);
+      const json = await a.dono.req('PUT', '/empresa/logo', Buffer.from('{}'), { 'content-type': 'application/json' });
+      expect(json.statusCode).toBe(400);
+      expect(json.json()).toEqual(esperado);
+      const texto = await a.dono.req('PUT', '/empresa/logo', Buffer.from('oi'), { 'content-type': 'text/plain' });
+      expect(texto.statusCode).toBe(400);
+    });
+
     it('rejeita tipo inválido, arquivo vazio e Vendedor no upload', async () => {
       const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
       expect((await a.dono.putArquivo('/empresa/logo', svg, 'x.svg', 'image/svg+xml')).statusCode).toBe(400);

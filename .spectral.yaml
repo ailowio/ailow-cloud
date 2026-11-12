@@ -1,0 +1,6 @@
+# Lint do contrato OpenAPI 3.1 (S13a, PRD §10.6). `npm run lint:openapi` falha em erro E em aviso.
+extends: ["spectral:oas"]
+rules:
+  # Decisão da S13a: toda operação tem `summary` (descreve o que faz). `description` repetiria o resumo sem
+  # informação nova; vale exigir só quando houver regra que o resumo não cabe (aí a operação a declara).
+  operation-description: off

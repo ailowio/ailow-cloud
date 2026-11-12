@@ -12,7 +12,8 @@
     "admin:criar": "tsx src/admin/criar-admin-cli.ts",
     "dev:db": "tsx scripts/dev-db.ts",
     "dev:api": "tsx watch scripts/dev-api.ts",
-    "dev:seed": "tsx scripts/dev-seed.ts"
+    "dev:seed": "tsx scripts/dev-seed.ts",
+    "openapi:gerar": "tsx scripts/gerar-openapi.ts"
   },
   "dependencies": {
     "@ailow/shared": "*",

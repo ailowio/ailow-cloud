@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import EmbeddedPostgres from 'embedded-postgres';
 import { runner } from 'node-pg-migrate';
+import { INITDB_FLAGS } from './embedded-flags.js';
 import { PASTA_DEV, PASTA_MIGRACOES, lerAmbienteDev, recusarEmProducao, urlBanco } from './dev-ambiente.js';
 
 // `npm run dev:db`: Postgres 18 embutido e PERSISTENTE para desenvolver sem Docker.
@@ -17,6 +18,7 @@ const pg = new EmbeddedPostgres({
   password: ambiente.senhaDb,
   port: ambiente.porta,
   persistent: true,
+  initdbFlags: INITDB_FLAGS,
   onLog: () => {},
   onError: (e) => console.error(e),
 });
