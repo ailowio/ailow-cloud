@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clienteEditarSchema,
   clienteNovoSchema,
+  clienteSchema,
   clientesQuerySchema,
   digitosDaBusca,
   linkWhatsApp,
@@ -98,6 +100,38 @@ describe('contrato de cliente', () => {
     expect(clientesQuerySchema.safeParse({ q: 'a'.repeat(80) }).success).toBe(true);
     expect(clientesQuerySchema.safeParse({ q: 'a'.repeat(81) }).success).toBe(false);
   });
+
+  // S09b: o cliente pode ser inativado (reversível) ou excluído (definitivo); a lista padrão mostra só os ativos.
+  it('a lista é de clientes ativos, a menos que peçam os inativos', () => {
+    expect(clientesQuerySchema.parse({}).situacao).toBe('ativos');
+    expect(clientesQuerySchema.parse({ situacao: 'inativos' }).situacao).toBe('inativos');
+    expect(clientesQuerySchema.safeParse({ situacao: 'todos' }).success).toBe(false);
+  });
+
+  it('a ficha traz `ativo` e não guarda mais dado de anonimização', () => {
+    expect(Object.keys(clienteSchema.shape).sort()).toEqual(['ativo', 'aviso_lgpd_em', 'celular', 'criado_em', 'id', 'nome']);
+  });
+});
+
+// S09b: editar nome e celular (RF-CLI-05). O aviso LGPD não se edita por aqui: tem rota própria.
+describe('clienteEditarSchema', () => {
+  it('aceita nome e celular com máscara e devolve só dígitos', () => {
+    expect(clienteEditarSchema.parse({ nome: ' Ana  ', celular: '(11) 91234-5678' })).toEqual({ nome: 'Ana', celular: '11912345678' });
+  });
+
+  it.each([
+    ['sem nome', { nome: '  ', celular: '11912345678' }],
+    ['sem celular', { nome: 'Ana' }],
+    ['celular inválido', { nome: 'Ana', celular: '123' }],
+    ['nome com 81 letras', { nome: 'a'.repeat(81), celular: '11912345678' }],
+    ['aviso_lgpd (tem rota própria)', { nome: 'Ana', celular: '11912345678', aviso_lgpd: true }],
+    ['campo a mais (empresa_id vem da sessão)', { nome: 'Ana', celular: '11912345678', empresa_id: 'x' }],
+  ])('recusa %s', (_n, corpo) => {
+    expect(clienteEditarSchema.safeParse(corpo).success).toBe(false);
+  });
+});
+
+describe('contrato: ponto de entrada sem Zod', () => {
 
   it('o ponto de entrada sem Zod expõe as regras do celular', () => {
     expect(puro.normalizarCelular('(11) 91234-5678')).toBe('11912345678');

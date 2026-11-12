@@ -13,16 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### Limpeza de pendências (pós-plano; paralelo à S07 no Claude Code) — 2026-11-12 — Composer
-Gate: feature logo + bugfix PIN + tooling + docs, **tier B**. Branch `chore/limpeza-pendencias-pos-s07` (worktree; S07 ainda WIP fora desta branch).
-Feito:
-- **ADR 004 aceito** (código já na main desde S04).
-- **RF-CFG-02 logo via UI:** migração `logo_bytes`/`logo_mime` (PNG/JPEG/WebP ≤ 512 KiB, sem SVG); `PUT/DELETE/GET /empresa/logo`; Configurações > Empresa envia/troca/remove; OpenAPI 0.5.1; `@fastify/multipart`.
-- **L-0011:** asserção SEC-16 parseia JSON do log (não substring solta em `time`/UUID).
-- **`npm run dev:parar`** (L-0012 ação 3).
-- **Adiados com dono:** reescrita acervo (Pedro); proxy HTTPS → S14; Safari/iOS → só Chromium por ora; texto 13–14 px aceito; nested virt aceito.
-Verificação: `npm run verify` (ver PR).
-
 ### S08 — Etiquetas QR — 2026-11-11 — Claude Opus 5.5
 Gate: feature API + UI, **tier B**; TEST-01..08/17, CODE-*, SEC-03, ARQ (ADR 003), CI-01, MC. Decisão do Pedro na sessão: **bobina 33 × 22 mm em 3 colunas** (não 40 × 25), PDF **na API com pdfkit**.
 Feito (branch `feature/s08-etiquetas`): `POST /etiquetas` (só Dono) devolve PDF com **uma fileira de 3 por página**; QR vetorial só com o código (versão 1, correção M, zona de 4 módulos, módulo 0,5 mm = 4 pontos a 203 dpi); texto: nome, tamanho em destaque, cor, preço, código; **sem custo nem fornecedor**. Até 999 por PDF; SKU de outra empresa, inexistente ou de produto inativo = 404. Tela "Etiquetas" em Produtos: busca, quantidade por SKU, "Usar o estoque", resumo de fileiras/em branco, download com o dia de São Paulo. ADR 003 **proposto**.
@@ -40,3 +30,10 @@ Verificação: `verify` exit 0; mutação 5/5 (a 1ª rodada pegou 4/5: o teste d
 Aprendizado: **L-0016** (teste avançou o relógio compartilhado em minutos e derrubou as sessões; comentário no helper). O guard barrou um comando meu com ".env" e não foi contornado. `check-harness` OK.
 Pendências: prefixo `clientes` no proxy HTTPS da S14 (o do Vite já tem, por teste de guarda); impressão física das etiquetas (S08, Pedro).
 
+### S09b — Clientes editar/inativar/excluir — 2026-11-12 — Composer
+Gate: feature + migração + UI, **tier B**; TEST-01..08/17, SEC-01/04, AUD-10, OPS-11, ARQ (ADR 007), MC. Branch `feature/s09b-clientes-editar-excluir` (S09 já mergeada, PR #17). Continuação da sessão Claude Code interrompida por usage limit.
+Feito: migração `20261113180000_clientes-inativar-excluir` (`ativo` no lugar de `anonimizado_em`; `DELETE` ao runtime); `PUT /clientes/{id}`, `POST …/inativar|reativar`, `DELETE /clientes/{id}`; lista com aba de inativos (só Dono); formulário compartilhado cadastro/edição; ADR 007 **aceito** (decisão do Pedro); OpenAPI 0.9.0; matriz de acessos atualizada.
+Números: testes API 634 -> 662, web 231 -> 235, shared 191 -> 200.
+Decisões (Pedro): excluir = apagar do banco ou inativar; edição obrigatória; histórico aguarda S10; log sem nome/celular.
+Verificação: `verify` exit 0 (API 662, web 235, shared 200); mutação das regras novas (sessão Claude: 8/8); Playwright 360×640 nos 2 temas: 14 telas (lista, inativos, novo, ficha, editar, ficha-inativo, confirmar-excluir × 2 temas), 0 rolagem, 0 alvo < 48 px, 0 texto cortado.
+Pendências: impressão física S08 (Pedro); S10 Vendas.

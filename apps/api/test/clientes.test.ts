@@ -16,14 +16,15 @@ import {
   semearAdmin,
 } from './helpers.js';
 
-// S09 / RF-CLI-01…04, D8, RN-10. Cada empresa vê só o que é seu; Dono e Vendedor cadastram e consultam, só o Dono
-// anonimiza. Só afirmamos sobre ids/nomes criados aqui (L-0008): os arquivos de teste rodam em paralelo no mesmo Postgres.
+// S09/S09b / RF-CLI-01…05, D8, RN-10. Cada empresa vê só o que é seu; Dono e Vendedor cadastram, editam e consultam,
+// só o Dono inativa, reativa e exclui. Só afirmamos sobre ids/nomes criados aqui (L-0008): os arquivos de teste
+// rodam em paralelo no mesmo Postgres.
 interface ClienteResp {
   id: string;
   nome: string;
-  celular: string | null;
+  celular: string;
   aviso_lgpd_em: string | null;
-  anonimizado_em: string | null;
+  ativo: boolean;
   criado_em: string;
 }
 
@@ -51,6 +52,7 @@ describe('Clientes (API)', () => {
   // Celulares únicos dentro do processo; cada empresa de teste é nova, então não colidem entre arquivos.
   const celularNovo = (): string => `219${String(20_000_000 + ++seq).padStart(8, '0')}`;
   const nomeNovo = (base = 'Cliente') => `${base} ${randomUUID().slice(0, 8)}`;
+  const comMascara = (n: string) => `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
 
   async function criar(cli: Cliente, extra: Record<string, unknown> = {}): Promise<ClienteResp> {
     const res = await cli.post('/clientes', { nome: nomeNovo(), celular: celularNovo(), ...extra });
@@ -59,10 +61,12 @@ describe('Clientes (API)', () => {
     const ficha = await cli.get(`/clientes/${id}`);
     return ficha.json() as ClienteResp;
   }
-  const listar = async (cli: Cliente, q?: string) => {
-    const res = await cli.get(`/clientes${q === undefined ? '' : `?q=${encodeURIComponent(q)}`}`);
+  const listar = async (cli: Cliente, q?: string, situacao?: string) => {
+    const params = [q === undefined ? '' : `q=${encodeURIComponent(q)}`, situacao === undefined ? '' : `situacao=${situacao}`].filter(Boolean);
+    const res = await cli.get(`/clientes${params.length ? `?${params.join('&')}` : ''}`);
     return { status: res.statusCode, json: res.json() as { clientes: ClienteResp[]; truncado: boolean } };
   };
+  const ids = (r: { clientes: ClienteResp[] }) => r.clientes.map((c) => c.id);
   const eventos = async (alvo: string) =>
     (await owner.query('SELECT tipo FROM eventos_acesso WHERE alvo_id = $1 ORDER BY id', [alvo])).rows.map((r) => r.tipo as string);
 
@@ -89,11 +93,11 @@ describe('Clientes (API)', () => {
       const cli = a[quem];
       const nome = nomeNovo('Ana');
       const n = celularNovo();
-      const res = await cli.post('/clientes', { nome: `  ${nome} `, celular: `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}` });
+      const res = await cli.post('/clientes', { nome: `  ${nome} `, celular: comMascara(n) });
       expect(res.statusCode).toBe(201);
       const { id } = res.json() as { id: string };
       const ficha = (await cli.get(`/clientes/${id}`)).json() as ClienteResp;
-      expect(ficha).toMatchObject({ id, nome, celular: n, aviso_lgpd_em: null, anonimizado_em: null });
+      expect(ficha).toMatchObject({ id, nome, celular: n, aviso_lgpd_em: null, ativo: true });
       // a empresa nunca sai no corpo (vem da sessão)
       expect(JSON.stringify(ficha)).not.toContain(a.dados.empresaId);
     });
@@ -106,7 +110,7 @@ describe('Clientes (API)', () => {
     it('recusa celular repetido na mesma empresa, mesmo digitado com outra máscara', async () => {
       const numero = celularNovo();
       await a.dono.post('/clientes', { nome: nomeNovo(), celular: numero });
-      const outra = await a.vendedor.post('/clientes', { nome: nomeNovo(), celular: `(${numero.slice(0, 2)}) ${numero.slice(2, 7)}-${numero.slice(7)}` });
+      const outra = await a.vendedor.post('/clientes', { nome: nomeNovo(), celular: comMascara(numero) });
       expect(outra.statusCode).toBe(409);
       expect(outra.json()).toEqual({ erro: 'celular_ja_cadastrado' });
     });
@@ -126,6 +130,13 @@ describe('Clientes (API)', () => {
     ])('recusa %s com 400', async (_n, corpo) => {
       const res = await a.dono.post('/clientes', corpo);
       expect(res.statusCode).toBe(400);
+    });
+
+    it('a resposta de validação não repete o celular nem o nome enviados', async () => {
+      const res = await a.dono.post('/clientes', { nome: 'Fulana Sigilosa', celular: '(21) 9-ABCD-0001' });
+      expect(res.statusCode).toBe(400);
+      expect(res.body).not.toContain('Fulana Sigilosa');
+      expect(res.body).not.toContain('ABCD');
     });
 
     it('sem sessão responde 401', async () => {
@@ -177,8 +188,6 @@ describe('Clientes (API)', () => {
       joao = await criar(a.dono, { nome: `João ${marca}`, celular: '21988880002' });
     });
 
-    const ids = (r: { clientes: ClienteResp[] }) => r.clientes.map((c) => c.id);
-
     it('sem busca lista os clientes da empresa, em ordem de nome (sem contar acento nem caixa)', async () => {
       const r = ids((await listar(a.dono)).json);
       expect(r).toEqual(expect.arrayContaining([maria.id, mario.id, joao.id]));
@@ -214,6 +223,10 @@ describe('Clientes (API)', () => {
       expect((await listar(a.dono, 'a'.repeat(81))).status).toBe(400);
     });
 
+    it('situação desconhecida é recusada', async () => {
+      expect((await listar(a.dono, undefined, 'todos')).status).toBe(400);
+    });
+
     it('sem sessão responde 401', async () => {
       expect((await new Cliente(app).get('/clientes')).statusCode).toBe(401);
     });
@@ -234,71 +247,181 @@ describe('Clientes (API)', () => {
     });
   });
 
-  describe('excluir/anonimizar (RF-CLI-04)', () => {
-    it('o Dono anonimiza: some o nome e o celular, a linha fica e a lista não mostra mais', async () => {
-      const numero = celularNovo();
-      const c = await criar(a.dono, { celular: numero, aviso_lgpd: true });
-      const res = await a.dono.post(`/clientes/${c.id}/anonimizar`);
+  describe('editar nome e celular (RF-CLI-05)', () => {
+    it.each(['dono', 'vendedor'] as const)('o %s corrige nome e celular; a ficha e a busca mostram o novo', async (quem) => {
+      const c = await criar(a.dono, { aviso_lgpd: true });
+      const novoNome = nomeNovo('Corrigida');
+      const novoNumero = celularNovo();
+      const res = await a[quem].put(`/clientes/${c.id}`, { nome: `  ${novoNome} `, celular: comMascara(novoNumero) });
       expect(res.statusCode).toBe(200);
-      const depois = res.json() as ClienteResp;
-      expect(depois).toMatchObject({ id: c.id, nome: 'Cliente anonimizado', celular: null });
-      expect(depois.anonimizado_em).toBe(relogio.agora.toISOString());
-      expect(JSON.stringify(depois)).not.toContain(c.nome);
-      expect(JSON.stringify(depois)).not.toContain(numero);
-      // a ficha continua existindo (as vendas apontam para ela) mas não aparece na busca
-      expect((await a.dono.get(`/clientes/${c.id}`)).statusCode).toBe(200);
-      expect((await listar(a.dono, c.nome)).json.clientes).toEqual([]);
-      expect((await listar(a.dono, numero)).json.clientes).toEqual([]);
-      // buscar pelo nome antigo nunca acharia nada mesmo sem o filtro: a lista inteira e o nome novo é que provam
-      expect((await listar(a.dono)).json.clientes.map((x) => x.id)).not.toContain(c.id);
-      expect((await listar(a.dono, 'anonimizado')).json.clientes.map((x) => x.id)).not.toContain(c.id);
-      expect(await eventos(c.id)).toContain('cliente_anonimizado');
+      expect(res.json()).toMatchObject({ id: c.id, nome: novoNome, celular: novoNumero, ativo: true, aviso_lgpd_em: c.aviso_lgpd_em });
+      expect(ids((await listar(a.dono, novoNumero)).json)).toEqual([c.id]);
+      expect(ids((await listar(a.dono, c.celular)).json)).toEqual([]);
+      expect(await eventos(c.id)).toEqual(['cliente_criado', 'cliente_editado']);
     });
 
-    it('anonimizar libera o celular para um novo cadastro', async () => {
-      const numero = celularNovo();
-      const c = await criar(a.dono, { celular: numero });
-      await a.dono.post(`/clientes/${c.id}/anonimizar`);
-      expect((await a.dono.post('/clientes', { nome: nomeNovo(), celular: numero })).statusCode).toBe(201);
-    });
-
-    it('os dados pessoais somem do banco, não só da resposta', async () => {
+    it('salvar sem mudar nada responde 200 e não gera auditoria nova', async () => {
       const c = await criar(a.dono);
-      await a.dono.post(`/clientes/${c.id}/anonimizar`);
-      const r = await owner.query('SELECT nome, celular FROM clientes WHERE id = $1', [c.id]);
-      expect(r.rows[0]).toEqual({ nome: 'Cliente anonimizado', celular: null });
+      const res = await a.dono.put(`/clientes/${c.id}`, { nome: c.nome, celular: comMascara(c.celular) });
+      expect(res.statusCode).toBe(200);
+      expect(await eventos(c.id)).toEqual(['cliente_criado']);
     });
 
-    it('anonimizar duas vezes dá 409 e não duplica a auditoria', async () => {
+    it('trocar só o nome mantém o próprio celular (não conta como repetido)', async () => {
       const c = await criar(a.dono);
-      expect((await a.dono.post(`/clientes/${c.id}/anonimizar`)).statusCode).toBe(200);
-      const segunda = await a.dono.post(`/clientes/${c.id}/anonimizar`);
-      expect(segunda.statusCode).toBe(409);
-      expect(segunda.json()).toEqual({ erro: 'cliente_anonimizado' });
-      expect((await eventos(c.id)).filter((t) => t === 'cliente_anonimizado')).toHaveLength(1);
+      const res = await a.dono.put(`/clientes/${c.id}`, { nome: nomeNovo('So nome'), celular: c.celular });
+      expect(res.statusCode).toBe(200);
     });
 
-    it('registrar aviso num cliente anonimizado dá 409', async () => {
+    it('celular de outro cliente da empresa dá 409 e nada muda', async () => {
+      const outro = await criar(a.dono);
       const c = await criar(a.dono);
-      await a.dono.post(`/clientes/${c.id}/anonimizar`);
-      expect((await a.dono.post(`/clientes/${c.id}/aviso-lgpd`)).statusCode).toBe(409);
+      const res = await a.dono.put(`/clientes/${c.id}`, { nome: 'Nome Novo', celular: outro.celular });
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toEqual({ erro: 'celular_ja_cadastrado' });
+      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp)).toMatchObject({ nome: c.nome, celular: c.celular });
     });
 
-    it('o Vendedor não anonimiza (403) e o cliente fica intacto', async () => {
+    it('celular de cliente INATIVO também conta como repetido (o número continua reservado)', async () => {
+      const inativo = await criar(a.dono);
+      await a.dono.post(`/clientes/${inativo.id}/inativar`);
       const c = await criar(a.dono);
-      const res = await a.vendedor.post(`/clientes/${c.id}/anonimizar`);
-      expect(res.statusCode).toBe(403);
-      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).celular).toBe(c.celular);
+      expect((await a.dono.put(`/clientes/${c.id}`, { nome: c.nome, celular: inativo.celular })).statusCode).toBe(409);
     });
 
-    it('o Dono de outra empresa não anonimiza (404) e o cliente fica intacto', async () => {
+    it.each([
+      ['sem nome', { nome: ' ', celular: '21920000009' }],
+      ['celular inválido', { nome: 'Ana', celular: '123' }],
+      ['sem celular', { nome: 'Ana' }],
+      ['aviso_lgpd no corpo', { nome: 'Ana', celular: '21920000009', aviso_lgpd: true }],
+      ['empresa_id no corpo', { nome: 'Ana', celular: '21920000009', empresa_id: randomUUID() }],
+    ])('recusa %s com 400', async (_n, corpo) => {
       const c = await criar(a.dono);
-      expect((await b.dono.post(`/clientes/${c.id}/anonimizar`)).statusCode).toBe(404);
-      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).celular).toBe(c.celular);
+      expect((await a.dono.put(`/clientes/${c.id}`, corpo)).statusCode).toBe(400);
+    });
+
+    it('cliente de outra empresa ou inexistente dá 404 e o da outra empresa fica intacto', async () => {
+      const deB = await criar(b.dono);
+      expect((await a.dono.put(`/clientes/${deB.id}`, { nome: 'Invasor', celular: celularNovo() })).statusCode).toBe(404);
+      expect((await a.dono.put(`/clientes/${randomUUID()}`, { nome: 'Ana', celular: celularNovo() })).statusCode).toBe(404);
+      expect(((await b.dono.get(`/clientes/${deB.id}`)).json() as ClienteResp).nome).toBe(deB.nome);
     });
 
     it('sem sessão responde 401', async () => {
-      expect((await new Cliente(app).post(`/clientes/${randomUUID()}/anonimizar`)).statusCode).toBe(401);
+      expect((await new Cliente(app).put(`/clientes/${randomUUID()}`, { nome: 'Ana', celular: celularNovo() })).statusCode).toBe(401);
+    });
+  });
+
+  describe('inativar e reativar (RF-CLI-04)', () => {
+    it('o Dono inativa: some da lista padrão, aparece em Inativos e a ficha continua abrindo', async () => {
+      const c = await criar(a.dono);
+      const res = await a.dono.post(`/clientes/${c.id}/inativar`);
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ id: c.id, nome: c.nome, celular: c.celular, ativo: false });
+      expect(ids((await listar(a.dono)).json)).not.toContain(c.id);
+      expect(ids((await listar(a.dono, c.nome)).json)).toEqual([]);
+      expect(ids((await listar(a.dono, c.nome, 'inativos')).json)).toEqual([c.id]);
+      expect(ids((await listar(a.dono, undefined, 'inativos')).json)).toContain(c.id);
+      expect(((await a.vendedor.get(`/clientes/${c.id}`)).json() as ClienteResp).ativo).toBe(false);
+    });
+
+    it('o número de um inativo continua reservado (novo cadastro dá 409)', async () => {
+      const c = await criar(a.dono);
+      await a.dono.post(`/clientes/${c.id}/inativar`);
+      const res = await a.vendedor.post('/clientes', { nome: nomeNovo(), celular: c.celular });
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('reativar traz de volta para a lista padrão', async () => {
+      const c = await criar(a.dono);
+      await a.dono.post(`/clientes/${c.id}/inativar`);
+      const res = await a.dono.post(`/clientes/${c.id}/reativar`);
+      expect(res.statusCode).toBe(200);
+      expect((res.json() as ClienteResp).ativo).toBe(true);
+      expect(ids((await listar(a.dono, c.nome)).json)).toEqual([c.id]);
+      expect(ids((await listar(a.dono, c.nome, 'inativos')).json)).toEqual([]);
+      expect(await eventos(c.id)).toEqual(['cliente_criado', 'cliente_inativado', 'cliente_reativado']);
+    });
+
+    it('inativar quem já está inativo e reativar quem está ativo dão 409, sem auditoria repetida', async () => {
+      const c = await criar(a.dono);
+      expect((await a.dono.post(`/clientes/${c.id}/reativar`)).json()).toEqual({ erro: 'cliente_ja_ativo' });
+      await a.dono.post(`/clientes/${c.id}/inativar`);
+      const de_novo = await a.dono.post(`/clientes/${c.id}/inativar`);
+      expect(de_novo.statusCode).toBe(409);
+      expect(de_novo.json()).toEqual({ erro: 'cliente_ja_inativo' });
+      expect(await eventos(c.id)).toEqual(['cliente_criado', 'cliente_inativado']);
+    });
+
+    it('o Vendedor não inativa nem reativa (403) e não lista os inativos (403)', async () => {
+      const c = await criar(a.dono);
+      expect((await a.vendedor.post(`/clientes/${c.id}/inativar`)).statusCode).toBe(403);
+      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).ativo).toBe(true);
+      await a.dono.post(`/clientes/${c.id}/inativar`);
+      expect((await a.vendedor.post(`/clientes/${c.id}/reativar`)).statusCode).toBe(403);
+      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).ativo).toBe(false);
+      expect((await listar(a.vendedor, undefined, 'inativos')).status).toBe(403);
+    });
+
+    it('o Dono de outra empresa não inativa nem reativa (404)', async () => {
+      const c = await criar(a.dono);
+      expect((await b.dono.post(`/clientes/${c.id}/inativar`)).statusCode).toBe(404);
+      expect((await b.dono.post(`/clientes/${c.id}/reativar`)).statusCode).toBe(404);
+      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).ativo).toBe(true);
+    });
+
+    it('sem sessão responde 401', async () => {
+      expect((await new Cliente(app).post(`/clientes/${randomUUID()}/inativar`)).statusCode).toBe(401);
+      expect((await new Cliente(app).post(`/clientes/${randomUUID()}/reativar`)).statusCode).toBe(401);
+    });
+  });
+
+  describe('excluir (RF-CLI-04)', () => {
+    it('o Dono exclui: a linha sai do banco, a ficha dá 404 e o número fica livre', async () => {
+      const c = await criar(a.dono, { aviso_lgpd: true });
+      const res = await a.dono.delete(`/clientes/${c.id}`);
+      expect(res.statusCode).toBe(204);
+      expect(res.body).toBe('');
+      expect((await a.dono.get(`/clientes/${c.id}`)).statusCode).toBe(404);
+      expect(ids((await listar(a.dono, c.nome)).json)).toEqual([]);
+      expect(ids((await listar(a.dono, c.nome, 'inativos')).json)).toEqual([]);
+      expect((await owner.query('SELECT 1 FROM clientes WHERE id = $1', [c.id])).rowCount).toBe(0);
+      expect((await a.dono.post('/clientes', { nome: nomeNovo(), celular: c.celular })).statusCode).toBe(201);
+    });
+
+    it('registra a exclusão na auditoria só com o id', async () => {
+      const c = await criar(a.dono);
+      await a.dono.delete(`/clientes/${c.id}`);
+      expect(await eventos(c.id)).toEqual(['cliente_criado', 'cliente_excluido']);
+    });
+
+    it('também exclui um cliente inativo', async () => {
+      const c = await criar(a.dono);
+      await a.dono.post(`/clientes/${c.id}/inativar`);
+      expect((await a.dono.delete(`/clientes/${c.id}`)).statusCode).toBe(204);
+    });
+
+    it('excluir de novo dá 404', async () => {
+      const c = await criar(a.dono);
+      await a.dono.delete(`/clientes/${c.id}`);
+      expect((await a.dono.delete(`/clientes/${c.id}`)).statusCode).toBe(404);
+    });
+
+    it('o Vendedor não exclui (403) e o cliente fica intacto', async () => {
+      const c = await criar(a.dono);
+      expect((await a.vendedor.delete(`/clientes/${c.id}`)).statusCode).toBe(403);
+      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).celular).toBe(c.celular);
+    });
+
+    it('o Dono de outra empresa não exclui (404) e o cliente fica intacto', async () => {
+      const c = await criar(a.dono);
+      expect((await b.dono.delete(`/clientes/${c.id}`)).statusCode).toBe(404);
+      expect(((await a.dono.get(`/clientes/${c.id}`)).json() as ClienteResp).celular).toBe(c.celular);
+    });
+
+    it('id que não é UUID dá 400 e sem sessão dá 401', async () => {
+      expect((await a.dono.delete('/clientes/nao-e-uuid')).statusCode).toBe(400);
+      expect((await new Cliente(app).delete(`/clientes/${randomUUID()}`)).statusCode).toBe(401);
     });
   });
 });

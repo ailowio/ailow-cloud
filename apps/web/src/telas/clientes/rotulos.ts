@@ -14,10 +14,11 @@ export const linhaDoAviso = (avisoEm: string | null): string =>
 
 export function mensagemClientes(e: ErroApi): string {
   if (e.status === 409 && e.codigo === 'celular_ja_cadastrado') {
-    return 'Já existe um cliente com este celular. Busque pelo número para abrir a ficha.';
+    return 'Já existe um cliente com este celular. Busque pelo número; se não aparecer, ele pode estar inativo: peça ao Dono.';
   }
-  if (e.status === 409 && e.codigo === 'cliente_anonimizado') return 'Os dados deste cliente já foram apagados.';
+  if (e.status === 409 && e.codigo === 'cliente_ja_inativo') return 'Este cliente já está inativo. Atualize a tela.';
+  if (e.status === 409 && e.codigo === 'cliente_ja_ativo') return 'Este cliente já está ativo. Atualize a tela.';
   if (e.status === 404) return 'Não encontramos este cliente. Atualize a tela.';
-  if (e.status === 403) return 'Só o Dono pode apagar os dados de um cliente.';
+  if (e.status === 403) return 'Só o Dono pode inativar, reativar ou excluir um cliente.';
   return mensagemGenerica(e);
 }
