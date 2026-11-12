@@ -18,6 +18,12 @@ const configSchema = z.object({
     (v) => (v === '' ? undefined : v),
     z.string().min(16, { error: 'deve ter ao menos 16 caracteres' }).optional(),
   ),
+  // Conexões simultâneas da API com o Postgres (S13b2). Ausente ou vazio = 10 (padrão do createPool). Soma de todas as
+  // instâncias da API tem de caber em max_connections do Postgres; o teto 50 evita esgotá-lo por engano.
+  DB_POOL_MAX: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.coerce.number().int().min(1).max(50).optional(),
+  ),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

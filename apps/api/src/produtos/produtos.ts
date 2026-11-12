@@ -207,7 +207,11 @@ export async function movimentosDoSku(c: pg.PoolClient, skuId: string): Promise<
   const existe = await c.query('SELECT 1 FROM skus WHERE id = $1', [skuId]);
   if (existe.rowCount !== 1) return null;
   const r = await c.query(
-    `SELECT m.id, m.tipo, m.quantidade, m.saldo_apos, m.motivo, m.origem_id, u.nome AS autor_nome, m.criado_em
+    // Venda nova grava só "Venda" (o número é alocado por último, ADR 009): "Venda N" é composto na leitura.
+    `SELECT m.id, m.tipo, m.quantidade, m.saldo_apos, m.origem_id, u.nome AS autor_nome, m.criado_em,
+            CASE WHEN m.tipo = 'venda' AND m.motivo = 'Venda'
+                 THEN coalesce('Venda ' || (SELECT v.numero FROM vendas v WHERE v.id = m.origem_id), m.motivo)
+                 ELSE m.motivo END AS motivo
        FROM movimentos_estoque m
        JOIN usuarios u ON u.empresa_id = m.empresa_id AND u.id = m.autor_id
       WHERE m.sku_id = $1

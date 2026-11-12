@@ -391,6 +391,75 @@ describe('Vendas (API)', () => {
       expect((await estoqueDe(loja, p.codigo)).json.estoque).toBe(0);
     });
 
+    // ADR 009 (opção A): a trava de venda_sequencia vale até o COMMIT; por isso o número é alocado por último,
+    // depois do estoque, dos pagamentos e do Financeiro, para encurtar o tempo em que as vendas da empresa esperam.
+    it('aloca o número da venda por último: depois dele não há mais baixa de estoque, item, pagamento nem lançamento', async () => {
+      const loja = await montar('Vendas número por último');
+      const p = await peca(loja);
+      const ctx = { empresaId: loja.dados.empresaId, autorId: loja.dados.donoId, perfil: 'dono' as const, agora: relogio.agora };
+      const c = await pool.connect();
+      const sql: string[] = [];
+      try {
+        await c.query('BEGIN');
+        await c.query('SET LOCAL ROLE ailow_app');
+        await c.query("SELECT set_config('app.empresa_id', $1, true)", [loja.dados.empresaId]);
+        const original = c.query.bind(c) as (...args: unknown[]) => Promise<unknown>;
+        (c as unknown as { query: unknown }).query = (...args: unknown[]) => {
+          const primeiro = args[0];
+          sql.push(typeof primeiro === 'string' ? primeiro : (primeiro as { text: string }).text);
+          return original(...args);
+        };
+        await finalizarVenda(c, ctx, fechar(p, celular()) as Parameters<typeof finalizarVenda>[2]);
+        await c.query('ROLLBACK');
+      } finally {
+        c.release();
+      }
+      const aloca = sql.findIndex((s) => s.includes('venda_sequencia'));
+      expect(aloca).toBeGreaterThan(-1);
+      const gravacoes = /INSERT INTO (itens_venda|pagamentos_venda|movimentos_estoque|lancamentos)|UPDATE skus/;
+      expect(sql.slice(aloca + 1).filter((s) => gravacoes.test(s))).toEqual([]);
+      expect(sql.slice(0, aloca).filter((s) => gravacoes.test(s)).length).toBeGreaterThan(0);
+      // A trava dura até o COMMIT: o comando que aloca o número é o último; a resposta já foi montada antes dele.
+      expect(sql.slice(aloca + 1).filter((s) => !/^\s*(COMMIT|ROLLBACK)\s*$/.test(s))).toEqual([]);
+    });
+
+    it('oito vendas ao mesmo tempo na mesma loja recebem os números 1 a 8, sem repetir e sem buraco', async () => {
+      const loja = await montar('Vendas oito juntas');
+      const pecas = await Promise.all(Array.from({ length: 8 }, () => peca(loja)));
+      const respostas = await Promise.all(
+        pecas.map((p, i) => (i % 2 ? loja.vendedor : loja.dono).post('/vendas', fechar(p, celular()))),
+      );
+      expect(respostas.map((r) => r.statusCode)).toEqual(Array(8).fill(201));
+      const numeros = respostas.map((r) => (r.json() as { numero: number }).numero).sort((x, y) => x - y);
+      expect(numeros).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    it('venda recusada não gasta número: a próxima venda da loja continua na sequência', async () => {
+      const loja = await montar('Vendas recusada sem buraco');
+      const sem = await peca(loja, 0);
+      const ok = await peca(loja);
+      expect(((await loja.dono.post('/vendas', fechar(ok, celular()))).json() as { numero: number }).numero).toBe(1);
+      const recusada = await loja.dono.post('/vendas', fechar(sem, celular()));
+      expect(recusada.statusCode).toBe(409);
+      const outra = await peca(loja);
+      expect(((await loja.dono.post('/vendas', fechar(outra, celular()))).json() as { numero: number }).numero).toBe(2);
+    });
+
+    it('o texto "Venda N" continua aparecendo no histórico do SKU e no extrato, mesmo sem o número gravado no texto', async () => {
+      const loja = await montar('Vendas texto composto');
+      const p = await peca(loja);
+      const venda = await loja.dono.post('/vendas', fechar(p, celular()));
+      const { numero } = venda.json() as { numero: number };
+      const movs = await loja.dono.get(`/skus/${p.skuId}/movimentos`);
+      const motivos = (movs.json() as { movimentos: { tipo: string; motivo: string }[] }).movimentos.filter((m) => m.tipo === 'venda');
+      expect(motivos.map((m) => m.motivo)).toEqual([`Venda ${numero}`]);
+      const extrato = await loja.dono.get(`/financeiro/extrato?data=${DIA}`);
+      const descricoes = (extrato.json() as { lancamentos: { descricao: string | null; origem_id: string }[] }).lancamentos
+        .filter((l) => l.origem_id === (venda.json() as { id: string }).id)
+        .map((l) => l.descricao);
+      expect(descricoes).toEqual([`Venda ${numero}`]);
+    });
+
     it('dois cancelamentos da mesma venda: um vale, o outro é recusado e o estoque volta uma vez só', async () => {
       const loja = await montar('Vendas cancela junto');
       const p = await peca(loja);

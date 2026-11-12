@@ -37,7 +37,16 @@ const sessaoCookie = [{ sessao: [] }];
 const LIMITE_LINHAS = 500;
 
 // Colunas devolvidas ao cliente. `vencimento::text` evita o `pg` converter `date` para Date no fuso do servidor.
-const COLUNAS = `id, tipo, origem_tipo, origem_id, descricao, categoria, valor_centavos, forma_pagamento,
+// A venda grava só "Venda" (o número é alocado por último, ADR 009): "Venda N" é composto na leitura.
+const COLUNAS = `id, tipo, origem_tipo, origem_id,
+  CASE WHEN descricao = 'Venda'
+       THEN coalesce('Venda ' || (
+              SELECT v.numero FROM vendas v
+               WHERE v.id = CASE WHEN lancamentos.origem_tipo = 'venda' THEN lancamentos.origem_id
+                                 ELSE (SELECT o.origem_id FROM lancamentos o
+                                        WHERE o.id = lancamentos.estorno_de AND o.origem_tipo = 'venda') END), descricao)
+       ELSE descricao END AS descricao,
+  categoria, valor_centavos, forma_pagamento,
   lancamentos.vencimento::text AS vencimento, pago_em, status, estorno_de, estorno_motivo`;
 
 // Linha como o `pg` entrega (pago_em é Date) e a mesma linha no contrato da API (pago_em em ISO).

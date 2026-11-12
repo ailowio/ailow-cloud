@@ -7,6 +7,7 @@ import {
   calcularFechamento,
   celularSuspeito,
 } from '@ailow/shared';
+import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { registrarEvento } from '../acesso/comum.js';
 import { ErroCliente, buscarCliente, buscarPorCelular, criarCliente, resumoDosClientes } from '../clientes/clientes.js';
@@ -16,6 +17,10 @@ import { ErroFinanceiro, FUSO, estornarOrigem, registrarLancamento } from '../fi
 
 // Vendas (S10). Estoque, lançamento e cliente entram pela interface pública de cada módulo, na MESMA transação.
 // Este arquivo só escreve em vendas, itens_venda, pagamentos_venda e venda_sequencia.
+
+// Texto gravado nos movimentos de estoque e nos lançamentos da venda. O número ainda não existe quando eles são
+// gravados (ADR 009); as leituras de produtos/movimentos e do financeiro compõem "Venda N" pelo origem_id.
+const TEXTO_VENDA = 'Venda';
 
 export class ErroVenda extends Error {
   constructor(
@@ -74,16 +79,6 @@ async function hoje(c: pg.PoolClient, agora: Date): Promise<string> {
   return r.rows[0].hoje as string;
 }
 
-async function proximoNumero(c: pg.PoolClient, empresaId: string): Promise<number> {
-  const r = await c.query(
-    `INSERT INTO venda_sequencia (empresa_id, ultimo) VALUES ($1, 1)
-     ON CONFLICT (empresa_id) DO UPDATE SET ultimo = venda_sequencia.ultimo + 1
-     RETURNING ultimo`,
-    [empresaId],
-  );
-  return r.rows[0].ultimo as number;
-}
-
 async function montar(c: pg.PoolClient, id: string): Promise<Venda | null> {
   const capa = await c.query(
     `SELECT v.id, v.numero, v.status, v.subtotal_centavos, v.desconto_centavos, v.desconto_tipo, v.desconto_percentual,
@@ -93,18 +88,35 @@ async function montar(c: pg.PoolClient, id: string): Promise<Venda | null> {
       WHERE v.id = $1`,
     [id],
   );
-  const linha = capa.rows[0] as Omit<LinhaVenda, 'cliente_nome' | 'cliente_celular'> | undefined;
+  const linha = capa.rows[0] as LinhaCapa | undefined;
   if (!linha) return null;
   const cliente = linha.cliente_id ? await buscarCliente(c, linha.cliente_id) : null;
-  const itens = await c.query(
-    `SELECT sku_id, codigo, produto_nome AS nome, tamanho, cor, quantidade, preco_unitario_centavos
-       FROM itens_venda WHERE venda_id = $1 ORDER BY codigo`,
-    [id],
-  );
+  const itens = await itensDaVenda(c, id);
   const pagamentos = await c.query(
     `SELECT forma, valor_centavos FROM pagamentos_venda WHERE venda_id = $1 ORDER BY ordem`,
     [id],
   );
+  return paraVenda(linha, cliente, itens, pagamentos.rows as Venda['pagamentos']);
+}
+
+type LinhaCapa = Omit<LinhaVenda, 'cliente_nome' | 'cliente_celular'>;
+
+async function itensDaVenda(c: pg.PoolClient, id: string): Promise<Venda['itens']> {
+  const r = await c.query(
+    `SELECT sku_id, codigo, produto_nome AS nome, tamanho, cor, quantidade, preco_unitario_centavos
+       FROM itens_venda WHERE venda_id = $1 ORDER BY codigo`,
+    [id],
+  );
+  return r.rows as Venda['itens'];
+}
+
+// Um só formato de resposta para a venda lida do banco (montar) e a recém-finalizada (finalizarVenda).
+function paraVenda(
+  linha: LinhaCapa,
+  cliente: { id: string; nome: string; celular: string } | null,
+  itens: Venda['itens'],
+  pagamentos: Venda['pagamentos'],
+): Venda {
   return {
     id: linha.id,
     numero: linha.numero,
@@ -116,8 +128,8 @@ async function montar(c: pg.PoolClient, id: string): Promise<Venda | null> {
     total_centavos: linha.total_centavos,
     cliente: cliente ? { id: cliente.id, nome: cliente.nome, celular: cliente.celular } : null,
     vendedor_nome: linha.vendedor_nome,
-    itens: itens.rows as Venda['itens'],
-    pagamentos: pagamentos.rows as Venda['pagamentos'],
+    itens,
+    pagamentos,
     criado_em: linha.criado_em.toISOString(),
     cancelado_em: linha.cancelado_em?.toISOString() ?? null,
     motivo_cancelamento: linha.motivo_cancelamento,
@@ -161,28 +173,11 @@ export async function finalizarVenda(c: pg.PoolClient, ctx: Ctx, pedido: VendaFi
   if (!fechamento.ok) throw new ErroVenda(fechamento.erro);
 
   const clienteId = await resolverCliente(c, ctx, pedido);
-  const numero = await proximoNumero(c, ctx.empresaId);
   const data = await hoje(c, ctx.agora);
-  const gravada = await c.query(
-    `INSERT INTO vendas
-       (empresa_id, numero, cliente_id, vendedor_id, subtotal_centavos, desconto_centavos, total_centavos,
-        desconto_tipo, desconto_percentual, status, criado_em)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'finalizada', $10)
-     RETURNING id`,
-    [
-      ctx.empresaId,
-      numero,
-      clienteId,
-      ctx.autorId,
-      fechamento.subtotalCentavos,
-      fechamento.descontoCentavos,
-      fechamento.totalCentavos,
-      pedido.desconto.tipo,
-      pedido.desconto.tipo === 'percentual' ? pedido.desconto.percentual : null,
-      ctx.agora,
-    ],
-  );
-  const vendaId = gravada.rows[0].id as string;
+  // ADR 009 (opção A): a trava de venda_sequencia dura até o COMMIT e serializa as vendas da empresa. O número só
+  // é alocado no fim, junto da linha de `vendas`; antes dela itens e pagamentos apontam para este id (FK adiada).
+  const vendaId = randomUUID();
+  const descontoPercentual = pedido.desconto.tipo === 'percentual' ? (pedido.desconto.percentual ?? null) : null;
 
   for (const item of pedido.itens) {
     const sku = porId.get(item.sku_id) as SkuParaVenda;
@@ -197,7 +192,7 @@ export async function finalizarVenda(c: pg.PoolClient, ctx: Ctx, pedido: VendaFi
         skuId: sku.id,
         tipo: 'venda',
         quantidade: -item.quantidade,
-        motivo: `Venda ${numero}`,
+        motivo: TEXTO_VENDA,
         origemId: vendaId,
       });
     } catch (err) {
@@ -215,7 +210,7 @@ export async function finalizarVenda(c: pg.PoolClient, ctx: Ctx, pedido: VendaFi
       tipo: 'entrada',
       origem_tipo: 'venda',
       origem_id: vendaId,
-      descricao: `Venda ${numero}`,
+      descricao: TEXTO_VENDA,
       categoria: 'Vendas',
       valor_centavos: pag.valor_centavos,
       forma_pagamento: pag.forma,
@@ -225,7 +220,58 @@ export async function finalizarVenda(c: pg.PoolClient, ctx: Ctx, pedido: VendaFi
   }
 
   await registrarEvento(c, { empresaId: ctx.empresaId, atorTipo: 'usuario', atorId: ctx.autorId, alvoId: vendaId, tipo: 'venda_finalizada', em: ctx.agora });
-  return (await montar(c, vendaId)) as Venda;
+
+  // A resposta é montada ANTES da trava: depois do número só resta o COMMIT.
+  const vendedor = await c.query('SELECT nome FROM usuarios WHERE id = $1', [ctx.autorId]);
+  const cliente = await buscarCliente(c, clienteId);
+  const itensGravados = await itensDaVenda(c, vendaId);
+
+  // Último passo antes do COMMIT: um só comando aloca o número (venda_sequencia) e grava a venda.
+  const gravada = await c.query(
+    `WITH n AS (
+       INSERT INTO venda_sequencia (empresa_id, ultimo) VALUES ($2, 1)
+       ON CONFLICT (empresa_id) DO UPDATE SET ultimo = venda_sequencia.ultimo + 1
+       RETURNING ultimo
+     )
+     INSERT INTO vendas
+       (id, empresa_id, numero, cliente_id, vendedor_id, subtotal_centavos, desconto_centavos, total_centavos,
+        desconto_tipo, desconto_percentual, status, criado_em)
+     SELECT $1, $2, n.ultimo, $3, $4, $5, $6, $7, $8, $9, 'finalizada', $10 FROM n
+     RETURNING numero`,
+    [
+      vendaId,
+      ctx.empresaId,
+      clienteId,
+      ctx.autorId,
+      fechamento.subtotalCentavos,
+      fechamento.descontoCentavos,
+      fechamento.totalCentavos,
+      pedido.desconto.tipo,
+      descontoPercentual,
+      ctx.agora,
+    ],
+  );
+  return paraVenda(
+    {
+      id: vendaId,
+      numero: gravada.rows[0].numero as number,
+      status: 'finalizada',
+      subtotal_centavos: fechamento.subtotalCentavos,
+      desconto_centavos: fechamento.descontoCentavos,
+      desconto_tipo: pedido.desconto.tipo,
+      desconto_percentual: descontoPercentual,
+      total_centavos: fechamento.totalCentavos,
+      cliente_id: clienteId,
+      vendedor_id: ctx.autorId,
+      vendedor_nome: vendedor.rows[0].nome as string,
+      criado_em: ctx.agora,
+      cancelado_em: null,
+      motivo_cancelamento: null,
+    },
+    cliente,
+    itensGravados,
+    pedido.pagamentos.map((p) => ({ forma: p.forma, valor_centavos: p.valor_centavos })),
+  );
 }
 
 /** RF-VEN-08 / RN-08. O Vendedor cancela as próprias; o Dono, qualquer uma da empresa (D19). */
