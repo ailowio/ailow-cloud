@@ -18,7 +18,13 @@ RUN npm run build -w @ailow/shared && npm run build -w @ailow/web
 
 # ---- runtime: nginx sem root, só arquivos estáticos + proxy da API ----
 # Esta imagem escuta na 8080 (não precisa de privilégio). Nada de Node, npm ou código-fonte aqui.
-FROM nginxinc/nginx-unprivileged:1.29.3-alpine3.22 AS runtime
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine3.24 AS runtime
+# Patches de segurança do Alpine publicados depois da imagem base (gate SEC-12: o Trivy barra CRITICAL/HIGH com correção).
+# Custo: o build deixa de ser bit-a-bit reprodutível no tempo (pega o pacote corrigido do dia); aceito, a versão fica
+# registrada pelo digest da imagem publicada. Root só neste passo; volta ao usuário nginx (uid 101) logo depois.
+USER root
+RUN apk upgrade --no-cache
+USER 101
 COPY ops/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 EXPOSE 8080
