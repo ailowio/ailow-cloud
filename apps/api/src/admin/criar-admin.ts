@@ -1,5 +1,6 @@
 import { emailSchema, senhaSchema } from '@ailow/shared';
 import type pg from 'pg';
+import type { CifraTotp } from '../acesso/cifra-totp.js';
 import type { Hasher } from '../acesso/senhas.js';
 import { novoSegredoTotp, uriTotp } from '../acesso/totp.js';
 
@@ -9,13 +10,15 @@ export async function criarAdmin(
   pool: pg.Pool,
   hasher: Hasher,
   entrada: { email: string; senha: string },
+  cifra: CifraTotp,
 ): Promise<{ id: string; segredo: string; uri: string }> {
   const email = emailSchema.parse(entrada.email);
   const senha = senhaSchema.parse(entrada.senha);
   const segredo = novoSegredoTotp();
+  // O banco guarda o segredo cifrado (SEC-17); o claro só existe aqui, para ser mostrado ao Admin uma vez.
   const r = await pool.query(
     'INSERT INTO admins (email, senha_hash, totp_segredo) VALUES ($1, $2, $3) RETURNING id',
-    [email, await hasher.hash(senha), segredo],
+    [email, await hasher.hash(senha), cifra.cifrar(segredo)],
   );
   return { id: r.rows[0].id as string, segredo, uri: uriTotp(email, segredo) };
 }

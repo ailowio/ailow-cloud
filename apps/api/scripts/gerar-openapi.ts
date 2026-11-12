@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { buildApp } from '../src/app.js';
@@ -10,6 +11,8 @@ const pool = createPool('postgres://sem-banco:sem-banco@127.0.0.1:1/sem_banco', 
 const app = await buildApp({
   pool,
   authPepper: 'pepper-so-para-gerar-o-contrato-com-32-caracteres',
+  // Chave descartável (não cifra dado algum: o contrato não toca no banco).
+  totpChave: randomBytes(32).toString('base64'),
   cookieSecure: true,
   agora: () => new Date('2026-01-01T00:00:00.000Z'),
 });

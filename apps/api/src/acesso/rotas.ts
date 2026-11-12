@@ -55,8 +55,9 @@ export async function registrarRotasAcesso(app: FastifyInstance, deps: Deps, g: 
         tags: ['acesso'],
         summary: 'Dono entra com e-mail + senha e vincula o aparelho',
         body: entrarBodySchema,
-        response: { 200: entrarResponseSchema, 401: erroSchema },
+        response: { 200: entrarResponseSchema, 401: erroSchema, 429: erroSchema },
       },
+      config: { rateLimit: deps.limiteSenha },
     },
     async (request, reply) => {
       const { email, senha } = request.body;

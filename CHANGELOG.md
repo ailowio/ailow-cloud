@@ -4,6 +4,9 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### Segurança
+- S14, threat model #3 e #5 (SEC-07, SEC-17; OpenAPI 0.14.0): **rate limit por IP** em `POST /acesso/entrar` e `POST /admin/login` (`@fastify/rate-limit` 11.2.2; padrão 10 por 60 s; resposta `429 {erro: "muitas_tentativas"}` com `Retry-After`; `LOGIN_RATE_MAX`, `LOGIN_RATE_JANELA_S`) e **segredo TOTP do Admin cifrado em repouso** (AES-256-GCM, chave `TOTP_CHAVE` **obrigatória**, formato `v1.`). `TRUST_PROXY` (IPs/CIDRs) para ler o IP real atrás do proxy: o Fastify 5 não aceita número de saltos. **Quebra:** `criarAdmin` recebe a cifra; Admins de dev criados antes têm o segredo em claro e precisam ser recriados (`npm run admin:criar`). ADR 010 (hospedagem portável) aceito.
+
 ### Alterado
 - Desempenho da venda (S13b2, ADR 009 opção A, RNF-01/02; OpenAPI continua 0.13.0, sem diff): o número da venda é alocado **por último** na transação, num só comando que também grava `vendas` e devolve o número, e a resposta é montada antes; a trava de `venda_sequencia` dura bem menos. Migração `20261117120000_vendas-fk-adiavel` (FKs de itens e pagamentos adiáveis; reversível). Movimentos de estoque e lançamentos **novos** gravam só "Venda"; o histórico do SKU e o Financeiro compõem "Venda N" na leitura (a API devolve o mesmo texto). Regra de numeração igual: sem buracos, sem repetição. `DB_POOL_MAX` (1 a 50; vazio = 10) configura o pool. **k6 com 50 VUs (esta máquina):** venda p95 1807 -> 309/333 ms, busca p95 957 -> 246/268 ms, erro 0%.
 - Tela inicial: o aviso "em breve" só aparece se algum módulo ainda não estiver pronto.

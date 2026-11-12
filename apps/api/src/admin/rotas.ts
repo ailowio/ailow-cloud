@@ -42,8 +42,9 @@ export async function registrarRotasAdmin(app: FastifyInstance, deps: Deps, g: G
         tags: ['admin'],
         summary: 'Admin da plataforma entra com e-mail, senha e código TOTP',
         body: adminLoginBodySchema,
-        response: { 200: z.object({ ok: z.literal(true) }), 401: erroSchema },
+        response: { 200: z.object({ ok: z.literal(true) }), 401: erroSchema, 429: erroSchema },
       },
+      config: { rateLimit: deps.limiteSenha },
     },
     async (request, reply) => {
       const { email, senha, codigo } = request.body;
@@ -59,7 +60,9 @@ export async function registrarRotasAdmin(app: FastifyInstance, deps: Deps, g: G
       const senhaOk = await hasher.verificar(adm?.senha_hash ?? hashFalso, senha);
       const now = agora();
       const passo =
-        adm && senhaOk ? validarTotp(adm.totp_segredo, codigo, now.getTime(), Number(adm.totp_ultimo_passo)) : null;
+        adm && senhaOk
+          ? validarTotp(deps.cifraTotp.decifrar(adm.totp_segredo), codigo, now.getTime(), Number(adm.totp_ultimo_passo))
+          : null;
       if (!adm || !senhaOk || passo === null) return credenciaisInvalidas(reply);
 
       // Anti-replay atômico: só um login pode "consumir" cada passo TOTP.

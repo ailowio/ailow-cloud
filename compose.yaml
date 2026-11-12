@@ -54,6 +54,11 @@ services:
       PORT: "3000"
       # Segredo do servidor misturado aos hashes de senha/PIN (ADR 004). Falha cedo se faltar (ENV-04/05).
       AUTH_PEPPER: ${AUTH_PEPPER:?defina AUTH_PEPPER no arquivo de ambiente}
+      # Chave AES-256 (base64, 32 bytes) do segredo TOTP do Admin (SEC-17). Falha cedo se faltar (ENV-04/05).
+      TOTP_CHAVE: ${TOTP_CHAVE:?defina TOTP_CHAVE no arquivo de ambiente}
+      LOGIN_RATE_MAX: ${LOGIN_RATE_MAX:-}
+      LOGIN_RATE_JANELA_S: ${LOGIN_RATE_JANELA_S:-}
+      TRUST_PROXY: ${TRUST_PROXY:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:

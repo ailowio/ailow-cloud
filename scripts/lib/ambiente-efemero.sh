@@ -19,6 +19,11 @@ ambiente_variaveis() {
   SENHA_PG="$(aleatorio 18)"
   export CONTRATO_SENHA="$(aleatorio 18)"
   export AUTH_PEPPER="$(aleatorio 24)" # 48 caracteres (a API exige >= 32)
+  # Base64 de 32 bytes (a API exige exatamente isso). `base64` é do coreutils: não depende de openssl no Git Bash.
+  export TOTP_CHAVE="$(head -c 32 /dev/urandom | base64 | tr -d '\n')"
+  # Só neste ambiente efêmero de teste: contrato, carga e E2E fazem centenas de logins do mesmo IP. Em produção vale o
+  # padrão (10 por minuto por IP, SEC-07). O que prova o limite real é apps/api/test/rate-limit.test.ts.
+  export LOGIN_RATE_MAX=100000
   export DATABASE_URL="postgresql://ailow:${SENHA_PG}@127.0.0.1:${PORTA_PG}/ailow"
   export COOKIE_SECURE=false PORT="${PORTA_API}" LOG_LEVEL="${LOG_LEVEL:-warn}"
   export ALVO_LOCAL="http://127.0.0.1:${PORTA_API}"

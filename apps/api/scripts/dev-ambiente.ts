@@ -16,18 +16,29 @@ export interface AmbienteDev {
   senhaDb: string;
   // Mesmo pepper em toda execução: trocá-lo invalidaria as senhas e PINs já gravados no banco de dev.
   pepper: string;
+  // Chave que cifra o segredo TOTP do Admin (base64, 32 bytes). Mesma regra do pepper: trocá-la inutiliza os Admins de dev.
+  totpChave: string;
 }
 
 const ARQUIVO = join(PASTA_DEV, 'ambiente.json');
 
 export function lerAmbienteDev(): AmbienteDev {
-  if (existsSync(ARQUIVO)) return JSON.parse(readFileSync(ARQUIVO, 'utf8')) as AmbienteDev;
+  if (existsSync(ARQUIVO)) {
+    const lido = JSON.parse(readFileSync(ARQUIVO, 'utf8')) as Partial<AmbienteDev> & Omit<AmbienteDev, 'totpChave'>;
+    if (lido.totpChave) return lido as AmbienteDev;
+    // Arquivo de antes da cifra do TOTP (S14): acrescenta a chave sem mexer nos outros campos. Admins de dev criados
+    // antes dela têm o segredo em claro no banco e precisam ser recriados (npm run admin:criar).
+    const completo: AmbienteDev = { ...lido, totpChave: randomBytes(32).toString('base64') };
+    writeFileSync(ARQUIVO, JSON.stringify(completo, null, 2));
+    return completo;
+  }
   const ambiente: AmbienteDev = {
     porta: 54329, // longe da 5432 padrão e da porta aleatória dos testes
     usuario: 'ailow_dev',
     banco: 'ailow_dev',
     senhaDb: randomBytes(18).toString('hex'),
     pepper: randomBytes(32).toString('hex'),
+    totpChave: randomBytes(32).toString('base64'),
   };
   mkdirSync(PASTA_DEV, { recursive: true });
   writeFileSync(ARQUIVO, JSON.stringify(ambiente, null, 2));

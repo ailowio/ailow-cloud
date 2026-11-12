@@ -65,14 +65,14 @@ docker compose down         # NÃO use -v se quiser manter os dados do banco
 
 ### Variáveis de ambiente
 
-Só nomes em `.env.example`. A API falha ao iniciar, citando o nome da variável, se `DATABASE_URL` ou `AUTH_PEPPER` (≥ 32 caracteres) faltarem ou forem inválidas. `COOKIE_SECURE=false` só em desenvolvimento sem HTTPS.
+Só nomes em `.env.example`. A API falha ao iniciar, citando o nome da variável, se `DATABASE_URL`, `AUTH_PEPPER` (≥ 32 caracteres) ou `TOTP_CHAVE` (base64 de 32 bytes) faltarem ou forem inválidas. Atrás de um proxy, `TRUST_PROXY` (IPs/CIDRs) precisa estar preenchido, senão todos os clientes dividem o mesmo limite de tentativas de login. `COOKIE_SECURE=false` só em desenvolvimento sem HTTPS.
 
 ### Criar o Admin da plataforma (acesso privilegiado, com TOTP)
 
 Fora da API, por pessoa autorizada; a senha vai por variável de ambiente (nunca por argumento) e a URI do TOTP é mostrada **uma única vez** (cadastre no app autenticador; não cole em chat/log):
 
 ```bash
-ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA=... npm run admin:criar -w @ailow/api   # precisa de DATABASE_URL e AUTH_PEPPER
+ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA=... npm run admin:criar -w @ailow/api   # precisa de DATABASE_URL, AUTH_PEPPER e TOTP_CHAVE
 ```
 
 Depois: `POST /admin/login` (e-mail, senha, código) → `POST /admin/empresas` (empresa + Dono). Contrato completo em `/openapi.json`.

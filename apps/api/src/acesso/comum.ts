@@ -1,6 +1,7 @@
 import type { FastifyReply } from 'fastify';
 import type pg from 'pg';
 import { z } from 'zod';
+import type { CifraTotp } from './cifra-totp.js';
 import type { Hasher } from './senhas.js';
 
 // Regras de tempo e limites (ADR 004). Constantes nomeadas para o teste e o ADR apontarem para um lugar só.
@@ -15,6 +16,9 @@ export interface Deps {
   hasher: Hasher;
   agora: () => Date;
   cookieSecure: boolean;
+  cifraTotp: CifraTotp;
+  // Limite por IP das rotas que conferem senha (config.rateLimit do @fastify/rate-limit; janela em ms).
+  limiteSenha: { max: number; timeWindow: number };
 }
 
 // Resposta 204: sem corpo (declarada para constar no OpenAPI).

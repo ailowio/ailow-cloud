@@ -7,6 +7,7 @@ recusarEmProducao();
 const ambiente = lerAmbienteDev();
 process.env.DATABASE_URL ??= urlBanco(ambiente);
 process.env.AUTH_PEPPER ??= ambiente.pepper;
+process.env.TOTP_CHAVE ??= ambiente.totpChave;
 process.env.COOKIE_SECURE ??= 'false';
 
 // Import dinâmico: as variáveis acima precisam existir antes de a configuração ser lida.

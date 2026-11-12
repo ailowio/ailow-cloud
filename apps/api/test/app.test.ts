@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
-import { TEST_PEPPER } from './helpers.js';
+import { TEST_PEPPER, TEST_TOTP_CHAVE } from './helpers.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -26,7 +26,7 @@ describe('API', () => {
 
   beforeAll(async () => {
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL_TEST, max: 2 });
-    app = await buildApp({ pool, logger: { level: 'info', stream: log.stream }, authPepper: TEST_PEPPER });
+    app = await buildApp({ pool, logger: { level: 'info', stream: log.stream }, authPepper: TEST_PEPPER, totpChave: TEST_TOTP_CHAVE });
     await app.ready();
   });
 
@@ -47,7 +47,7 @@ describe('API', () => {
         connectionString: 'postgresql://x:y@127.0.0.1:1/z',
         connectionTimeoutMillis: 500,
       });
-      const app2 = await buildApp({ pool: semBanco, logger: false, authPepper: TEST_PEPPER });
+      const app2 = await buildApp({ pool: semBanco, logger: false, authPepper: TEST_PEPPER, totpChave: TEST_TOTP_CHAVE });
       try {
         const res = await app2.inject({ method: 'GET', url: '/health' });
         expect(res.statusCode).toBe(503);
@@ -124,7 +124,7 @@ describe('API', () => {
   describe('erros do banco no log (SEC-04)', () => {
     it('um 500 com `detail` do Postgres não grava os valores da linha, mas guarda o código para diagnóstico', async () => {
       const log2 = coletor();
-      const app2 = await buildApp({ pool, logger: { level: 'info', stream: log2.stream }, authPepper: TEST_PEPPER });
+      const app2 = await buildApp({ pool, logger: { level: 'info', stream: log2.stream }, authPepper: TEST_PEPPER, totpChave: TEST_TOTP_CHAVE });
       app2.get('/_falha-de-teste', async () => {
         throw Object.assign(new Error('new row violates check constraint "clientes_celular_check"'), {
           code: '23514',

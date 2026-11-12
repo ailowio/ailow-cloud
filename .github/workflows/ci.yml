@@ -209,6 +209,7 @@ jobs:
           {
             echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
             echo "AUTH_PEPPER=$(openssl rand -hex 32)"
+            echo "TOTP_CHAVE=$(openssl rand -base64 32)"
           } > "$GITHUB_WORKSPACE/.env"
       - name: compose up
         run: docker compose up -d --build
