@@ -72,6 +72,18 @@ echo "== o que o Traefik veria (web pela rede do proxy)"
 [ "$(curl_rede "http://${STACK}_web:8080/")" = "200" ] && ok "/ 200" || falha "/ não deu 200"
 [ "$(curl_rede "http://${STACK}_web:8080/metrics")" = "404" ] && ok "/metrics 404 (não sai para fora)" || falha "/metrics não deu 404"
 
+# S14d: compressão. A busca de produtos devolve até ~62 KiB de JSON; sem gzip isso pesa no 4G da loja e no p95 (RNF-02).
+# Cabeçalhos da resposta (com e sem Accept-Encoding) e um arquivo do app com hash no nome.
+cabecalhos_rede() { docker run --rm --network "$REDE" curlimages/curl:8.11.0 -s -m 10 -D - -o /dev/null "$@" 2>/dev/null | tr -d '\r'; }
+corpo_rede() { docker run --rm --network "$REDE" curlimages/curl:8.11.0 -s -m 10 "$1" 2>/dev/null; }
+echo "== compressão gzip (JSON da API e arquivos do app)"
+js="$(corpo_rede "http://${STACK}_web:8080/" | grep -o '/assets/[^"]*\.js' | head -n1)"
+[ -n "$js" ] || falha "não achei um .js em /assets no index.html"
+cabecalhos_rede -H 'Accept-Encoding: gzip' "http://${STACK}_web:8080${js}" | grep -qi '^content-encoding: gzip' && ok "JS do app vem em gzip" || falha "JS do app sem gzip"
+cabecalhos_rede -H 'Accept-Encoding: gzip' "http://${STACK}_web:8080/openapi.json" | grep -qi '^content-encoding: gzip' && ok "JSON da API (openapi.json) vem em gzip" || falha "JSON da API sem gzip"
+cabecalhos_rede -H 'Accept-Encoding: gzip' "http://${STACK}_web:8080/openapi.json" | grep -qi '^vary:.*accept-encoding' && ok "Vary: Accept-Encoding presente" || falha "falta Vary: Accept-Encoding"
+cabecalhos_rede "http://${STACK}_web:8080/openapi.json" | grep -qi '^content-encoding:' && falha "respondeu comprimido a quem não pediu" || ok "sem Accept-Encoding a resposta vem pura"
+
 echo "== isolamento de rede"
 [ "$(curl_rede "http://${STACK}_api:3000/health")" = "000" ] && ok "api inalcançável pela rede do proxy" || falha "api alcançável pela rede do proxy"
 [ "$(curl_rede "http://${STACK}_db:5432")" = "000" ] && ok "db inalcançável pela rede do proxy" || falha "db alcançável pela rede do proxy"

@@ -4,6 +4,9 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### Alterado
+- Desempenho (RNF-02; sem mudança de API, OpenAPI continua 0.14.0): **compressão gzip no nginx do web** (`ops/web/nginx.conf`: JSON, JS, CSS, SVG e manifest; `gzip_min_length 1024`, nível 5, `Vary: Accept-Encoding`). A busca ampla de produtos (864 SKUs) mede **96,8 KiB → 22,3 KiB (4,3×)** e comprimir custa ~1,6 ms por resposta no nginx (medido em um PC, não na VPS). Teste no `stack-local.sh` (job `stack`): JS do app e `openapi.json` vêm em gzip, `Vary` presente e resposta pura sem `Accept-Encoding` (vermelho antes, verde depois). **Não é garantia de passar o RNF-02:** o efeito sobre o p95 só se confirma re-medindo na VPS com 50 usuários. Medidos e descartados como gargalo: montagem da resposta (~2 ms), validação Zod (~1 ms).
+
 ### Adicionado
 - S14d, **pipeline de deploy** (ADR 012; sem mudança de API, OpenAPI continua 0.14.0): workflow `deploy.yml` (disparo manual com a tag; valida formato, existência, commit na `main` e as imagens no GHCR; job de implantação no Environment `producao` com **revisor obrigatório**, só `main`; chave SSH dedicada com host key fixada); `ops/deploy/ssh-entrada.sh` (comando forçado: aceita só `deploy vX.Y.Z`, serializa com `flock`, confere a tag na `main`) e `ops/deploy/deploy.sh` (backup antes; espera `api`/`web` e 3 `/health` seguidos; **reversão automática** para a tag anterior; códigos de saída 0/2/10/20/21). Testes sem VPS em `scripts/deploy-test.sh` (comando injetado, sucesso, health falhando ⇒ reversão, backup falhando ⇒ nada alterado, Swarm revertendo sozinho) mais um **canário** que reprova se a reversão quebrar, ambos no job `stack` do CI. Runbook de deploy reescrito (§2 pipeline, §2b emergência) e inventários de acessos, rotinas (R-05) e interfaces (I-07) atualizados. Encerra a exceção EX-02 depois do 1º deploy por ele em produção.
 
