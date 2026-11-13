@@ -6,6 +6,7 @@
 // Entradas (ambiente): BASE_URL, COOKIE (sessão do Dono descartável), RUN_ID. Opcionais: P95_VENDA_MS (500) e
 // P95_BUSCA_MS (300), usados pelo canário que prova que o threshold reprova de verdade.
 // Cada requisição leva a tag `endpoint` (buscar_produto | finalizar_venda); o setup() usa `setup` e fica de fora.
+// A busca leva também `tipo` (modelo | ampla), só para o resumo mostrar o p95 de cada uma (diagnóstico do RNF-02).
 import http from 'k6/http';
 import { check, fail, sleep } from 'k6';
 import exec from 'k6/execution';
@@ -52,6 +53,8 @@ const CENARIOS = {
 if (!CENARIOS[PERFIL]) throw new Error(`PERFIL inválido: ${PERFIL} (smoke | carga | estresse)`);
 
 const ENDPOINTS = ['buscar_produto', 'finalizar_venda'];
+// Tag `tipo` da busca: `modelo` (1 produto) ou `ampla` (todos os modelos do teste, ~864 SKUs). Só diagnóstico.
+const TIPOS_BUSCA = ['modelo', 'ampla'];
 
 function limiares() {
   const t = {};
@@ -77,6 +80,8 @@ function limiares() {
   // Sem nenhuma requisição medida o threshold passaria vazio: exige que as duas rotas tenham sido exercitadas.
   t['http_reqs{endpoint:finalizar_venda}'] = ['count>0'];
   t['http_reqs{endpoint:buscar_produto}'] = ['count>0'];
+  // Sempre verdadeiros (informativos, não mudam o RNF-02): materializam o p95 da busca por tipo para o handleSummary.
+  for (const tipo of TIPOS_BUSCA) t[`http_req_duration{endpoint:buscar_produto,tipo:${tipo}}`] = ['p(95)>=0'];
   return t;
 }
 
@@ -148,11 +153,15 @@ function etiquetas(endpoint) {
 
 export default function (dados) {
   // RNF-02: 80% das buscas por um modelo (1 produto), 20% pelo termo amplo (todos os modelos do teste).
+  const tipo = Math.random() < 0.8 ? 'modelo' : 'ampla';
   const termo =
-    Math.random() < 0.8
+    tipo === 'modelo'
       ? `Modelo ${String(1 + Math.floor(Math.random() * dados.modelos)).padStart(2, '0')} ${RUN_ID}`
       : `Conjunto Modelo`;
-  const busca = http.get(`${BASE}/produtos?q=${encodeURIComponent(termo)}`, params({ tags: etiquetas('buscar_produto') }));
+  const busca = http.get(
+    `${BASE}/produtos?q=${encodeURIComponent(termo)}`,
+    params({ tags: { ...etiquetas('buscar_produto'), tipo } }),
+  );
   check(busca, { 'busca 200': (r) => r.status === 200 });
 
   // RNF-01: 1 ou 2 itens, SKUs sorteados entre centenas (vender o mesmo SKU serializaria na trava de linha).
@@ -195,6 +204,14 @@ export function handleSummary(data) {
     if (!d) continue;
     linhas.push(
       `${e.padEnd(16)} n=${n ? n.count : '-'}  avg=${f(d.avg)}  med=${f(d.med)}  p95=${f(d['p(95)'])}  p99=${f(d['p(99)'])}  max=${f(d.max)} ms  erro=${x ? (x.rate * 100).toFixed(2) : '-'}%`,
+    );
+  }
+  linhas.push('', 'Busca por tipo (informativo; o RNF-02 vale para o conjunto acima):');
+  for (const tipo of TIPOS_BUSCA) {
+    const d = valores(m[`http_req_duration{endpoint:buscar_produto,tipo:${tipo}}`]);
+    if (!d) continue;
+    linhas.push(
+      `  ${tipo.padEnd(8)} med=${f(d.med)}  p95=${f(d['p(95)'])}  p99=${f(d['p(99)'])}  max=${f(d.max)} ms`,
     );
   }
   const reprovados = [];
