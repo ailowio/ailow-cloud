@@ -11,6 +11,7 @@
 | [`deploy.md`](deploy.md) | Publicar uma versão (tag) na VPS |
 | [`rollback.md`](rollback.md) | Voltar para a versão anterior (app e, se for o caso, banco) |
 | [`migrar-vps.md`](migrar-vps.md) | Mudar o sistema para outra VPS (ou recriar a atual) |
+| [`dimensionamento-minimo.md`](dimensionamento-minimo.md) | Configuração mínima de infraestrutura, medida (CPU, RAM, desempenho; S14e) |
 | [`backup.md`](backup.md) | Backup cifrado para o Drive, retenção e ensaio de restauração (S14b) |
 
 > **Atualização S14b (2026-11-12):** deploy e rollback agora descrevem a **stack do Swarm** (`ops/stack/ailow.yaml`),
