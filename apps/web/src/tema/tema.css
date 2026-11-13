@@ -101,6 +101,54 @@ h1, h2, h3, h4 {
   box-shadow: var(--ailow-brilho);
 }
 
+/* GradeAcoes (UXM-10): item = tile arredondado de 72 px + rótulo embaixo, como a home do iPhone. */
+.ailow-acao-grade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 2px;
+  border-radius: var(--mantine-radius-lg);
+  color: var(--mantine-color-text);
+}
+.ailow-acao-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: var(--ailow-superficie);
+  border: 1px solid var(--ailow-borda);
+  box-shadow: var(--ailow-sombra);
+  color: var(--ailow-marca-texto);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.ailow-acao-grade:hover .ailow-acao-tile { border-color: var(--ailow-acao); }
+.ailow-acao-grade:active .ailow-acao-tile { transform: scale(0.95); }
+.ailow-acao-grade[data-desabilitado='true'] { opacity: 0.45; cursor: not-allowed; }
+.ailow-acao-grade[data-desabilitado='true'] .ailow-acao-tile { box-shadow: none; transform: none; }
+
+/* Pop-up de celular (Modal de componentes/navegacao.tsx): centralizado, cantos grandes, corpo com rolagem própria
+   (UXM-01: a página nunca rola) e no máximo 85dvh. */
+.ailow-popup .mantine-Modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 85dvh;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--ailow-borda);
+  box-shadow: var(--ailow-sombra);
+}
+.ailow-popup .mantine-Modal-header { flex: none; }
+.ailow-popup .mantine-Modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+
 /* Tabela só no computador; no celular a lista vira cartões (princípio 6). */
 .so-desktop { display: none; }
 @media (min-width: 48em) {
@@ -110,6 +158,8 @@ h1, h2, h3, h4 {
 @media (prefers-reduced-motion: reduce) {
   .ailow-bloco { transition: none; }
   .ailow-bloco:active { transform: none; }
+  .ailow-acao-tile { transition: none; }
+  .ailow-acao-grade:active .ailow-acao-tile { transform: none; }
 }
 
 /* Bloco que ainda não existe nesta versão: visível (a grade mantém o formato), mas apagado e sem ação. */

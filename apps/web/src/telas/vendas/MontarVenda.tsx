@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconAlertCircle, IconCamera } from '@tabler/icons-react';
+import { Alert, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { IconAlertCircle, IconCamera, IconReportAnalytics, IconShoppingCartCheck } from '@tabler/icons-react';
 import type { Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { Carrinho } from '../../componentes';
+import { GradeAcoes } from '../../componentes/GradeAcoes';
 import { Carregando } from '../estados';
 import { MENSAGEM_SEM_ESTOQUE, type ItemVenda, acrescentar, mudarQuantidade } from './carrinho';
 import { Scanner } from './Scanner';
@@ -93,9 +94,13 @@ export function MontarVenda(props: {
 
   return (
     <Stack gap="md">
-      <Button h={48} leftSection={<IconCamera aria-hidden />} onClick={() => setLendo(true)}>
-        Escanear
-      </Button>
+      <GradeAcoes
+        acoes={[
+          { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={32} stroke={1.75} />, aoTocar: () => setLendo(true) },
+          { id: 'fechar', rotulo: 'Fechar', icone: <IconShoppingCartCheck size={32} stroke={1.75} />, aoTocar: props.aoFechar, desabilitado: props.itens.length === 0 },
+          { id: 'gerenciar', rotulo: 'Gerenciar vendas', descricao: 'Gerenciar vendas (Relatório)', icone: <IconReportAnalytics size={32} stroke={1.75} />, aoTocar: props.aoRelatorio },
+        ]}
+      />
       <TextInput size="lg" label="Buscar" placeholder="Nome, código ou preço" value={busca} onChange={(e) => setBusca(e.currentTarget.value)} autoFocus autoComplete="off" />
       {carregando && <Carregando linhas={2} />}
       {erroBusca && (
@@ -139,12 +144,6 @@ export function MontarVenda(props: {
           }}
         />
       )}
-      <Button h={48} disabled={props.itens.length === 0} onClick={props.aoFechar}>
-        Fechar
-      </Button>
-      <Button h={48} variant="default" onClick={props.aoRelatorio}>
-        Relatório
-      </Button>
     </Stack>
   );
 }

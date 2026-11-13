@@ -5,8 +5,11 @@ import {
 import { notifications } from '@mantine/notifications';
 import { DataTable } from 'mantine-datatable';
 import {
-  IconCircleCheck, IconClock, IconCoin, IconMoon, IconPackage, IconPlus, IconSettings, IconSun, IconTruckDelivery, IconUsers,
+  IconCamera, IconCircleCheck, IconClock, IconCoin, IconMoon, IconPackage, IconPlus, IconReportAnalytics, IconSettings, IconSun,
+  IconTruckDelivery, IconUsers,
 } from '@tabler/icons-react';
+import { GradeAcoes } from '../componentes/GradeAcoes';
+import { Modal } from '../componentes/navegacao';
 import { ambar, azul, chumbo, marca } from '../tema/tema';
 import {
   BlocoAcao, Carrinho, EstadoVazio, Etapas, GradeModulos, SeloEstoque, TecladoPin, Valor, type ItemCarrinho,
@@ -18,6 +21,8 @@ const SKUS = [
   { codigo: '0042-48-CHO', nome: 'Tomara que caia Essência', tam: '48', cor: 'Chocolate', preco: 8900, estoque: 0, minimo: 2 },
   { codigo: '0107-M-PRE', nome: 'Calcinha Bombom cintura alta renda francesa', tam: 'M', cor: 'Preto', preco: 2900, estoque: 12, minimo: 4 },
 ];
+
+const LINHAS_DO_POPUP = Array.from({ length: 24 }, (_, i) => `Linha ${i + 1}: o corpo rola por dentro; a página atrás não se mexe.`);
 
 const PALETAS = [
   { nome: 'marca', papel: 'Cor do A da logo: ações, seleção, totais, PIN', cores: marca, tom: 5 },
@@ -57,6 +62,7 @@ export function Catalogo() {
     { codigo: SKUS[0].codigo, nome: SKUS[0].nome, detalhe: `${SKUS[0].tam} · ${SKUS[0].cor}`, precoCentavos: SKUS[0].preco, qtd: 1 },
     { codigo: SKUS[2].codigo, nome: SKUS[2].nome, detalhe: `${SKUS[2].tam} · ${SKUS[2].cor}`, precoCentavos: SKUS[2].preco, qtd: 2 },
   ]);
+  const [popup, setPopup] = useState<'curto' | 'longo' | null>(null);
   const mudar = (codigo: string, delta: number) =>
     setItens((l) => l.map((i) => (i.codigo === codigo ? { ...i, qtd: i.qtd + delta } : i)).filter((i) => i.qtd > 0));
 
@@ -95,6 +101,33 @@ export function Catalogo() {
               <BlocoAcao rotulo="Pessoas" icone={<IconClock size={32} stroke={1.75} />} />
               <BlocoAcao rotulo="Config." icone={<IconSettings size={32} stroke={1.75} />} />
             </GradeModulos>
+          </Secao>
+
+          <Secao titulo="Menu de ações">
+            <GradeAcoes
+              acoes={[
+                { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={32} stroke={1.75} />, aoTocar: () => notifications.show({ message: 'Escanear', color: 'marca' }) },
+                { id: 'nova', rotulo: 'Nova venda', icone: <IconPlus size={32} stroke={1.75} />, aoTocar: () => notifications.show({ message: 'Nova venda', color: 'marca' }) },
+                { id: 'gerenciar', rotulo: 'Gerenciar vendas', icone: <IconReportAnalytics size={32} stroke={1.75} />, aoTocar: () => notifications.show({ message: 'Gerenciar vendas', color: 'marca' }) },
+                { id: 'contas', rotulo: 'Contas a pagar', icone: <IconCoin size={32} stroke={1.75} />, aoTocar: () => notifications.show({ message: 'Contas a pagar', color: 'marca' }) },
+                { id: 'etiquetas', rotulo: 'Etiquetas', icone: <IconPackage size={32} stroke={1.75} />, aoTocar: () => notifications.show({ message: 'Etiquetas', color: 'marca' }) },
+                { id: 'bloqueada', rotulo: 'Indisponível', icone: <IconSettings size={32} stroke={1.75} />, aoTocar: () => undefined, desabilitado: true },
+              ]}
+            />
+          </Secao>
+
+          <Secao titulo="Pop-up">
+            <Group grow>
+              <Button variant="default" onClick={() => setPopup('curto')}>Abrir pop-up</Button>
+              <Button variant="default" onClick={() => setPopup('longo')}>Abrir pop-up longo</Button>
+            </Group>
+            <Modal opened={popup !== null} onClose={() => setPopup(null)} title="Pop-up de celular">
+              <Stack gap="sm">
+                <Text>Aparece no centro, com cantos arredondados e margem de 16 px. O Voltar do aparelho fecha.</Text>
+                {popup === 'longo' && LINHAS_DO_POPUP.map((t) => <Text key={t} c="dimmed">{t}</Text>)}
+                <Button onClick={() => setPopup(null)}>Entendi</Button>
+              </Stack>
+            </Modal>
           </Secao>
 
           <Secao titulo="Entrada por PIN">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef } from 'react';
 import { Modal as ModalMantine, type ModalProps } from '@mantine/core';
+import { useReducedMotion } from '@mantine/hooks';
 import { useLocation, useNavigate, useNavigationType } from 'react-router';
 
 // UXM-03: o botão Voltar do sistema nunca sai do app. Três peças, todas sobre o histórico do navegador:
@@ -97,5 +98,20 @@ export function Modal({ opened, onClose, ...resto }: ModalProps) {
     [naEntrada],
   );
 
-  return <ModalMantine opened={opened} onClose={() => (naEntrada() ? navigate(-1) : onClose())} {...resto} />;
+  // Formato de pop-up de celular (S05/UXM-10): centrado, 16 px de margem lateral, entrada com escala + fade de 180 ms
+  // (sem animação com prefers-reduced-motion), fundo escurecido, X de 48 px. Altura máxima e rolagem do corpo: tema.css.
+  const semMovimento = useReducedMotion();
+  return (
+    <ModalMantine
+      centered
+      xOffset={16}
+      className="ailow-popup"
+      overlayProps={{ backgroundOpacity: 0.6, blur: 2 }}
+      transitionProps={{ transition: 'pop', duration: semMovimento ? 0 : 180 }}
+      closeButtonProps={{ size: 48 }}
+      opened={opened}
+      onClose={() => (naEntrada() ? navigate(-1) : onClose())}
+      {...resto}
+    />
+  );
 }
