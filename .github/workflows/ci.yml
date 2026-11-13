@@ -217,6 +217,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
+      # S14d: o pipeline de deploy (ops/deploy/) é testado sem VPS (atalhos de docker/curl/systemctl); o canário prova
+      # que o teste reprova se a reversão automática quebrar (L-0006).
+      - name: pipeline de deploy (testes e canário)
+        run: |
+          bash scripts/deploy-test.sh
+          bash scripts/deploy-test.sh canario
       - run: bash scripts/stack-local.sh
 
   compose:

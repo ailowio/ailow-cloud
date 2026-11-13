@@ -4,6 +4,9 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### Adicionado
+- S14d, **pipeline de deploy** (ADR 012; sem mudança de API, OpenAPI continua 0.14.0): workflow `deploy.yml` (disparo manual com a tag; valida formato, existência, commit na `main` e as imagens no GHCR; job de implantação no Environment `producao` com **revisor obrigatório**, só `main`; chave SSH dedicada com host key fixada); `ops/deploy/ssh-entrada.sh` (comando forçado: aceita só `deploy vX.Y.Z`, serializa com `flock`, confere a tag na `main`) e `ops/deploy/deploy.sh` (backup antes; espera `api`/`web` e 3 `/health` seguidos; **reversão automática** para a tag anterior; códigos de saída 0/2/10/20/21). Testes sem VPS em `scripts/deploy-test.sh` (comando injetado, sucesso, health falhando ⇒ reversão, backup falhando ⇒ nada alterado, Swarm revertendo sozinho) mais um **canário** que reprova se a reversão quebrar, ambos no job `stack` do CI. Runbook de deploy reescrito (§2 pipeline, §2b emergência) e inventários de acessos, rotinas (R-05) e interfaces (I-07) atualizados. Encerra a exceção EX-02 depois do 1º deploy por ele em produção.
+
 ## [1.0.0] - 2026-11-13
 
 Primeira versão em produção (`https://cloud.ailow.com.br`, VPS compartilhada com o Swarm da Copel). A `v0.1.0` (2026-11-12, mesmo código da `main` em `fcf532b`) foi a tag de teste que exercitou o `publicar.yml` e o deploy; a `v1.0.0` acrescenta só os arquivos de operação abaixo e a documentação com a evidência real, **sem mudança de API** (OpenAPI continua 0.14.0).
