@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import { Group, Stack, Text, UnstyledButton } from '@mantine/core';
+import { Navigate, useLocation, useNavigate } from 'react-router';
+import { useSairDoAssistente, useVoltar } from '../../componentes/navegacao';
 import { IconBuildingStore, IconCategory, IconChevronRight, IconPercentage, IconUsers } from '@tabler/icons-react';
 import type { Api } from '../../api/endpoints';
 import { Moldura } from '../Moldura';
@@ -23,8 +24,14 @@ export function Configuracoes(props: {
   aoVoltar: () => void;
   aoMudarInatividade: (minutos: number) => void;
 }) {
-  const [secao, setSecao] = useState<Secao>('menu');
-  const item = ITENS.find((i) => i.id === secao);
+  const navigate = useNavigate();
+  // Cada área é uma subrota de /configuracoes: o Voltar do sistema (e a seta do topo) recua uma tela por vez.
+  const sub = useLocation().pathname.replace(/^\/configuracoes\/?/, '').replace(/\/$/, '');
+  const voltarUm = useVoltar('/configuracoes');
+  const sair = useSairDoAssistente('/configuracoes');
+  const item = ITENS.find((i) => i.id === sub);
+  const secao: Secao = item ? item.id : 'menu';
+  if (sub !== '' && !item) return <Navigate to="/configuracoes" replace />;
 
   return (
     <Moldura
@@ -32,13 +39,13 @@ export function Configuracoes(props: {
       logoEmpresa
       voltar={{
         rotulo: item ? 'Configurações' : 'Início',
-        aoVoltar: item ? () => setSecao('menu') : props.aoVoltar,
+        aoVoltar: item ? voltarUm : props.aoVoltar,
       }}
     >
       {secao === 'menu' && (
         <Stack gap="sm">
           {ITENS.map((i) => (
-            <UnstyledButton key={i.id} className="ailow-bloco" mih={72} p="md" w="100%" onClick={() => setSecao(i.id)}>
+            <UnstyledButton key={i.id} className="ailow-bloco" mih={72} p="md" w="100%" onClick={() => navigate(`/configuracoes/${i.id}`)}>
               <Group wrap="nowrap" gap="md">
                 {i.icone}
                 <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
@@ -56,7 +63,7 @@ export function Configuracoes(props: {
         </Stack>
       )}
       {secao === 'usuarios' && <Usuarios api={props.api} eu={props.usuarioId} />}
-      {secao === 'empresa' && <DadosDaEmpresa api={props.api} aoMudarInatividade={props.aoMudarInatividade} aoConcluir={() => setSecao('menu')} />}
+      {secao === 'empresa' && <DadosDaEmpresa api={props.api} aoMudarInatividade={props.aoMudarInatividade} aoConcluir={() => sair()} />}
       {secao === 'markup' && <Markup api={props.api} />}
       {secao === 'categorias' && <Categorias api={props.api} />}
     </Moldura>

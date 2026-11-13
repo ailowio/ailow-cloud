@@ -196,7 +196,10 @@ test('(d) Voltar do sistema: recua cada passo, e só do primeiro passo sai do as
   await expect(page.getByLabel('Nome do modelo')).toHaveValue(`Volta ${sufixo}`);
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Que tipo de peça é?' })).toBeVisible();
-  // Primeiro passo: o Voltar do sistema sai do assistente (volta para a tela anterior do app).
+  // Primeiro passo: o Voltar do sistema sai do assistente (volta para a tela anterior do app: a lista de Produtos,
+  // agora uma rota própria, S14b); mais um Voltar chega ao Início.
+  await page.goBack();
+  await expect(page.getByLabel('Buscar produto')).toBeVisible();
   await page.goBack();
   await expect(page.getByText('O que vamos fazer?')).toBeVisible();
 

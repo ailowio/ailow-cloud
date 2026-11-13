@@ -6,8 +6,17 @@ import react from '@vitejs/plugin-react';
 // Em produção o proxy HTTPS faz o mesmo papel (S14). API_URL permite apontar para outra porta/host local.
 // Depois do prefixo vale "/", "?" (query string: /categorias?tipo=...) ou o fim da URL; o Vite casa com a URL inteira.
 const alvo = process.env.API_URL ?? 'http://127.0.0.1:3000';
+// Colisão de nomes: vendas, produtos, clientes, compras e financeiro são ao mesmo tempo rotas do front (ADR 011) e da
+// API. Quem abre o endereço no navegador (link direto, F5) manda `Accept: text/html`; as chamadas do app usam fetch
+// (`Accept: */*`). `bypass` devolve o index.html do app para a navegação, e o resto segue para a API.
+const ROTAS_DO_FRONT = /^\/(vendas|produtos|clientes|compras|financeiro)(\/|\?|$)/;
 const proxy = {
-  '^/(acesso|usuarios|empresa|categorias|financeiro|produtos|skus|estoque|etiquetas|clientes|vendas|fornecedores|compras|pontos|admin|health|openapi\\.json)(/|\\?|$)': { target: alvo, changeOrigin: false },
+  '^/(acesso|usuarios|empresa|categorias|financeiro|produtos|skus|estoque|etiquetas|clientes|vendas|fornecedores|compras|pontos|admin|health|openapi\\.json)(/|\\?|$)': {
+    target: alvo,
+    changeOrigin: false,
+    bypass: (req: { url?: string; headers: { accept?: string } }) =>
+      ROTAS_DO_FRONT.test(req.url ?? '') && (req.headers.accept ?? '').includes('text/html') ? '/index.html' : undefined,
+  },
 };
 
 export default defineConfig({

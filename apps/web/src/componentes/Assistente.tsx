@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { Box, Button, Group, Progress, Stack, Text, Title } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useLocation, useNavigate } from 'react-router';
+import { estadoDoPasso } from './navegacao';
 
 // Peças do assistente em passos (padrão da S10, "Novo produto"), compartilhadas pela "Nova despesa" (S11).
 
@@ -133,7 +134,7 @@ export function usePassoNoHistorico<P extends string>(passos: readonly P[]) {
     atual,
     indice,
     ultimo: indice === passos.length - 1,
-    avancar: () => navigate(location.pathname + location.search, { state: { passo: passos[indice + 1] } }),
+    avancar: () => navigate(location.pathname + location.search, { state: estadoDoPasso(passos[indice + 1] as P, indice + 1) }),
     recuar: () => navigate(-1),
   };
 }

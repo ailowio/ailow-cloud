@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Button, SegmentedControl, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import type { Cliente, Perfil } from '@ailow/shared';
+import { useSairDoAssistente, useVoltar } from '../../componentes/navegacao';
 import { mascararCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
@@ -16,7 +18,6 @@ import { NovoCliente } from './NovoCliente';
 
 const SEM_CLIENTES: Cliente[] = [];
 
-type Vista = 'lista' | 'novo';
 type Situacao = 'ativos' | 'inativos';
 
 /**
@@ -24,23 +25,28 @@ type Situacao = 'ativos' | 'inativos';
  * só o Dono vê os inativos, inativa, reativa e exclui.
  */
 export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void }) {
-  const [vista, setVista] = useState<Vista>('lista');
+  const navigate = useNavigate();
+  // Cada tela é uma subrota de /clientes (/clientes/novo): o Voltar recua uma tela por vez.
+  const sub = useLocation().pathname.replace(/^\/clientes\/?/, '').replace(/\/$/, '');
+  const voltarUm = useVoltar('/clientes');
+  const sair = useSairDoAssistente('/clientes');
   const [abertoId, setAbertoId] = useState<string | null>(null);
   // Muda quando algo muda na ficha: a lista busca de novo.
   const [rodada, setRodada] = useState(0);
   const dono = props.perfil === 'dono';
 
-  if (vista === 'novo') {
+  if (sub !== '' && sub !== 'novo') return <Navigate to="/clientes" replace />;
+  if (sub === 'novo') {
     return (
-      <Moldura titulo="Novo cliente" voltar={{ rotulo: 'Clientes', aoVoltar: () => setVista('lista') }}>
+      <Moldura titulo="Novo cliente" voltar={{ rotulo: 'Clientes', aoVoltar: voltarUm }}>
         <NovoCliente
           api={props.api}
-          aoCancelar={() => setVista('lista')}
+          aoCancelar={() => sair()}
           // S13: o assistente devolve as entradas do histórico ao sair e isso fecharia uma ficha aberta no mesmo
           // instante; por isso volta à lista (com o aviso "Cliente cadastrado") em vez de abrir a ficha.
           aoCriar={() => {
             setRodada((r) => r + 1);
-            setVista('lista');
+            sair();
           }}
         />
       </Moldura>
@@ -49,7 +55,7 @@ export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
   return (
     <Moldura titulo="Clientes" voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
-      <Lista key={rodada} api={props.api} dono={dono} aoNovo={() => setVista('novo')} aoAbrir={setAbertoId} />
+      <Lista key={rodada} api={props.api} dono={dono} aoNovo={() => navigate('/clientes/novo')} aoAbrir={setAbertoId} />
       {abertoId && (
         <FichaCliente
           api={props.api}

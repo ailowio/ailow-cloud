@@ -1,7 +1,9 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Badge, Group, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconAlertTriangle, IconChevronRight, IconListDetails, IconPlus, IconQrcode, IconSearch } from '@tabler/icons-react';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import type { Perfil, Produto } from '@ailow/shared';
+import { useSairDoAssistente, useVoltar } from '../../componentes/navegacao';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
 import { GradeAcoes } from '../../componentes/GradeAcoes';
@@ -22,32 +24,45 @@ const SEM_PRODUTOS: Produto[] = [];
 type Vista = 'lista' | 'novo' | 'etiquetas';
 type Aba = 'todos' | 'baixo';
 
+/** Cada tela é uma subrota de /produtos (/produtos/novo, /produtos/etiquetas): o Voltar recua uma tela por vez. */
+function vistaDaRota(caminho: string): Vista | null {
+  const sub = caminho.replace(/^\/produtos\/?/, '').replace(/\/$/, '');
+  if (sub === '') return 'lista';
+  return sub === 'novo' || sub === 'etiquetas' ? sub : null;
+}
+
 /**
  * Produtos. O Dono cadastra, vê o custo e mexe no estoque; o Vendedor só consulta produto, preço e estoque
  * (RF-PRO-07). A API já não manda o custo ao Vendedor; a tela também não o mostra.
  */
 export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void }) {
-  const [vista, setVista] = useState<Vista>('lista');
+  const navigate = useNavigate();
+  const vista = vistaDaRota(useLocation().pathname);
+  const voltarUm = useVoltar('/produtos');
+  const sair = useSairDoAssistente('/produtos');
   const [busca, setBusca] = useState('');
   const dono = props.perfil === 'dono';
 
-  if (vista === 'etiquetas' && dono) {
+  if (vista === null || (vista !== 'lista' && !dono)) return <Navigate to="/produtos" replace />;
+
+  if (vista === 'etiquetas') {
     return (
-      <Moldura titulo="Etiquetas" voltar={{ rotulo: 'Produtos', aoVoltar: () => setVista('lista') }}>
+      <Moldura titulo="Etiquetas" voltar={{ rotulo: 'Produtos', aoVoltar: voltarUm }}>
         <Etiquetas api={props.api} />
       </Moldura>
     );
   }
 
-  if (vista === 'novo' && dono) {
+  if (vista === 'novo') {
     return (
-      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: () => setVista('lista') }}>
+      // A seta diz "Voltar para Produtos": sai do assistente inteiro (devolve os passos), sem deixar passos fantasma.
+      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: () => sair() }}>
         <NovoProduto
           api={props.api}
-          aoCancelar={() => setVista('lista')}
+          aoCancelar={() => sair()}
           aoTerminar={(codigo) => {
             setBusca(codigo ?? '');
-            setVista('lista');
+            sair();
           }}
         />
       </Moldura>
@@ -60,8 +75,8 @@ export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void
         api={props.api}
         dono={dono}
         buscaInicial={busca}
-        aoNovo={() => setVista('novo')}
-        aoEtiquetas={() => setVista('etiquetas')}
+        aoNovo={() => navigate('/produtos/novo')}
+        aoEtiquetas={() => navigate('/produtos/etiquetas')}
       />
     </Moldura>
   );

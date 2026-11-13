@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
+import { useNavigate } from 'react-router';
+import { useSairDoAssistente, useVoltar } from '../../componentes/navegacao';
 import type { StatusPedido } from '@ailow/shared';
 import { linkPedidoWhatsApp, textoDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -20,39 +22,36 @@ import { ROTULO_STATUS, mensagemCompras } from './rotulos';
 type PedidoDaLista = Awaited<ReturnType<Api['pedidosCompra']>>['pedidos'][number];
 const SEM_PEDIDOS: PedidoDaLista[] = [];
 
-type Vista = 'lista' | 'novo' | 'ficha';
-
-/** RF-COM-02…04: lista, novo rascunho, enviar pelo WhatsApp e receber com parcelas. */
-export function Pedidos(props: { api: Api }) {
-  const [vista, setVista] = useState<Vista>('lista');
-  const [abertoId, setAbertoId] = useState<string | null>(null);
+/**
+ * RF-COM-02…04: lista, novo rascunho, enviar pelo WhatsApp e receber com parcelas.
+ * Rotas: /compras/pedidos (lista), /compras/pedidos/novo, /compras/pedidos/<id> (ficha); `sub` é o trecho depois de pedidos.
+ */
+export function Pedidos(props: { api: Api; sub?: string }) {
+  const navigate = useNavigate();
+  const sair = useSairDoAssistente('/compras/pedidos');
+  const voltarUm = useVoltar('/compras/pedidos');
   const [rodada, setRodada] = useState(0);
 
-  if (vista === 'novo') {
+  if (props.sub === 'novo') {
     return (
       <NovoPedido
         api={props.api}
-        aoCancelar={() => setVista('lista')}
+        aoCancelar={() => sair()}
         aoCriar={(id) => {
           setRodada((r) => r + 1);
-          setAbertoId(id);
-          setVista('ficha');
+          sair(`/compras/pedidos/${id}`);
         }}
       />
     );
   }
 
-  if (vista === 'ficha' && abertoId) {
+  if (props.sub) {
     return (
       <FichaPedido
-        key={`${abertoId}-${rodada}`}
+        key={`${props.sub}-${rodada}`}
         api={props.api}
-        id={abertoId}
-        aoVoltar={() => {
-          setAbertoId(null);
-          setVista('lista');
-          setRodada((r) => r + 1);
-        }}
+        id={props.sub}
+        aoVoltar={voltarUm}
         aoMudar={() => setRodada((r) => r + 1)}
       />
     );
@@ -62,11 +61,8 @@ export function Pedidos(props: { api: Api }) {
     <Lista
       key={rodada}
       api={props.api}
-      aoNovo={() => setVista('novo')}
-      aoAbrir={(id) => {
-        setAbertoId(id);
-        setVista('ficha');
-      }}
+      aoNovo={() => navigate('/compras/pedidos/novo')}
+      aoAbrir={(id) => navigate(`/compras/pedidos/${id}`)}
     />
   );
 }

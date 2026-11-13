@@ -25,7 +25,8 @@ export function TravaVoltar() {
     const armar = () => {
       if (armada.current) return;
       armada.current = true;
-      if (posicao() === 0) navigate(window.location.pathname + window.location.search);
+      // `trava` marca a entrada de reserva: ela repete a tela da entrada 0, então a seta não deve "recuar" para ela.
+      if (posicao() === 0) navigate(window.location.pathname + window.location.search, { state: { trava: true } });
     };
     window.addEventListener('pointerdown', armar, { once: true, capture: true });
     window.addEventListener('keydown', armar, { once: true, capture: true });
@@ -47,13 +48,55 @@ export function TravaVoltar() {
 const modaisDaEntrada = (): string[] =>
   (window.history.state as { usr?: { modais?: string[] } | null } | null)?.usr?.modais ?? [];
 
-/** Um passo para trás no histórico; sem passo anterior dentro do app, vai para `reserva`. */
+interface EstadoDaEntrada {
+  trava?: boolean;
+  /** Quantos passos de assistente foram empurrados acima da primeira tela dele. */
+  n?: number;
+}
+const estadoAtual = (): EstadoDaEntrada => (window.history.state as { usr?: EstadoDaEntrada | null } | null)?.usr ?? {};
+
+/** Estado da entrada do próximo passo de um assistente: guarda o passo, quantos passos há e se a base é a reserva. */
+export const estadoDoPasso = <P extends string>(passo: P, n: number) => ({
+  passo,
+  n,
+  ...(estadoAtual().trava ? { trava: true } : {}),
+});
+
+/**
+ * Um passo para trás no histórico; sem passo anterior dentro do app (link direto, recarregar), vai para `reserva`
+ * (o pai da tela). Na entrada de reserva (que repete a tela) a seta também vai ao pai, senão ela não sairia do lugar.
+ */
 export function useVoltar(reserva = '/'): () => void {
   const navigate = useNavigate();
   return useCallback(() => {
-    if (posicao() > 0) navigate(-1);
-    else navigate(reserva, { replace: true });
+    if (posicao() > 0 && !estadoAtual().trava) navigate(-1);
+    else navigate(reserva, { replace: true, state: posicao() > 0 ? { trava: true } : null });
   }, [navigate, reserva]);
+}
+
+/**
+ * Sair de um assistente (cancelar ou concluir) devolve todas as entradas que ele empurrou e cai no pai; com `depois`,
+ * segue para outra tela empurrando-a (o Voltar dela volta ao pai, nunca ao assistente). Sem entradas para devolver
+ * (link direto), troca a tela atual pelo pai.
+ */
+export function useSairDoAssistente(pai: string): (depois?: string) => void {
+  const navigate = useNavigate();
+  return useCallback(
+    (depois?: string) => {
+      const { trava, n = 0 } = estadoAtual();
+      const devolver = trava ? n : n + 1;
+      const seguir = () => {
+        if (trava) navigate(pai, { replace: true, state: { trava: true } });
+        if (depois && window.location.pathname !== depois) navigate(depois);
+      };
+      if (devolver === 0) seguir();
+      else if (posicao() >= devolver) {
+        window.addEventListener('popstate', () => setTimeout(seguir, 0), { once: true });
+        navigate(-devolver);
+      } else navigate(depois ?? pai, { replace: true });
+    },
+    [navigate, pai],
+  );
 }
 
 /**

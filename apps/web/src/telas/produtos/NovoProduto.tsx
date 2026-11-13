@@ -6,6 +6,7 @@ import type { Categoria, Porte } from '@ailow/shared';
 import { MAX_SKUS_POR_PRODUTO, PRECO_MAXIMO_CENTAVOS, chaveCor } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
+import { estadoDoPasso } from '../../componentes/navegacao';
 import { useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { BotaoConfigCategorias } from './ConfigCategorias';
@@ -191,7 +192,7 @@ function Assistente(props: {
       return;
     }
     if (passoAtual === 'custo') reconciliarValores();
-    navigate(location.pathname + location.search, { state: { passo: passos[indice + 1] } });
+    navigate(location.pathname + location.search, { state: estadoDoPasso(passos[indice + 1] as Passo, indice + 1) });
   }
 
   function voltar() {

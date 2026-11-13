@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
+import { Navigate, useNavigate } from 'react-router';
+import { useSairDoAssistente } from '../../componentes/navegacao';
 import type { Fornecedor } from '@ailow/shared';
 import { mascararCelular, normalizarCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -23,46 +25,47 @@ import { mensagemCompras } from './rotulos';
 
 const SEM_FORNECEDORES: Fornecedor[] = [];
 
-type Vista = 'lista' | 'novo' | 'editar';
-
 const TITULOS: Record<PassoFornecedor, string> = {
   nome: 'Qual é o nome do fornecedor?',
   contato: 'Como falar com ele?',
   confirmar: 'Confira e salve',
 };
 
-/** RF-COM-01: lista, cadastro e edição de fornecedores (cadastro e edição em passos, S13). */
-export function Fornecedores(props: { api: Api }) {
-  const [vista, setVista] = useState<Vista>('lista');
+/**
+ * RF-COM-01: lista, cadastro e edição de fornecedores (cadastro e edição em passos, S13).
+ * Rotas: /compras/fornecedores, /compras/fornecedores/novo e /compras/fornecedores/editar (`sub` é o trecho depois de fornecedores).
+ * A edição leva o fornecedor escolhido na memória; recarregar a página (sem ele) volta à lista.
+ */
+export function Fornecedores(props: { api: Api; sub?: string }) {
+  const navigate = useNavigate();
+  const sair = useSairDoAssistente('/compras/fornecedores');
   const [editando, setEditando] = useState<Fornecedor | null>(null);
   const [rodada, setRodada] = useState(0);
 
-  if (vista === 'novo' || (vista === 'editar' && editando)) {
+  if (props.sub === 'editar' && !editando) return <Navigate to="/compras/fornecedores" replace />;
+  if (props.sub === 'novo' || props.sub === 'editar') {
     return (
       <FormFornecedor
         api={props.api}
-        inicial={vista === 'editar' ? editando : null}
-        aoCancelar={() => {
-          setVista('lista');
-          setEditando(null);
-        }}
+        inicial={props.sub === 'editar' ? editando : null}
+        aoCancelar={() => sair()}
         aoSalvar={() => {
           setRodada((r) => r + 1);
-          setVista('lista');
-          setEditando(null);
+          sair();
         }}
       />
     );
   }
+  if (props.sub) return <Navigate to="/compras/fornecedores" replace />;
 
   return (
     <Lista
       key={rodada}
       api={props.api}
-      aoNovo={() => setVista('novo')}
+      aoNovo={() => navigate('/compras/fornecedores/novo')}
       aoEditar={(f) => {
         setEditando(f);
-        setVista('editar');
+        navigate('/compras/fornecedores/editar');
       }}
     />
   );
