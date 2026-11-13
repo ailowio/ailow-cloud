@@ -1,0 +1,101 @@
+# Deploy em produção por pipeline (S14d, ADR 012). Regras: OPS-04/05, AUD-24/27/96, SEC-*, CI-07/18.
+# Disparo MANUAL com a tag como entrada; só roda depois da APROVAÇÃO do Pedro no Environment `producao`
+# (aprovação separada do disparo, evidência no GitHub). Serializado (um deploy por vez). Imagens e tag já passaram pelo
+# publicar.yml; aqui só se implanta uma tag publicada, que está na main.
+# O servidor aceita só `deploy vX.Y.Z` (comando forçado da chave), faz backup, implanta, espera 3 health seguidos e
+# REVERTE sozinho se falhar (ops/deploy/). Rollback manual = rodar este workflow com a tag anterior.
+# Segredos (Environment `producao`): DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER, DEPLOY_HOST_KEY (known_hosts fixado).
+# Todas as actions de terceiros fixadas por SHA (CI-18).
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a implantar (vX.Y.Z, já publicada pelo workflow Publicar imagens)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
+env:
+  DOMINIO: cloud.ailow.com.br
+  TAG: ${{ inputs.tag }}
+
+jobs:
+  validar:
+    name: validar a tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: formato, existência e commit na main
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag inválida: use vX.Y.Z" >&2; exit 1; }
+          git rev-parse -q --verify "refs/tags/${TAG}^{commit}" > /dev/null || { echo "a tag ${TAG} não existe" >&2; exit 1; }
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "refs/tags/${TAG}" origin/main || { echo "tag fora da main: não implanto" >&2; exit 1; }
+      - name: as duas imagens existem no registro
+        run: |
+          for img in api web; do
+            docker manifest inspect "ghcr.io/ailowio/ailow-cloud-${img}:${TAG}" > /dev/null \
+              || { echo "imagem ${img}:${TAG} não encontrada (o workflow Publicar imagens rodou?)" >&2; exit 1; }
+          done
+
+  implantar:
+    name: implantar em producao
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # A aprovação do Pedro acontece aqui (Environment com revisor obrigatório); os segredos só existem neste Environment.
+    environment: producao
+    steps:
+      - name: chave e known_hosts
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+      - name: deploy (backup, implantação, espera de saúde, reversão automática)
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -o pipefail
+          set +e
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" "deploy ${TAG}" 2>&1 | tee deploy.log
+          codigo=${PIPESTATUS[0]}
+          set -e
+          {
+            echo "### Deploy ${TAG}"
+            echo "Aprovação: Environment \`producao\` (ver o histórico do run). Código de saída do servidor: ${codigo}"
+            echo '```'
+            grep -E '^(api|web)=' deploy.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          case "$codigo" in
+            0) ;;
+            20) echo "::error::deploy falhou e o servidor REVERTEU para a versão anterior (veja o log)"; exit 1 ;;
+            21) echo "::error::deploy falhou e a reversão NÃO foi confirmada: intervenção humana (docs/runbooks/rollback.md)"; exit 1 ;;
+            *) echo "::error::deploy recusado ou abortado (código ${codigo}); a stack não foi alterada se o código for 2 a 5 ou 10"; exit 1 ;;
+          esac
+      - name: verificação de fora (internet)
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' "https://${DOMINIO}/health")" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' "https://${DOMINIO}/metrics")" = 404
+          curl -sI "https://${DOMINIO}/" | grep -i '^strict-transport-security: max-age=31536000'
+      - name: apagar a chave do runner
+        if: always()
+        run: shred -u ~/.ssh/deploy_key ~/.ssh/known_hosts 2>/dev/null || true
