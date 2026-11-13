@@ -124,7 +124,7 @@ function Assistente(props: {
   if (criado) {
     return (
       <Stack gap="md">
-        <Alert color="teal" icon={<IconCheck />} title={`Produto ${String(criado.numero).padStart(4, '0')} cadastrado`}>
+        <Alert color="marca" icon={<IconCheck />} title={`Produto ${String(criado.numero).padStart(4, '0')} cadastrado`}>
           {criado.codigos.length} {criado.codigos.length === 1 ? 'peça criada' : 'peças criadas'}, cada uma com o seu código.
         </Alert>
         <Stack gap={4} className="ailow-cartao" p="md">

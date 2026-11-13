@@ -7,7 +7,7 @@ import { DataTable } from 'mantine-datatable';
 import {
   IconCircleCheck, IconClock, IconCoin, IconMoon, IconPackage, IconPlus, IconSettings, IconSun, IconTruckDelivery, IconUsers,
 } from '@tabler/icons-react';
-import { ambar, azul, ciano, coral, navy } from '../tema/tema';
+import { ambar, azul, chumbo, marca } from '../tema/tema';
 import {
   BlocoAcao, Carrinho, EstadoVazio, Etapas, GradeModulos, SeloEstoque, TecladoPin, Valor, type ItemCarrinho,
 } from '../componentes';
@@ -20,11 +20,10 @@ const SKUS = [
 ];
 
 const PALETAS = [
-  { nome: 'azul', papel: 'Primária: ações, seleção, foco', cores: azul, tom: 6 },
-  { nome: 'ciano', papel: 'Detalhes luminosos (com moderação)', cores: ciano, tom: 5 },
-  { nome: 'coral', papel: 'Destaque laranja: totais, PIN', cores: coral, tom: 5 },
+  { nome: 'marca', papel: 'Cor do A da logo: ações, seleção, totais, PIN', cores: marca, tom: 5 },
+  { nome: 'azul', papel: 'Secundária: avisos informativos', cores: azul, tom: 6 },
   { nome: 'ambar', papel: 'Alerta: estoque baixo', cores: ambar, tom: 5 },
-  { nome: 'navy', papel: 'Base neutra do tema escuro', cores: navy, tom: 7 },
+  { nome: 'chumbo', papel: 'Base neutra do tema escuro (cinza chumbo)', cores: chumbo, tom: 7 },
 ];
 
 function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
@@ -67,9 +66,9 @@ export function Catalogo() {
         <Container size="sm" py="sm">
           <Group justify="space-between">
             <Group gap="xs">
-              <Box w={10} h={10} bg="coral.5" style={{ borderRadius: 3, boxShadow: '0 0 12px var(--mantine-color-coral-5)' }} />
+              <Box w={10} h={10} bg="marca.5" style={{ borderRadius: 3, boxShadow: '0 0 12px var(--ailow-marca)' }} />
               <Title order={1} fz="xl">Ailow ERP</Title>
-              <Badge variant="light" color="azul">Design System</Badge>
+              <Badge variant="light" color="marca">Design System</Badge>
             </Group>
             <ActionIcon variant="default" size={48} onClick={toggleColorScheme} aria-label="Trocar tema claro/escuro">
               {colorScheme === 'dark' ? <IconSun /> : <IconMoon />}
@@ -100,7 +99,7 @@ export function Catalogo() {
 
           <Secao titulo="Entrada por PIN">
             <Box p="md" className="ailow-cartao">
-              <TecladoPin onCompleto={(pin) => notifications.show({ message: `PIN com ${pin.length} dígitos recebido.`, color: 'azul' })} />
+              <TecladoPin onCompleto={(pin) => notifications.show({ message: `PIN com ${pin.length} dígitos recebido.`, color: 'marca' })} />
             </Box>
           </Secao>
 
@@ -151,7 +150,7 @@ export function Catalogo() {
 
           <Secao titulo="Avisos">
             <SimpleGrid cols={2}>
-              <Button color="azul" leftSection={<IconCircleCheck size={20} />} onClick={() => notifications.show({ message: 'Venda 1827 finalizada.', color: 'azul', autoClose: 3000 })}>
+              <Button color="marca" leftSection={<IconCircleCheck size={20} />} onClick={() => notifications.show({ message: 'Venda 1827 finalizada.', color: 'marca', autoClose: 3000 })}>
                 Sucesso
               </Button>
               <Button color="red" onClick={() => notifications.show({ title: 'Peça sem estoque', message: 'Chame o Dono.', color: 'red', autoClose: false })}>

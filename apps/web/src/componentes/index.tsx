@@ -12,7 +12,7 @@ export function BlocoAcao(props: { rotulo: string; icone: ReactNode; destaque?: 
     <Indicator label={alerta} disabled={!alerta} color="red" size={22} offset={10} zIndex={2}>
       <UnstyledButton className="ailow-bloco" data-destaque={destaque ? 'true' : 'false'} data-em-breve={emBreve ? 'true' : 'false'} disabled={emBreve} onClick={onClick} mih={104} w="100%" py="sm" px={6}>
         <Stack align="center" gap={10}>
-          <Box c={destaque ? '#fff' : 'var(--ailow-primario-texto)'} lh={0}>{icone}</Box>
+          <Box c={destaque ? 'var(--ailow-sobre-acao)' : 'var(--ailow-marca-texto)'} lh={0}>{icone}</Box>
           <Text fw={650} fz={13} ta="center" lang="pt-BR" style={{ hyphens: 'auto', overflowWrap: 'break-word' }}>{rotulo}</Text>
           {emBreve && <Text size="xs" c="dimmed">em breve</Text>}
         </Stack>
@@ -29,7 +29,7 @@ export function GradeModulos({ children }: { children: ReactNode }) {
 /** Valor em reais, a partir de centavos inteiros. */
 export function Valor({ centavos, destaque }: { centavos: number; destaque?: boolean }) {
   return (
-    <Text span fw={destaque ? 700 : 550} c={destaque ? 'var(--ailow-laranja-texto)' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
+    <Text span fw={destaque ? 700 : 550} c={destaque ? 'var(--ailow-marca-texto)' : undefined} style={{ fontVariantNumeric: 'tabular-nums' }}>
       {formatarReais(centavos)}
     </Text>
   );
@@ -53,7 +53,7 @@ export function EstadoVazio(props: { titulo: string; texto: string; acao?: strin
   );
 }
 
-/** Teclado numérico do PIN: 4 pontos de progresso em laranja (destaque), teclas de 64 px. */
+/** Teclado numérico do PIN: 4 pontos de progresso na cor da marca, teclas de 64 px. */
 export function TecladoPin({ onCompleto, desabilitado }: { onCompleto: (pin: string) => void; desabilitado?: boolean }) {
   const [pin, setPin] = useState('');
   const tecla = (k: string) => {
@@ -73,9 +73,9 @@ export function TecladoPin({ onCompleto, desabilitado }: { onCompleto: (pin: str
             h={16}
             style={{
               borderRadius: '50%',
-              border: '2px solid var(--mantine-color-coral-5)',
-              background: i < pin.length ? 'var(--mantine-color-coral-5)' : 'transparent',
-              boxShadow: i < pin.length ? '0 0 10px var(--mantine-color-coral-5)' : 'none',
+              border: '2px solid var(--ailow-acao)',
+              background: i < pin.length ? 'var(--ailow-acao)' : 'transparent',
+              boxShadow: i < pin.length ? '0 0 10px var(--ailow-acao)' : 'none',
             }}
           />
         ))}

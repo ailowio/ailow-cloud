@@ -2,28 +2,47 @@
  * Camadas de superfície (o modo claro não pode ser "um fundo só").
  * Mantine marca o <html> com data-mantine-color-scheme = light | dark.
  */
+/* UXM-08: UMA paleta. A marca é a cor do "A" da logo (public/logo.svg); o azul #2448FF é só secundário.
+   Razões de contraste (WCAG) conferidas por src/tema/paleta.test.ts e e2e/paleta.e2e.ts. */
+:root {
+  --ailow-marca: #07bdd5;                 /* cor do A da logo, idêntica nos dois temas (logo, ícones no escuro) */
+  --ailow-secundario: #2448ff;            /* apoio: avisos informativos, links secundários */
+}
+
 :root[data-mantine-color-scheme='light'] {
-  --mantine-color-body: #eef0f7;          /* fundo da página: slate frio bem claro */
+  --mantine-color-body: #eff1f2;          /* fundo da página: cinza frio bem claro */
+  --mantine-color-text: var(--ailow-texto);
+  --mantine-color-dimmed: var(--ailow-apagado);
+  --ailow-texto: #16181a;
+  --ailow-apagado: #565c62;
   --ailow-superficie: #ffffff;            /* cartões e blocos */
-  --ailow-superficie-2: #f6f7fb;          /* campos, áreas internas */
-  --ailow-borda: #dde1ee;
-  --ailow-sombra: 0 1px 2px rgb(17 24 50 / 6%), 0 4px 14px rgb(17 24 50 / 6%);
-  --ailow-brilho: 0 6px 20px rgb(36 72 255 / 30%);
-  --ailow-primario-texto: #1b37d6;        /* azul.7 sobre branco = 8,19:1 */
-  --ailow-laranja-texto: #bf431e;         /* coral.7 sobre branco = 5,20:1 */
+  --ailow-superficie-2: #f6f7f8;          /* campos, áreas internas */
+  --ailow-borda: #dcdfe2;
+  --ailow-sombra: 0 1px 2px rgb(20 22 24 / 6%), 0 4px 14px rgb(20 22 24 / 6%);
+  --ailow-brilho: 0 6px 20px rgb(4 126 144 / 30%);
+  --ailow-acao: #047e90;                  /* marca.7: botões, seleção, barra (a marca crua dá só 2,1:1 sobre branco) */
+  --ailow-sobre-acao: #ffffff;
+  --ailow-marca-texto: #036171;           /* marca.8: texto e ícones na cor da marca */
+  --ailow-secundario-texto: #1b37d6;
   --ailow-topo: #ffffff;
 }
 
 :root[data-mantine-color-scheme='dark'] {
-  --mantine-color-body: #0b1126;          /* navy profundo */
-  --ailow-superficie: #151c36;            /* slate escuro */
-  --ailow-superficie-2: #1b2340;
-  --ailow-borda: #2b3454;
+  --mantine-color-body: #1b1c1e;          /* cinza chumbo, não preto */
+  --mantine-color-text: var(--ailow-texto);
+  --mantine-color-dimmed: var(--ailow-apagado);
+  --ailow-texto: #ececed;
+  --ailow-apagado: #a3a7ad;
+  --ailow-superficie: #26282b;
+  --ailow-superficie-2: #2f3236;
+  --ailow-borda: #44474c;
   --ailow-sombra: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
-  --ailow-brilho: 0 0 0 1px rgb(36 72 255 / 60%), 0 8px 28px rgb(36 72 255 / 40%);
-  --ailow-primario-texto: #6984ff;        /* azul.3 sobre navy = 5,65:1 (superfície 5,07:1) */
-  --ailow-laranja-texto: #ff7043;         /* coral.5 sobre navy = 6,82:1 (superfície 6,11:1) */
-  --ailow-topo: #111832;
+  --ailow-brilho: 0 0 0 1px rgb(7 189 213 / 60%), 0 8px 28px rgb(7 189 213 / 30%);
+  --ailow-acao: #07bdd5;                  /* a própria cor da marca */
+  --ailow-sobre-acao: #06161a;
+  --ailow-marca-texto: #07bdd5;
+  --ailow-secundario-texto: #8aa0ff;
+  --ailow-topo: #222325;
 }
 
 body {
@@ -73,12 +92,12 @@ h1, h2, h3, h4 {
   box-shadow: var(--ailow-sombra);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
-.ailow-bloco:hover { border-color: var(--mantine-color-azul-4); }
+.ailow-bloco:hover { border-color: var(--ailow-acao); }
 .ailow-bloco:active { transform: scale(0.97); }
 .ailow-bloco[data-destaque='true'] {
-  background: var(--mantine-color-azul-6);
-  border-color: var(--mantine-color-azul-6);
-  color: #fff;
+  background: var(--ailow-acao);
+  border-color: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
   box-shadow: var(--ailow-brilho);
 }
 
@@ -112,8 +131,8 @@ h1, h2, h3, h4 {
   top: -64px;
   z-index: 1000;
   padding: 12px 16px;
-  background: var(--mantine-color-azul-6);
-  color: #fff;
+  background: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
   border-radius: var(--mantine-radius-md);
 }
 .ailow-pular:focus { top: 8px; }

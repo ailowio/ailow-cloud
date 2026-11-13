@@ -30,7 +30,7 @@ export function Entrar(props: { aviso?: string; aoEntrar: (email: string, senha:
       <form onSubmit={enviar} noValidate>
         <Stack gap="md">
           {props.aviso && (
-            <Alert color="blue" icon={<IconInfoCircle />} role="status">{props.aviso}</Alert>
+            <Alert color="azul" icon={<IconInfoCircle />} role="status">{props.aviso}</Alert>
           )}
           <TextInput
             label="E-mail"
