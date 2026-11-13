@@ -44,7 +44,7 @@ export function Categorias({ api }: { api: Api }) {
   );
 }
 
-function ListaCategorias({ api, tipo }: { api: Api; tipo: TipoCategoria }) {
+export function ListaCategorias({ api, tipo }: { api: Api; tipo: TipoCategoria }) {
   const { carga, recarregar, tentarDeNovo } = useCarregar(() => api.categorias(tipo).then((r) => r.categorias));
   // undefined = fechado; null = nova categoria; objeto = editando.
   const [editando, setEditando] = useState<Categoria | null | undefined>(undefined);

@@ -76,7 +76,9 @@ export function Modal({ opened, onClose, ...resto }: ModalProps) {
   useEffect(() => {
     if (opened && fase.current === 'fora') {
       fase.current = 'empurrando';
-      navigate(location.pathname + location.search, { state: { modais: [...modaisDaEntrada(), id] } });
+      // Mantém o resto do estado da entrada (ex.: o passo do assistente de novo produto): só a pilha de modais muda.
+      const resto = (window.history.state as { usr?: Record<string, unknown> | null } | null)?.usr ?? {};
+      navigate(location.pathname + location.search, { state: { ...resto, modais: [...modaisDaEntrada(), id] } });
     } else if (!opened && fase.current !== 'fora') {
       if (fase.current === 'dentro') navigate(-1);
       fase.current = 'fora';

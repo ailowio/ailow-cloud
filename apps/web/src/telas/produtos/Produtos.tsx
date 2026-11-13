@@ -43,6 +43,7 @@ export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void
       <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: () => setVista('lista') }}>
         <NovoProduto
           api={props.api}
+          aoCancelar={() => setVista('lista')}
           aoTerminar={(codigo) => {
             setBusca(codigo ?? '');
             setVista('lista');

@@ -8,6 +8,7 @@ import type { Api } from '../../api/endpoints';
 import { Modal } from '../../componentes/navegacao';
 import { fecharModal } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { BotaoConfigCategorias } from './ConfigCategorias';
 import { type CampoComErro, type FormularioProduto, NOME_MAXIMO, corpoDaEdicao, formularioDoProduto } from './edicao-produto';
 import { PORTES_DISPONIVEIS, mensagemProdutos, rotuloPorte } from './rotulos';
 
@@ -29,10 +30,10 @@ export function EditarProduto(props: { api: Api; produto: Produto; aoFechar: () 
 }
 
 function Carregado(props: { api: Api; produtoId: string; inicial: FormularioProduto; aoFechar: () => void; aoSalvo: () => void }) {
-  const { carga, tentarDeNovo } = useCarregar(async () => (await props.api.categorias('produto')).categorias.filter((c) => c.ativa));
+  const { carga, recarregar, tentarDeNovo } = useCarregar(async () => (await props.api.categorias('produto')).categorias.filter((c) => c.ativa));
   if (carga.fase === 'carregando') return <Carregando linhas={3} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  return <Formulario {...props} categorias={carga.dados} />;
+  return <Formulario {...props} categorias={carga.dados} aoRecarregarCategorias={() => void recarregar()} />;
 }
 
 function Formulario(props: {
@@ -40,6 +41,7 @@ function Formulario(props: {
   produtoId: string;
   inicial: FormularioProduto;
   categorias: Categoria[];
+  aoRecarregarCategorias: () => void;
   aoFechar: () => void;
   aoSalvo: () => void;
 }) {
@@ -93,7 +95,10 @@ function Formulario(props: {
       />
 
       <Stack gap={6} role="group" aria-label="Categoria">
-        <Text fw={500}>Categoria</Text>
+        <Group justify="space-between" wrap="nowrap">
+          <Text fw={500}>Categoria</Text>
+          <BotaoConfigCategorias api={props.api} aoFechar={props.aoRecarregarCategorias} />
+        </Group>
         {props.categorias.map((c) => {
           const marcada = c.id === f.categoria_id;
           return (
