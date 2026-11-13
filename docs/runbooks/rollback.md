@@ -1,6 +1,6 @@
 # Runbook: rollback (voltar para a versão anterior)
 
-- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-12 · **Ensaiado:** nunca **[NÃO VERIFICADO — S14]** · tempo medido: __ min
+- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado na VPS:** 2026-11-12, parcialmente (mecanismo do §3.1, sem versão anterior real) · **tempo medido:** `web` 37 s, `api` 71 s (`docker service update --rollback`), ver "Não verificado"
 - Regras: OPS-05/06/11, AUD-24. Princípio: **voltar o código primeiro (barato, seguro); mexer no banco só se for inevitável.**
 
 ## 1. Sintoma (quando usar)
@@ -48,5 +48,15 @@ Parar a `api` (`docker service scale ailow_api=0`), **não** apagar nada, preser
 ## 5. Depois
 Postmortem sem culpa (`harness/templates/postmortem.md`), com ações, dono e prazo; lição no registro (MC); registrar no release: versão revertida, motivo, duração da indisponibilidade, **tempo medido: __ min** (alimenta o MTTR, OPS-01).
 
-## Não verificado (depende da S14)
-Todo o procedimento em VPS; `docker service update --rollback` (comando do Docker, mas nunca rodado nesta stack); o `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal`; restore real do Drive; tempo de rollback; o registro GHCR em uso real.
+## Ensaio na VPS (S14c, 2026-11-12) e o que ele prova e não prova
+**Como:** com uma única tag implantada não existe "versão anterior", então o ensaio mudou o spec de cada serviço (`docker service update --env-add ENSAIO_ROLLBACK=1`) e voltou com `docker service update --detach=false --rollback`, medindo o tempo e fazendo `GET /health` de fora a cada 1 s. Não tocou em banco nem volume.
+
+| Serviço | Rollback (comando até convergir) | `/health` de fora durante o ensaio | Estado final |
+|---|---|---|---|
+| `web` (start-first) | **37 s** | 1 de 53 checagens ≠ 200 | variável sumiu do spec, 1/1 |
+| `api` (stop-first, `monitor: 60s`) | **71 s** | 6 de 94 checagens ≠ 200 (indisponibilidade curta na troca) | variável sumiu do spec, 1/1 |
+
+**Prova:** o comando do §3.1 opção A funciona nesta stack e devolve o spec anterior com os dois serviços saudáveis. **Não prova:** voltar para uma imagem **diferente** (opção B, trocar `TAG`), o `down` de migração (§3.2), nem rollback com dados reais; o tempo da `api` é dominado pelo período de monitoramento de 60 s.
+
+## Não verificado (continua aberto depois da S14c)
+Rollback para uma tag anterior real (opção B); o `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal` (§3.2); restauração do banco de produção com dados reais; o gatilho numérico ainda não foi exercitado por uma falha real.

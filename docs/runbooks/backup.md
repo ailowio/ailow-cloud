@@ -1,6 +1,6 @@
 # Runbook: backup e restauração (banco → Google Drive cifrado)
 
-- **Serviço:** Ailow Cloud (Postgres da stack `ailow`) · **Dono:** Pedro · **Última revisão:** 2026-11-12 · **Ensaiado no Drive/VPS:** nunca **[NÃO VERIFICADO — S14c]**
+- **Serviço:** Ailow Cloud (Postgres da stack `ailow`) · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado no Drive/VPS:** 2026-11-13 (backup real e restore-ensaio a partir do Drive, com banco de teste)
 - Regras: ADR 010 item 7, SEC-01/04, ENV-12, OPS-*, AUD-43/44/90. Scripts: `ops/backup/backup.sh`, `ops/backup/restore-ensaio.sh`.
 
 ## 0. O que é verificado e o que não é
@@ -9,9 +9,11 @@
 | `backup.sh` contra o Postgres de uma stack Swarm real (local, descartável) → remoto rclone `crypt` | **verificado local** (2026-11-12) | dump de 118 392 bytes, 26 tabelas com dados, nada sobra em disco local; no armazenamento cru, nomes e conteúdo ilegíveis (cabeçalho `RCLONE\0\0`) |
 | Recusa de remoto que não seja `crypt` | **verificado local** | exit 3 com remoto `local` |
 | `restore-ensaio.sh`: checksum, restore em Postgres limpo, RLS forçada e GRANTs | **verificado local** | 3 execuções seguidas: restore em 1–2 s, 26 tabelas, 14 migrações, 0 tabelas sem RLS/GRANT; canário (GRANT indevido a `diretorio_login`) reprovou com exit 5; dump adulterado reprovou no checksum (exit 3) |
-| Envio ao **Google Drive** de verdade, token OAuth, cota, renovação | **NÃO VERIFICADO** | só testado com remoto `crypt` sobre disco local; o Drive entra na S14c |
-| Tempo de dump/restore **com dados reais** e **na VPS** | **NÃO VERIFICADO** | os 1–2 s acima são de um banco quase vazio (dev), não são o RTO |
-| Agendamento (timer/cron) e alerta de falha | **NÃO VERIFICADO** | ver §3 |
+| Envio ao **Google Drive** de verdade (crypt, escopo `drive.file`, app publicado) | **verificado na VPS** (2026-11-13) | backup real: 16,5 s (dump+envio), 124 405 bytes, 26 tabelas; gravar, ler e apagar pelo `crypt` OK; no Drive os nomes são texto aleatório. **Renovação do token, cota e expiração: não observadas** (precisa de dias de uso) |
+| Restore **a partir do Drive**, na VPS | **verificado** (2026-11-13) | download+decifra 2,8 s, restore 1 s, total 10,5 s (inclui baixar a imagem do Postgres); checksum OK, 26 tabelas, 14 migrações, 0 sem RLS, 0 sem GRANT |
+| Tempo de dump/restore **com dados reais** | **NÃO VERIFICADO** | o banco só tem dados de teste (≈124 KB): os segundos acima são o **piso do procedimento, não o RTO**. Medir de novo quando houver dados da loja |
+| Agendamento (timer) | **verificado** (2026-11-13) | `ailow-backup.timer` ativo, próxima rodada 03:02 BRT; execução pelo systemd com sucesso (2º dump no Drive) |
+| Alerta de falha | **verificado na VPS** (2026-11-13) | `OnFailure` + healthchecks.io testados (falha proposital e sucesso real); recebimento do e-mail pelo Pedro não conferido por mim (§3) |
 
 ## 1. Desenho
 1. `pg_dump -Fc` do banco `ailow` pelo contêiner `ailow_db` → arquivo `0600` em `BACKUP_DIR`, apagado ao sair (sucesso ou erro).
@@ -32,12 +34,13 @@ Passos:
 2. No host de backup: `rclone config` → remoto `gdrive` (tipo `drive`, escopo `drive.file`, seu `client_id`).
 3. `rclone config` → remoto `ailowcrypt` (tipo `crypt`, `remote = gdrive:ailow-cloud-backups`, `filename_encryption = standard`, duas senhas geradas por `rclone config`).
 4. **Guardar a senha do `crypt` e o sal fora da VPS e fora do Drive** (gerenciador de senhas + cópia impressa/cofre). Perdeu = backup ilegível para sempre.
-5. O arquivo `rclone.conf` fica na VPS com permissão `0600`, dono do usuário que roda o backup. Ele contém o token do Drive e as senhas do crypt: é um **segredo**, nunca no repositório.
+5. **Como foi feito na S14c (2026-11-12):** a VPS não tem navegador, então os passos 2 e 3 rodaram no PC do Pedro (`rclone config create gdrive drive ... scope=drive.file`, depois `rclone config create ailowcrypt crypt ... --obscure` com senhas aleatórias; o OAuth abre o navegador local) e o `rclone.conf` resultante foi enviado por `scp` para `/etc/ailow/rclone.conf` (dir `0700`, arquivo `0600`, root). **Atenção:** a credencial OAuth tem de ser do tipo "aplicativo para computador"; uma credencial "Web" dá `redirect_uri_mismatch` (a rclone recebe o retorno em `http://127.0.0.1:53682/`). A cópia do `rclone.conf` vai para o gerenciador de senhas.
+6. O arquivo `rclone.conf` fica na VPS com permissão `0600`, dono do usuário que roda o backup. Ele contém o token do Drive e as senhas do crypt: é um **segredo**, nunca no repositório.
 
-## 3. Agendar (VPS) **[NÃO VERIFICADO — S14c]**
-Sugestão: `systemd timer` diário às 03:00 chamando
-`RCLONE_REMOTE=ailowcrypt:backups RCLONE_CONFIG=/etc/ailow/rclone.conf bash /opt/ailow/ops/backup/backup.sh`.
-Falha = exit ≠ 0 e linha em stderr; o `systemd` registra no `journal`. **Alerta ativo** (e-mail/WhatsApp ao Pedro quando o timer falha) ainda não existe: sem ele, o primeiro sinal de backup quebrado é o dia em que se precisa dele. Definir na S14c; até lá, conferir `rclone ls ailowcrypt:backups/diarios` toda segunda-feira.
+## 3. Agendar (VPS) — instalado em 2026-11-13
+Arquivos versionados em `ops/backup/systemd/` (`ailow-backup.service`, `ailow-backup.timer`, `ailow-backup-alerta.service`) e `ops/backup/alerta.sh`. Instalação (como root): copiar as três unidades para `/etc/systemd/system/`, `alerta.sh` para `/opt/ailow/ops/backup/`, `systemctl daemon-reload` e `systemctl enable --now ailow-backup.timer`. Roda todo dia às **06:00 UTC (03:00 em Brasília)**, até 5 min de atraso aleatório, `Persistent=true` (se a VPS estava desligada, roda ao ligar). Conferir: `systemctl list-timers ailow-backup.timer` e `journalctl -u ailow-backup.service -n 50`.
+
+**Alerta de falha:** o serviço tem `OnFailure=ailow-backup-alerta.service`, que sempre grava `crit` no journal e, **se existir `/etc/ailow/alerta.env`** (0600, fora do repositório) com `ALERTA_URL=`, faz POST da mensagem; com `ALERTA_PING_OK_URL=` faz um ping a cada sucesso (serviço tipo healthchecks.io avisa quando o ping **deixa** de chegar, o que cobre "o timer nem rodou"). Testado com falha proposital: `systemd-run --unit=ailow-teste-falha -p OnFailure=ailow-backup-alerta.service --wait /bin/false` grava o alerta no journal. **Canal configurado em 2026-11-13: healthchecks.io** (`/etc/ailow/alerta.env` com as duas variáveis apontando para o mesmo check; a URL é segredo e não está neste repositório). Testado na VPS: sucesso pelo systemd (ping chegou, resposta `OK`) e falha pela unidade `ailow-backup-alerta.service` (POST em `/fail`). **Não verificado por mim:** se o e-mail/push chegou ao Pedro e qual a tolerância de atraso configurada no check (sugestão: período de 1 dia e margem de 2 h). A conferência manual semanal (`rclone lsl ailowcrypt:backups/diarios`, com `RCLONE_CONFIG=/etc/ailow/rclone.conf`) continua como rede de segurança.
 
 ## 4. Restaurar
 **Ensaio (obrigatório antes de depender do backup; repetir a cada trimestre):**

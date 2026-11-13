@@ -1,11 +1,13 @@
 # Runbook: deploy de uma versão na VPS (stack do Swarm)
 
-- **Serviço:** Ailow Cloud (`db`, `api`, `web`; HTTPS pelo Traefik do host) · **Dono:** Pedro · **Última revisão:** 2026-11-12 · **Ensaiado na VPS:** nunca **[NÃO VERIFICADO — S14c]** · tempo medido: __ min
+- **Serviço:** Ailow Cloud (`db`, `api`, `web`; HTTPS pelo Traefik do host) · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado na VPS:** 2026-11-12, `v0.1.0`, 1ª implantação (stack nova) · **tempo medido: ≈ 5 min** do `docker stack deploy` ao `/health` 200 pelo domínio (inclui o 1º pull das imagens e a 1ª emissão do certificado; atualização de versão com imagem já baixada deve ser mais curta, **não medida**)
 - Regras: OPS-04 (deploy repetível e serializado), OPS-05 (gatilho de reversão), OPS-11 (banco compatível com 2 versões), AUD-24/27 (mudança rastreável), ENV-12 (nunca apagar volume sem intenção).
 
 ## 0. O que existe e o que não
-- **Existe e foi exercitado [verificado local/CI]:** `ops/stack/ailow.yaml` (Swarm: `db` com Postgres 18.6, `api` que **migra e depois sobe**, `web` com nginx) e o script `scripts/stack-local.sh` (job `stack` do CI), que sobe a stack num Swarm descartável e confere: `db`/`api`/`web` em 1/1; `/health` 200 e `/metrics` 404 pelo `web`; `db` e `api` inalcançáveis da rede do proxy; **API sem saída para a internet**; `api` e `web` sem root, FS somente leitura, `cap_drop: ALL`, limite de memória; **nenhum segredo em `docker service inspect`** (vão por Swarm secrets); labels do Traefik (Host, certresolver, HSTS 1 ano). Imagens: `publicar.yml` publica `api` e `web` no GHCR em tag `vX.Y.Z` (**ainda nunca rodou**, só roda numa tag real).
-- **Não existe / não verificado:** a VPS e o Traefik dela; o domínio `cloud.ailow.com.br` (em 2026-11-12 o resolvedor público ainda respondia "Non-existent domain"); o certificado; o pull do GHCR a partir do host; o agendamento do backup; `main` protegida (decisão do Pedro).
+- **Existe e foi exercitado [verificado local/CI]:** `ops/stack/ailow.yaml` (Swarm: `db` com Postgres 18.6, `api` que **migra e depois sobe**, `web` com nginx) e o script `scripts/stack-local.sh` (job `stack` do CI), que sobe a stack num Swarm descartável e confere: `db`/`api`/`web` em 1/1; `/health` 200 e `/metrics` 404 pelo `web`; `db` e `api` inalcançáveis da rede do proxy; **API sem saída para a internet**; `api` e `web` sem root, FS somente leitura, `cap_drop: ALL`, limite de memória; **nenhum segredo em `docker service inspect`** (vão por Swarm secrets); labels do Traefik (Host, certresolver, HSTS 1 ano). Imagens: `publicar.yml` publica `api` e `web` no GHCR em tag `vX.Y.Z`.
+- **Verificado na VPS em 2026-11-12 (S14c, `v0.1.0`):** `publicar.yml` verde em tag real (digests no resumo do run); pull das imagens **sem credencial** (pacotes públicos); stack no Swarm do host com `db`, `api` e `web` em 1/1; `/health` 200 e `/metrics` 404 **pela internet**; HSTS 1 ano, http→https 308, certificado Let's Encrypt emitido na 1ª subida; os 4 fluxos do E2E contra o domínio (venda em 5 toques, limite 8); k6 smoke (1 usuário, 20 s): p95 de busca 209 ms e de venda 170 ms, erro 0 %. Valores reais do host: `CERT_RESOLVER=letsencryptresolver`, `PROXY_NETWORK=CopelNet`, `ENTRYPOINT=websecure` (os do plano, conferidos ao vivo).
+- **Não verificado:** carga de **50 usuários** na VPS (RNF-01/02 pedem 50; o smoke foi 1); renovação automática do certificado; deploy de uma **segunda** versão (só existe uma tag implantada); tempo de uma atualização de versão com imagem já baixada; `main` protegida pelo ruleset (feito no GitHub pelo Pedro).
+- **O host não tem `node`** (nem `rclone` até a S14c): gere segredos com `openssl rand` (§1.6). Docker do host: 28.1.1.
 - O Swarm **ignora `security_opt: no-new-privileges`** (conferido no Docker 29.9.3); a defesa aqui é não-root + `cap_drop: ALL` + FS somente leitura.
 - Consequência: o deploy é **manual** (SSH + `docker stack deploy`) até existir pipeline de deploy. Alteração manual em produção é **mudança registrada** (AUD-24): anotar no release.
 
@@ -21,7 +23,8 @@
    node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))"  | docker secret create ailow_auth_pepper -
    node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))" | docker secret create ailow_totp_chave -
    ```
-   Guarde `AUTH_PEPPER` e `TOTP_CHAVE` no gerenciador de senhas **antes** de seguir (perdê-las tem custo: `migrar-vps.md §0`). Se a VPS não tiver Node, gere em outra máquina e passe por `docker secret create` via stdin; nunca por argumento de linha de comando.
+   Guarde `AUTH_PEPPER` e `TOTP_CHAVE` no gerenciador de senhas **antes** de seguir (perdê-las tem custo: `migrar-vps.md §0`). Se a VPS não tiver Node (**é o caso da VPS atual**), gere em outra máquina e passe por `docker secret create` via stdin (foi assim na S14c: pepper e TOTP gerados no PC do Pedro e enviados por `ssh ... docker secret create nome -`; a senha do Postgres, com `openssl rand -hex 24` na própria VPS); nunca por argumento de linha de comando. Apague qualquer arquivo temporário com os valores (`shred -u`) depois que o Pedro guardar a cópia.
+7. **Primeira implantação apenas:** crie o **Admin da plataforma** (o banco nasce vazio; `npm run dev:seed` recusa produção de propósito). A imagem não tem npm: rode dentro do contêiner da API, passando `ADMIN_EMAIL` e `ADMIN_SENHA` por ambiente (nunca por argumento) e lendo os segredos de `/run/secrets` como o `command` do serviço faz; `node dist/admin/criar-admin-cli.js`. A senha e a URI do TOTP vão para um arquivo `0600` na VPS que o Pedro copia para o gerenciador de senhas e que é apagado em seguida (nada disso passa por chat). A empresa e o Dono saem pela rota `POST /admin/empresas` (login do Admin com senha + TOTP).
 
 ## 2. Deploy (na VPS)
 ```bash
@@ -59,5 +62,5 @@ Qualquer um dos itens do README (health, 5xx > 1 %, fluxo do smoke falhando) ⇒
 ## 6. Quando escalar
 Banco não sobe, a migração falha de forma que o rollback não resolve, ou suspeita de perda/exposição de dados ⇒ parar, não improvisar no banco, acionar o Pedro (contato a registrar na S14c) e seguir `harness/checklists/incidente.md`.
 
-## Não verificado (depende da S14c)
-VPS, Traefik do host e nome do resolvedor/rede/entrypoint dele, DNS, certificado, pull do GHCR no host, `publicar.yml` numa tag real, rotina e restauração de backup a partir do Drive, janela com o cliente, tempos medidos, contato de escalonamento, valores finais do gatilho numérico.
+## Não verificado (continua aberto depois da S14c)
+Janela de deploy com o cliente (Marcos), contato de escalonamento do Pedro, valores finais do gatilho numérico (health 3×, 5xx > 1 %), carga de 50 usuários na VPS, segunda versão e atualização sobre dados reais, renovação do certificado.

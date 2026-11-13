@@ -1,0 +1,15 @@
+# Backup diário do banco do Ailow Cloud para o Google Drive cifrado (S14c; ver docs/runbooks/backup.md).
+# Instalar em /etc/systemd/system/. O alerta de falha é o OnFailure; o ping de sucesso é opcional (alerta.sh).
+[Unit]
+Description=Backup do banco do Ailow Cloud (Drive cifrado)
+After=docker.service network-online.target
+Wants=network-online.target
+OnFailure=ailow-backup-alerta.service
+
+[Service]
+Type=oneshot
+Environment=RCLONE_REMOTE=ailowcrypt:backups
+Environment=RCLONE_CONFIG=/etc/ailow/rclone.conf
+ExecStart=/bin/bash /opt/ailow/ops/backup/backup.sh
+ExecStartPost=/bin/bash /opt/ailow/ops/backup/alerta.sh ok
+TimeoutStartSec=30min

@@ -4,7 +4,12 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+## [1.0.0] - 2026-11-13
+
+Primeira versão em produção (`https://cloud.ailow.com.br`, VPS compartilhada com o Swarm da Copel). A `v0.1.0` (2026-11-12, mesmo código da `main` em `fcf532b`) foi a tag de teste que exercitou o `publicar.yml` e o deploy; a `v1.0.0` acrescenta só os arquivos de operação abaixo e a documentação com a evidência real, **sem mudança de API** (OpenAPI continua 0.14.0).
+
 ### Adicionado
+- S14c, operação na VPS (sem mudança de API): **timer diário do backup** `ops/backup/systemd/` (`ailow-backup.service`/`.timer`, 06:00 UTC) com `OnFailure` para `ailow-backup-alerta.service` e `ops/backup/alerta.sh` (journal sempre; POST/ping em `/etc/ailow/alerta.env` se configurado). Evidência: stack no Swarm do host, `/health` 200 e `/metrics` 404 pela internet, HSTS, certificado Let's Encrypt, 4 fluxos do E2E contra o domínio, k6 smoke (p95 busca 209 ms, venda 170 ms), rollback ensaiado (`web` 37 s, `api` 71 s), backup real e restore-ensaio a partir do Drive cifrado (10,5 s com banco de teste). Inventários de acessos, rotinas e interfaces e os runbooks de deploy, rollback e backup atualizados com os números e as ressalvas.
 - S14b, deploy portável (ADR 010; sem mudança de API, OpenAPI continua 0.14.0): **stack do Swarm** `ops/stack/ailow.yaml` (parametrizada por `TAG`, `DOMINIO`, `CERT_RESOLVER`, `PROXY_NETWORK`; segredos em Swarm secrets; rede `internal`; limites de memória/CPU), **imagem do web** (nginx sem root + `dist` do Vite, proxy da API, `/metrics` 404), Traefik mínimo para host novo (`ops/traefik/`), **backup cifrado** (`ops/backup/backup.sh`, rclone `crypt` → Drive) e **ensaio de restauração** (`restore-ensaio.sh`), `scripts/stack-local.sh` (valida a stack num Swarm descartável; job `stack` do CI), workflow `publicar.yml` (imagens no GHCR só em tag `vX.Y.Z`, com Trivy), job `imagem` agora escaneia também o web, runbooks (`backup.md`, deploy e rollback para Swarm) e inventários de auditoria (rotinas, interfaces, acessos). Teste novo trava a lista de rotas do nginx = a do Vite.
 
 ### Segurança
