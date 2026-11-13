@@ -79,6 +79,7 @@ describe('OpenAPI do módulo de acesso', () => {
     'post /clientes/{id}/reativar',
     'post /vendas',
     'get /vendas/relatorio',
+    'get /vendas/lista',
     'get /vendas/por-cliente/{clienteId}',
     'get /vendas/{id}',
     'post /vendas/{id}/cancelar',

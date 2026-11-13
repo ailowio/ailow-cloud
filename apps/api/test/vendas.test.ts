@@ -351,6 +351,36 @@ describe('Vendas (API)', () => {
       expect(soEle.repetidos).toEqual([]);
     });
 
+    it('a lista do dia traz número, cliente, total, formas e status (inclui canceladas); o Vendedor só as próprias', async () => {
+      const loja = await montar('Vendas lista');
+      const p = await peca(loja, 8);
+      const telA = celular();
+      const telB = celular();
+      const a = (await loja.dono.post('/vendas', fechar(p, telA))).json() as { id: string; numero: number };
+      const b = (await loja.vendedor.post('/vendas', fechar(p, telB, { cliente: { celular: telB, nome: 'Bia Lima' } }))).json() as {
+        id: string;
+        numero: number;
+      };
+      const cancel = await loja.dono.post(`/vendas/${a.id}/cancelar`, { motivo: 'Teste da lista' });
+      expect(cancel.statusCode).toBe(200);
+
+      const r = await loja.dono.get(`/vendas/lista?periodo=dia&data=${DIA}`);
+      expect(r.statusCode).toBe(200);
+      const { vendas } = r.json() as {
+        vendas: { id: string; numero: number; status: string; total_centavos: number; formas: string[]; cliente: { nome: string; celular: string } | null }[];
+      };
+      expect(vendas.map((v) => v.numero)).toEqual([b.numero, a.numero].sort((x, y) => y - x));
+      const va = vendas.find((v) => v.id === a.id);
+      expect(va).toMatchObject({ status: 'cancelada', total_centavos: 8990, formas: ['pix'] });
+      expect(va?.cliente).toEqual({ nome: 'Ana Souza', celular: telA });
+      expect(vendas.find((v) => v.id === b.id)?.cliente?.nome).toBe('Bia Lima');
+
+      const doVendedor = await loja.vendedor.get(`/vendas/lista?periodo=dia&data=${DIA}`);
+      expect((doVendedor.json() as { vendas: { id: string }[] }).vendas.map((v) => v.id)).toEqual([b.id]);
+      expect((await loja.vendedor.get(`/vendas/lista?periodo=mes&data=${DIA}`)).statusCode).toBe(403);
+      expect((await app.inject({ method: 'GET', url: `/vendas/lista?periodo=dia&data=${DIA}` })).statusCode).toBe(401);
+    });
+
     it('a ficha lista a compra pelo número da venda', async () => {
       const loja = await montar('Vendas ficha');
       const tel = celular();

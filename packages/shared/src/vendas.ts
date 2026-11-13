@@ -124,6 +124,20 @@ export const relatorioVendasSchema = z.object({
 });
 export type RelatorioVendas = z.infer<typeof relatorioVendasSchema>;
 
+// Linha da lista de vendas do período (S08): só o que a lista mostra; o detalhe vem de GET /vendas/{id}.
+export const vendaResumoSchema = z.object({
+  id: z.uuid(),
+  numero: z.number().int(),
+  status: statusVendaSchema,
+  total_centavos: z.number().int(),
+  cliente: z.object({ nome: z.string(), celular: z.string() }).nullable(),
+  vendedor_nome: z.string(),
+  formas: z.array(formaPagamentoSchema),
+  criado_em: z.iso.datetime(),
+});
+export const listaVendasSchema = z.object({ vendas: z.array(vendaResumoSchema) });
+export type VendaResumo = z.infer<typeof vendaResumoSchema>;
+
 export const skuPorCodigoQuerySchema = z.object({
   codigo: z.string().trim().min(1).max(20),
 });

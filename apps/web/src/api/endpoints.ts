@@ -34,6 +34,7 @@ import type {
   UsuarioPublico,
   Venda,
   VendaFinalizar,
+  VendaResumo,
 } from '@ailow/shared';
 import type { Cliente } from './cliente';
 
@@ -123,6 +124,8 @@ export function criarApi(c: Cliente) {
     cancelarVenda: (id: string, motivo: string) => p<Venda>('POST', `/vendas/${id}/cancelar`, { motivo }),
     relatorioVendas: (periodo: 'dia' | 'mes', data: string) =>
       p<RelatorioVendas>('GET', `/vendas/relatorio?periodo=${periodo}&data=${data}`),
+    listaVendas: (periodo: 'dia' | 'mes', data: string) =>
+      p<{ vendas: VendaResumo[] }>('GET', `/vendas/lista?periodo=${periodo}&data=${data}`),
     comprasDoCliente: (id: string) =>
       p<{ compras: { id: string; numero: number; total_centavos: number; status: Venda['status']; criado_em: string }[] }>(
         'GET',
