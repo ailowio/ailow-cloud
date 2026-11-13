@@ -1,17 +1,31 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconAlertCircle, IconPlus, IconSearch } from '@tabler/icons-react';
+import { Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { IconPlus, IconSearch } from '@tabler/icons-react';
 import type { Fornecedor } from '@ailow/shared';
-import { mascararCelular } from '@ailow/shared/puro';
+import { mascararCelular, normalizarCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
-import { useAcao } from '../config/comum';
+import { QuadroDoAssistente, avisoDoPasso, usePassoNoHistorico } from '../../componentes/Assistente';
+import { useSalvarComToast } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import {
+  PASSOS_FORNECEDOR,
+  type PassoFornecedor,
+  type RascunhoFornecedor,
+  fornecedorParaApi,
+  validarPassoFornecedor,
+} from './fornecedor-passos';
 import { mensagemCompras } from './rotulos';
 
 type Vista = 'lista' | 'novo' | 'editar';
 
-/** RF-COM-01: lista, cadastro e edição de fornecedores. */
+const TITULOS: Record<PassoFornecedor, string> = {
+  nome: 'Qual é o nome do fornecedor?',
+  contato: 'Como falar com ele?',
+  confirmar: 'Confira e salve',
+};
+
+/** RF-COM-01: lista, cadastro e edição de fornecedores (cadastro e edição em passos, S13). */
 export function Fornecedores(props: { api: Api }) {
   const [vista, setVista] = useState<Vista>('lista');
   const [editando, setEditando] = useState<Fornecedor | null>(null);
@@ -109,54 +123,101 @@ function FormFornecedor(props: {
   aoCancelar: () => void;
   aoSalvar: () => void;
 }) {
-  const [nome, setNome] = useState(props.inicial?.nome ?? '');
-  const [whatsapp, setWhatsapp] = useState(props.inicial?.whatsapp ?? '');
-  const [cnpj, setCnpj] = useState(props.inicial?.cnpj ?? '');
-  const { pendente, erro, rodar } = useAcao(mensagemCompras);
-  const pronto = nome.trim() !== '' && whatsapp.trim() !== '';
+  const [r, setR] = useState<RascunhoFornecedor>(() => ({
+    nome: props.inicial?.nome ?? '',
+    whatsapp: props.inicial ? mascararCelular(props.inicial.whatsapp) : '',
+    cnpj: props.inicial?.cnpj ?? '',
+  }));
+  const { atual, indice, ultimo, avancar, recuar } = usePassoNoHistorico(PASSOS_FORNECEDOR);
+  const { pendente, rodar } = useSalvarComToast(mensagemCompras);
+  const mudar = (parcial: Partial<RascunhoFornecedor>) => setR((x) => ({ ...x, ...parcial }));
+  const numero = normalizarCelular(r.whatsapp);
 
   async function salvar() {
-    if (!pronto) return;
-    const corpo = { nome: nome.trim(), whatsapp: whatsapp.trim(), cnpj: cnpj.trim() === '' ? null : cnpj.trim() };
+    const corpo = fornecedorParaApi(r);
+    if (!corpo) return;
     const ok = await rodar(
-      () =>
-        props.inicial
-          ? props.api.editarFornecedor(props.inicial.id, corpo)
-          : props.api.criarFornecedor(corpo),
+      () => (props.inicial ? props.api.editarFornecedor(props.inicial.id, corpo) : props.api.criarFornecedor(corpo)),
       props.inicial ? 'Fornecedor atualizado' : 'Fornecedor cadastrado',
     );
     if (ok) props.aoSalvar();
   }
 
+  // O botão principal nunca fica desabilitado: o que falta vira toast (não mexe no layout) e a pessoa fica no passo.
+  function principal() {
+    const problema = validarPassoFornecedor(atual, r);
+    if (problema) {
+      avisoDoPasso(problema);
+      return;
+    }
+    if (ultimo) void salvar();
+    else avancar();
+  }
+
   return (
-    <Stack gap="md">
-      <TextInput label="Nome" required size="lg" maxLength={80} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
-      <TextInput
-        label="WhatsApp"
-        required
-        size="lg"
-        placeholder="(11) 91234-5678"
-        value={whatsapp}
-        onChange={(e) => setWhatsapp(e.currentTarget.value)}
-      />
-      <TextInput
-        label="CNPJ (opcional)"
-        size="lg"
-        placeholder="12.345.678/0001-95"
-        value={cnpj}
-        onChange={(e) => setCnpj(e.currentTarget.value)}
-      />
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle aria-hidden />}>
-          {erro}
-        </Alert>
+    <QuadroDoAssistente
+      passo={atual}
+      titulo={TITULOS[atual]}
+      indice={indice}
+      total={PASSOS_FORNECEDOR.length}
+      rotuloPrincipal={ultimo ? 'Salvar fornecedor' : 'Continuar'}
+      aoPrincipal={principal}
+      aoCancelar={props.aoCancelar}
+      aoVoltar={recuar}
+      ocupado={pendente}
+    >
+      {atual === 'nome' && (
+        <TextInput
+          label="Nome"
+          required
+          size="lg"
+          maxLength={80}
+          autoComplete="off"
+          placeholder="Ex.: Malhas Sul"
+          value={r.nome}
+          onChange={(e) => mudar({ nome: e.currentTarget.value })}
+        />
       )}
-      <Button h={48} loading={pendente} disabled={!pronto || pendente} onClick={() => void salvar()}>
-        Salvar
-      </Button>
-      <Button h={48} variant="default" disabled={pendente} onClick={props.aoCancelar}>
-        Cancelar
-      </Button>
-    </Stack>
+
+      {atual === 'contato' && (
+        <Stack gap="lg">
+          <TextInput
+            label="WhatsApp com DDD"
+            required
+            size="lg"
+            type="tel"
+            inputMode="tel"
+            autoComplete="off"
+            maxLength={40}
+            placeholder="(11) 91234-5678"
+            value={r.whatsapp}
+            onChange={(e) => mudar({ whatsapp: e.currentTarget.value })}
+            description={numero !== null ? `Fica ${mascararCelular(numero)}` : 'O pedido é enviado por este número.'}
+          />
+          <TextInput
+            label="CNPJ (opcional)"
+            size="lg"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={22}
+            placeholder="12.345.678/0001-95"
+            value={r.cnpj}
+            onChange={(e) => mudar({ cnpj: e.currentTarget.value })}
+          />
+        </Stack>
+      )}
+
+      {atual === 'confirmar' && (
+        <Stack gap={4} p="sm" className="ailow-cartao">
+          <Text fw={650} fz="lg" style={{ overflowWrap: 'anywhere' }}>
+            {r.nome.trim()}
+          </Text>
+          <Text c="dimmed" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {numero !== null ? mascararCelular(numero) : r.whatsapp}
+          </Text>
+          <Text>{r.cnpj.trim() === '' ? 'Sem CNPJ' : `CNPJ ${r.cnpj.trim()}`}</Text>
+        </Stack>
+      )}
+    </QuadroDoAssistente>
   );
 }

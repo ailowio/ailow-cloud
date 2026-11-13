@@ -29,9 +29,11 @@ export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void
       <Moldura titulo="Novo cliente" voltar={{ rotulo: 'Clientes', aoVoltar: () => setVista('lista') }}>
         <NovoCliente
           api={props.api}
-          aoCriar={(id) => {
+          aoCancelar={() => setVista('lista')}
+          // S13: o assistente devolve as entradas do histórico ao sair e isso fecharia uma ficha aberta no mesmo
+          // instante; por isso volta à lista (com o aviso "Cliente cadastrado") em vez de abrir a ficha.
+          aoCriar={() => {
             setRodada((r) => r + 1);
-            setAbertoId(id);
             setVista('lista');
           }}
         />

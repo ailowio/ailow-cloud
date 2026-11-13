@@ -32,5 +32,28 @@ export function useAcao(mensagem?: string | ((e: ErroApi) => string)) {
   return { pendente, erro, limparErro: () => setErro(null), rodar };
 }
 
+/**
+ * Como `useAcao`, para os assistentes (S13): sucesso e erro viram toast (o erro não vira bloco que empurra o layout, UXM-04).
+ */
+export function useSalvarComToast(mensagem?: string | ((e: ErroApi) => string)) {
+  const [pendente, setPendente] = useState(false);
+  async function rodar(fn: () => Promise<unknown>, sucesso: string): Promise<boolean> {
+    setPendente(true);
+    try {
+      await fn();
+      notifications.show({ message: sucesso, color: 'teal', autoClose: 3500, withCloseButton: false });
+      return true;
+    } catch (e) {
+      const erroApi = e instanceof ErroApi ? e : new ErroApi(500, 'erro_interno');
+      const texto = typeof mensagem === 'function' ? mensagem(erroApi) : mensagemGenerica(erroApi, mensagem);
+      notifications.show({ message: texto, color: 'red', autoClose: 4500, withCloseButton: false });
+      return false;
+    } finally {
+      setPendente(false);
+    }
+  }
+  return { pendente, rodar };
+}
+
 // O botão de fechar padrão do Modal é pequeno; alvo de toque mínimo é 48 px (RNF-05).
 export const fecharModal = { size: 48, 'aria-label': 'Fechar' } as const;

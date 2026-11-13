@@ -56,7 +56,7 @@ export function Configuracoes(props: {
         </Stack>
       )}
       {secao === 'usuarios' && <Usuarios api={props.api} eu={props.usuarioId} />}
-      {secao === 'empresa' && <DadosDaEmpresa api={props.api} aoMudarInatividade={props.aoMudarInatividade} />}
+      {secao === 'empresa' && <DadosDaEmpresa api={props.api} aoMudarInatividade={props.aoMudarInatividade} aoConcluir={() => setSecao('menu')} />}
       {secao === 'markup' && <Markup api={props.api} />}
       {secao === 'categorias' && <Categorias api={props.api} />}
     </Moldura>

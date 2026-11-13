@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { Box, Button, Group, Progress, Stack, Text } from '@mantine/core';
+import { type ReactNode, useEffect, useRef } from 'react';
+import { Box, Button, Group, Progress, Stack, Text, Title } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { useLocation, useNavigate } from 'react-router';
 
 // Peças do assistente em passos (padrão da S10, "Novo produto"), compartilhadas pela "Nova despesa" (S11).
@@ -52,6 +53,45 @@ export function RodapeDoAssistente(props: {
         </Button>
       </Group>
     </Box>
+  );
+}
+
+/** Erro de validação do passo: toast (UXM-04), nunca um bloco que empurre o layout. */
+export const avisoDoPasso = (message: string) =>
+  notifications.show({ message, color: 'red', autoClose: 4500, withCloseButton: false });
+
+/**
+ * Moldura comum dos assistentes de cadastro (S13): cartão com título, "Passo X de N", o conteúdo do passo e o rodapé
+ * (Cancelar/Voltar à esquerda, Continuar/Salvar à direita). O botão principal nunca fica desabilitado: o que falta vira toast.
+ */
+export function QuadroDoAssistente(props: {
+  passo: string;
+  titulo: string;
+  indice: number;
+  total: number;
+  rotuloPrincipal: string;
+  aoPrincipal: () => void;
+  aoCancelar: () => void;
+  aoVoltar: () => void;
+  ocupado?: boolean;
+  children: ReactNode;
+}) {
+  const primeiro = props.indice === 0;
+  return (
+    <Stack gap="md" className="ailow-cartao" p="md" data-assistente={props.passo}>
+      <Title order={2} fz="lg" style={{ overflowWrap: 'anywhere' }}>
+        {props.titulo}
+      </Title>
+      <ProgressoDoPasso indice={props.indice} total={props.total} />
+      {props.children}
+      <RodapeDoAssistente
+        rotuloSecundario={primeiro ? 'Cancelar' : 'Voltar'}
+        rotuloPrincipal={props.rotuloPrincipal}
+        aoSecundario={primeiro ? props.aoCancelar : props.aoVoltar}
+        aoPrincipal={props.aoPrincipal}
+        ocupado={props.ocupado}
+      />
+    </Stack>
   );
 }
 

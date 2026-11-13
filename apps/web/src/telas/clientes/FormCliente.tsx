@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Stack, Switch, TextInput } from '@mantine/core';
+import { Alert, Button, Stack, TextInput } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { mascararCelular, normalizarCelular } from '@ailow/shared/puro';
 import { useAcao } from '../config/comum';
@@ -8,17 +8,15 @@ import { mensagemClientes } from './rotulos';
 export interface DadosCliente {
   nome: string;
   celular: string;
-  aviso: boolean;
 }
 
 /**
- * Nome e celular do cliente (RF-CLI-01/05, D8), para cadastrar e para corrigir. O aviso de finalidade (LGPD) só
- * aparece no cadastro; na edição ele tem botão próprio na ficha. `salvar` faz a chamada à API.
+ * Correção de nome e celular do cliente (RF-CLI-05, D8): 2 campos, por isso segue formulário simples. O cadastro novo é
+ * o assistente em passos (NovoCliente, S13) e o aviso de finalidade (LGPD) tem botão próprio na ficha. `salvar` chama a API.
  */
 export function FormCliente<T = void>(props: {
   // Presente = edição: os campos já vêm preenchidos e "Salvar" só liga quando algo mudou.
   inicial?: { nome: string; celular: string };
-  comAviso?: boolean;
   rotuloSalvar: string;
   sucesso: string;
   salvar: (d: DadosCliente) => Promise<T>;
@@ -28,7 +26,6 @@ export function FormCliente<T = void>(props: {
 }) {
   const [nome, setNome] = useState(props.inicial?.nome ?? '');
   const [celular, setCelular] = useState(props.inicial ? mascararCelular(props.inicial.celular) : '');
-  const [aviso, setAviso] = useState(false);
   // O erro do celular só aparece depois que a pessoa sai do campo: não reclamar no meio da digitação.
   const [celularVisitado, setCelularVisitado] = useState(false);
   const { pendente, erro, rodar } = useAcao(mensagemClientes);
@@ -42,7 +39,7 @@ export function FormCliente<T = void>(props: {
     if (!pronto) return;
     let resultado: T | undefined;
     const ok = await rodar(async () => {
-      resultado = await props.salvar({ nome: nome.trim(), celular, aviso });
+      resultado = await props.salvar({ nome: nome.trim(), celular });
     }, props.sucesso);
     if (ok) props.aoSalvo(resultado as T);
   }
@@ -74,15 +71,6 @@ export function FormCliente<T = void>(props: {
         error={celularComErro ? 'Escreva o celular com DDD e 9 dígitos, por exemplo (21) 98888-0001.' : undefined}
         description={numero !== null ? `Fica ${mascararCelular(numero)}` : undefined}
       />
-      {props.comAviso && (
-        <Switch
-          size="lg"
-          label="Já avisei para que uso o celular"
-          description="Avise o cliente que o número serve para falar da compra e das novidades da loja. Fica registrada a data."
-          checked={aviso}
-          onChange={(e) => setAviso(e.currentTarget.checked)}
-        />
-      )}
       {erro && (
         <Alert color="red" icon={<IconAlertCircle />} role="alert">
           {erro}

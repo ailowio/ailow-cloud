@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Alert, Button, NumberInput, Select, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { useState } from 'react';
+import { Alert, Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
-import type { Fornecedor, Produto, StatusPedido } from '@ailow/shared';
-import { linkPedidoWhatsApp, textoDoPedido, totalDoPedido } from '@ailow/shared/puro';
+import type { StatusPedido } from '@ailow/shared';
+import { linkPedidoWhatsApp, textoDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
 import { CampoData } from '../../componentes/CampoData';
@@ -10,6 +10,7 @@ import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { NovoPedido } from './NovoPedido';
 import { ROTULO_STATUS, mensagemCompras } from './rotulos';
 
 type Vista = 'lista' | 'novo' | 'ficha';
@@ -87,168 +88,6 @@ function Lista(props: { api: Api; aoNovo: () => void; aoAbrir: (id: string) => v
           </UnstyledButton>
         ))}
     </Stack>
-  );
-}
-
-interface LinhaNova {
-  sku_id: string;
-  rotulo: string;
-  quantidade: number;
-  custoTexto: string;
-}
-
-function NovoPedido(props: { api: Api; aoCancelar: () => void; aoCriar: (id: string) => void }) {
-  const forn = useCarregar(() => props.api.fornecedores());
-  const [fornecedorId, setFornecedorId] = useState<string | null>(null);
-  const [texto, setTexto] = useState('');
-  const [busca, setBusca] = useState('');
-  const [linhas, setLinhas] = useState<LinhaNova[]>([]);
-  const { pendente, erro, rodar } = useAcao(mensagemCompras);
-
-  useEffect(() => {
-    const t = setTimeout(() => setBusca(texto.trim()), 300);
-    return () => clearTimeout(t);
-  }, [texto]);
-
-  const total = totalDoPedido(
-    linhas.map((l) => ({
-      quantidade: l.quantidade,
-      custoCentavos: reaisParaCentavos(l.custoTexto) ?? 0,
-    })),
-  );
-  const linhasOk =
-    linhas.length > 0 &&
-    linhas.every((l) => {
-      const c = reaisParaCentavos(l.custoTexto);
-      return c !== null && c >= 1 && l.quantidade >= 1;
-    });
-  const pronto = fornecedorId !== null && linhasOk && total.ok;
-
-  async function salvar() {
-    if (!pronto || !fornecedorId || !total.ok) return;
-    let id: string | null = null;
-    const ok = await rodar(async () => {
-      const ped = await props.api.criarPedidoCompra({
-        fornecedor_id: fornecedorId,
-        itens: linhas.map((l) => ({
-          sku_id: l.sku_id,
-          quantidade: l.quantidade,
-          custo_centavos: reaisParaCentavos(l.custoTexto) as number,
-        })),
-      });
-      id = ped.id;
-    }, 'Pedido em rascunho');
-    if (ok && id) props.aoCriar(id);
-  }
-
-  if (forn.carga.fase === 'carregando') return <Carregando linhas={3} />;
-  if (forn.carga.fase === 'erro') return <ErroCarregar mensagem={forn.carga.mensagem} aoTentar={forn.tentarDeNovo} />;
-  if (forn.carga.dados.fornecedores.length === 0) {
-    return <EstadoVazio titulo="Cadastre um fornecedor" texto="Antes do pedido, informe quem vai receber o WhatsApp." />;
-  }
-
-  return (
-    <Stack gap="md">
-      <Select
-        label="Fornecedor"
-        required
-        size="lg"
-        placeholder="Escolha"
-        data={forn.carga.dados.fornecedores.map((f: Fornecedor) => ({ value: f.id, label: f.nome }))}
-        value={fornecedorId}
-        onChange={setFornecedorId}
-      />
-      <TextInput
-        label="Buscar peça"
-        size="lg"
-        placeholder="Nome ou código"
-        value={texto}
-        onChange={(e) => setTexto(e.currentTarget.value)}
-      />
-      <SugestoesPecas
-        key={busca}
-        api={props.api}
-        busca={busca}
-        ja={new Set(linhas.map((l) => l.sku_id))}
-        aoEscolher={(linha) => setLinhas((xs) => [...xs, linha])}
-      />
-      {linhas.map((l) => (
-        <Stack key={l.sku_id} gap="xs" className="ailow-bloco" p="md">
-          <Text fw={650}>{l.rotulo}</Text>
-          <NumberInput
-            label="Quantidade"
-            size="lg"
-            min={1}
-            max={999}
-            value={l.quantidade}
-            onChange={(v) =>
-              setLinhas((xs) => xs.map((x) => (x.sku_id === l.sku_id ? { ...x, quantidade: typeof v === 'number' ? v : 1 } : x)))
-            }
-          />
-          <TextInput
-            label="Custo unitário"
-            size="lg"
-            value={l.custoTexto}
-            onChange={(e) => setLinhas((xs) => xs.map((x) => (x.sku_id === l.sku_id ? { ...x, custoTexto: e.currentTarget.value } : x)))}
-          />
-          <Button h={48} variant="default" onClick={() => setLinhas((xs) => xs.filter((x) => x.sku_id !== l.sku_id))}>
-            Remover
-          </Button>
-        </Stack>
-      ))}
-      {total.ok && (
-        <Text fw={700}>
-          Total <Valor centavos={total.totalCentavos} destaque />
-        </Text>
-      )}
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle aria-hidden />}>
-          {erro}
-        </Alert>
-      )}
-      <Button h={48} loading={pendente} disabled={!pronto || pendente} onClick={() => void salvar()}>
-        Salvar rascunho
-      </Button>
-      <Button h={48} variant="default" disabled={pendente} onClick={props.aoCancelar}>
-        Cancelar
-      </Button>
-    </Stack>
-  );
-}
-
-function SugestoesPecas(props: {
-  api: Api;
-  busca: string;
-  ja: Set<string>;
-  aoEscolher: (l: LinhaNova) => void;
-}) {
-  const { carga } = useCarregar(() => props.api.produtos(props.busca || undefined));
-  if (carga.fase !== 'pronto') return null;
-  const opcoes = carga.dados.produtos.flatMap((prod: Produto) =>
-    prod.skus
-      .filter((s) => !props.ja.has(s.id))
-      .slice(0, 4)
-      .map((s) => ({
-        sku_id: s.id,
-        rotulo: `${prod.nome} · ${s.tamanho} · ${s.cor} · ${s.codigo}`,
-        quantidade: 1,
-        custoTexto: prod.custo_centavos != null ? centavosParaTexto(prod.custo_centavos) : '',
-        botao: `${prod.nome} · ${s.tamanho} · ${s.cor}`,
-      })),
-  );
-  return (
-    <>
-      {opcoes.slice(0, 6).map((o) => (
-        <Button
-          key={o.sku_id}
-          h={48}
-          variant="default"
-          onClick={() => props.aoEscolher({ sku_id: o.sku_id, rotulo: o.rotulo, quantidade: o.quantidade, custoTexto: o.custoTexto })}
-        >
-          + {o.botao}
-        </Button>
-      ))}
-    </>
   );
 }
 

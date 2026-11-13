@@ -9,7 +9,15 @@ import { Valor } from '../../componentes';
 import { Logo } from '../../componentes/Logo';
 import { bpsParaPercentual, exemploPrecoCentavos, formatarTelefone, percentualParaBps } from '../../lib/formatos';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
-import { useAcao } from './comum';
+import { QuadroDoAssistente, avisoDoPasso, usePassoNoHistorico } from '../../componentes/Assistente';
+import { useAcao, useSalvarComToast } from './comum';
+import {
+  PASSOS_EMPRESA,
+  type PassoEmpresa,
+  type RascunhoEmpresa,
+  empresaParaApi,
+  validarPassoEmpresa,
+} from './empresa-passos';
 
 interface Props {
   api: Api;
@@ -25,37 +33,64 @@ function useEmpresa(api: Api) {
 }
 
 /** RF-CFG-02 (dados da empresa) e RF-ACE-04 (trava por inatividade). */
-export function DadosDaEmpresa({ api, aoMudarInatividade }: Props) {
+export function DadosDaEmpresa({ api, aoMudarInatividade, aoConcluir }: Props & { aoConcluir: () => void }) {
   const { carga, tentarDeNovo, recarregar } = useEmpresa(api);
   if (carga.fase === 'carregando') return <Carregando linhas={4} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  return <FormDados atual={carga.dados} api={api} aoSalvar={recarregar} aoMudarInatividade={aoMudarInatividade} />;
+  return (
+    <FormDados atual={carga.dados} api={api} aoSalvar={recarregar} aoMudarInatividade={aoMudarInatividade} aoConcluir={aoConcluir} />
+  );
 }
 
-function FormDados(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Promise<void>; aoMudarInatividade: (m: number) => void }) {
+const TITULOS: Record<PassoEmpresa, string> = {
+  nome: 'Como se chama a empresa?',
+  contato: 'Como falar com a empresa?',
+  trava: 'Quando travar o app?',
+  confirmar: 'Confira e salve',
+};
+
+/** Dados da empresa em passos curtos (nome e logo → contato → trava → confirmar, S13). */
+function FormDados(props: {
+  atual: DadosEmpresa;
+  api: Api;
+  aoSalvar: () => Promise<void>;
+  aoMudarInatividade: (m: number) => void;
+  aoConcluir: () => void;
+}) {
   const { atual } = props;
-  const [nome, setNome] = useState(atual.nome);
-  const [telefone, setTelefone] = useState(formatarTelefone(atual.telefone));
-  const [endereco, setEndereco] = useState(atual.endereco ?? '');
-  const [minutos, setMinutos] = useState<number | string>(atual.inatividade_minutos);
+  const [r, setR] = useState<RascunhoEmpresa>({
+    nome: atual.nome,
+    telefone: formatarTelefone(atual.telefone),
+    endereco: atual.endereco ?? '',
+    minutos: atual.inatividade_minutos,
+  });
   const [logoVersao, setLogoVersao] = useState(0);
   const resetArquivo = useRef<() => void>(null);
-  const { pendente, erro, rodar } = useAcao();
+  const { atual: passo, indice, ultimo, avancar, recuar } = usePassoNoHistorico(PASSOS_EMPRESA);
+  const { pendente, rodar } = useSalvarComToast();
+  const mudar = (parcial: Partial<RascunhoEmpresa>) => setR((x) => ({ ...x, ...parcial }));
 
   async function salvar() {
+    const campos = empresaParaApi(r);
+    if (!campos) return;
     const { tem_logo: _ignorado, ...resto } = atual;
-    const corpo = {
-      ...resto,
-      nome: nome.trim(),
-      // Vazio = remover (null); o servidor valida e guarda só os dígitos.
-      telefone: telefone.trim() === '' ? null : telefone.trim(),
-      endereco: endereco.trim() === '' ? null : endereco.trim(),
-      inatividade_minutos: typeof minutos === 'number' ? minutos : Number(minutos),
-    };
+    const corpo = { ...resto, ...campos };
     const ok = await rodar(() => props.api.salvarEmpresa(corpo), 'Dados salvos');
     if (!ok) return;
     props.aoMudarInatividade(corpo.inatividade_minutos);
     await props.aoSalvar();
+    props.aoConcluir();
+  }
+
+  // O botão principal nunca fica desabilitado: o que falta vira toast (não mexe no layout) e a pessoa fica no passo.
+  function principal() {
+    const problema = validarPassoEmpresa(passo, r);
+    if (problema) {
+      avisoDoPasso(problema);
+      return;
+    }
+    if (ultimo) void salvar();
+    else avancar();
   }
 
   async function aoEscolherLogo(arquivo: File | null) {
@@ -80,7 +115,19 @@ function FormDados(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Promi
   }
 
   return (
-    <Stack gap="md">
+    <QuadroDoAssistente
+      passo={passo}
+      titulo={TITULOS[passo]}
+      indice={indice}
+      total={PASSOS_EMPRESA.length}
+      rotuloPrincipal={ultimo ? 'Salvar dados' : 'Continuar'}
+      aoPrincipal={principal}
+      aoCancelar={props.aoConcluir}
+      aoVoltar={recuar}
+      ocupado={pendente}
+    >
+      {passo === 'nome' && (
+        <Stack gap="md">
       {/* RF-CFG-02: upload PNG/JPEG/WebP; sem SVG (XSS). */}
       <Stack gap="xs">
         <Group gap="md" wrap="nowrap" align="center">
@@ -115,41 +162,54 @@ function FormDados(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Promi
           )}
         </Group>
       </Stack>
-      <TextInput label="Nome da empresa" required size="lg" maxLength={120} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
-      <TextInput
-        label="Telefone"
-        description="Com DDD."
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        placeholder="(11) 98765-4321"
-        size="lg"
-        value={telefone}
-        onChange={(e) => setTelefone(e.currentTarget.value)}
-      />
-      <TextInput label="Endereço" size="lg" maxLength={200} value={endereco} onChange={(e) => setEndereco(e.currentTarget.value)} />
-      <NumberInput
-        label="Travar o app após"
-        description="Minutos sem usar. Depois disso, volta para “Quem está usando?”."
-        size="lg"
-        min={1}
-        max={120}
-        allowDecimal={false}
-        allowNegative={false}
-        suffix=" min"
-        inputMode="numeric"
-        value={minutos}
-        onChange={setMinutos}
-      />
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
+      <TextInput label="Nome da empresa" required size="lg" maxLength={120} value={r.nome} onChange={(e) => mudar({ nome: e.currentTarget.value })} />
+        </Stack>
       )}
-      <Button onClick={() => void salvar()} loading={pendente} disabled={!nome.trim() || minutos === ''}>
-        Salvar
-      </Button>
-    </Stack>
+
+      {passo === 'contato' && (
+        <Stack gap="lg">
+          <TextInput
+            label="Telefone"
+            description="Com DDD. Pode deixar em branco."
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="(11) 98765-4321"
+            size="lg"
+            value={r.telefone}
+            onChange={(e) => mudar({ telefone: e.currentTarget.value })}
+          />
+          <TextInput label="Endereço" size="lg" maxLength={200} value={r.endereco} onChange={(e) => mudar({ endereco: e.currentTarget.value })} />
+        </Stack>
+      )}
+
+      {passo === 'trava' && (
+        <NumberInput
+          label="Travar o app após"
+          description="Minutos sem usar. Depois disso, volta para “Quem está usando?”."
+          size="lg"
+          min={1}
+          max={120}
+          allowDecimal={false}
+          allowNegative={false}
+          suffix=" min"
+          inputMode="numeric"
+          value={r.minutos}
+          onChange={(minutos) => mudar({ minutos })}
+        />
+      )}
+
+      {passo === 'confirmar' && (
+        <Stack gap={4} p="sm" className="ailow-cartao">
+          <Text fw={650} fz="lg" style={{ overflowWrap: 'anywhere' }}>
+            {r.nome.trim()}
+          </Text>
+          <Text style={{ overflowWrap: 'anywhere' }}>{r.telefone.trim() === '' ? 'Sem telefone' : r.telefone.trim()}</Text>
+          <Text style={{ overflowWrap: 'anywhere' }}>{r.endereco.trim() === '' ? 'Sem endereço' : r.endereco.trim()}</Text>
+          <Text>Trava o app após {r.minutos} min sem usar</Text>
+        </Stack>
+      )}
+    </QuadroDoAssistente>
   );
 }
 
