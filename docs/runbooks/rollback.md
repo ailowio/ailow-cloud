@@ -69,5 +69,13 @@ Com a `v1.0.0` publicada passou a existir uma tag anterior. Troca de `TAG` em `a
 
 **Não prova:** rollback quando a versão nova trouxe **migração** (as duas tags têm o mesmo schema; o §3.2 segue sem ensaio) nem com dados reais. A indisponibilidade medida (cerca de 6 a 8 segundos) é a da API em `stop-first`.
 
-## Não verificado (continua aberto depois da S14c)
-O `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal` (§3.2); restauração do banco de produção com dados reais; o gatilho numérico ainda não foi exercitado por uma falha real.
+### Pipeline em produção (2026-11-13)
+- **Deploy normal pelo pipeline** (workflow `Deploy`, run 43344269690, `v1.0.0` → `v1.0.1`, aprovado pelo Pedro): `deploy ok segundos=106` no servidor; job de implantação **1 min 55 s** (inclui backup e a verificação de fora). Nenhum comando manual na VPS.
+- **Primeira falha real (2 runs, 43348140648 cancelado antes da aprovação; 43348529282 e 43348976707 falharam):** reimplantação da **mesma tag** `v1.0.1` só para mudar limites de CPU numa medição. O que ficou provado e o que não:
+  - **Provado:** o `failure_action: rollback` do Swarm funciona sob falha real. A nova tarefa da `api` saiu com código 1 (`getaddrinfo EAI_AGAIN db`, porque o `db` também estava sendo reiniciado pela mudança de limite), o Swarm reverteu só a `api` (`rollback_completed`) e `/health` ficou 200, sem perda de dados (backup pré-deploy feito).
+  - **Falha do script (`ops/deploy/deploy.sh`), a corrigir com teste em PR própria:** (1) com tag anterior **igual** à pedida ele pula a reversão e termina com "reversão NÃO confirmada" (exit 21) mesmo com o Swarm já recuperado; (2) com a mesma tag o `web` não muda e nunca fica com `UpdateStatus=completed`, então a espera estoura os 300 s e o run falha embora `api` e `db` estejam saudáveis; (3) ao ver `rollback_started` ele sai sem esperar `rollback_completed`. Ou seja, o pipeline serve para **trocar de versão**; mudar só configuração da stack não é caso coberto.
+  - **Regra prática:** nunca mude no mesmo deploy o limite do `db` (ou a imagem do Postgres) e a `api`: o reinício do `db` derruba a resolução de nome para a `api`. Mudança no `db` vai sozinha, com a `api` estável.
+- Volta de limites (1,5 → 1,0 CPU) feita por `docker service update --limit-cpu` em sequência (`db`, depois `api`) e `ailow.env` restaurado: mudança manual registrada no diário privado da VPS (AUD-24).
+
+## Não verificado (continua aberto depois da S14e)
+O `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal` (§3.2); restauração do banco de produção com dados reais; o gatilho numérico foi exercitado por **uma falha real** (a acima), mas só a reversão do Swarm foi observada: a reversão do **script** para uma tag diferente continua sem ensaio em produção (existe `scripts/deploy-test.sh canario` no CI).

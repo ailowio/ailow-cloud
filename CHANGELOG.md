@@ -1,8 +1,15 @@
 # Changelog
 
-Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada será `v1.0.0` (S14).
+Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
 ## [Não lançado]
+
+### Documentação
+- S14e, fechamento da S14 (sem mudança de código nem de API, OpenAPI continua 0.14.0): resultado do RNF-01/02 em produção com a `v1.0.1` (RNF-01 passou; **RNF-02 reprovou em 3 rodadas, incluindo uma medição pontual com 1,5 CPU que refutou a hipótese do teto de CPU**); decisão do Pedro de otimizar a busca ampla em sessão própria; EX-02 do deploy manual encerrada; primeira falha real do pipeline registrada (`rollback.md`); `docs/runbooks/dimensionamento-minimo.md` (configuração mínima para o pacote do curso).
+
+## [1.0.1] - 2026-11-13
+
+Primeira versão implantada **pelo pipeline** (workflow `Deploy`, run 43344269690, aprovado pelo Pedro; 106 s no servidor).
 
 ### Alterado
 - Desempenho (RNF-02; sem mudança de API, OpenAPI continua 0.14.0): **compressão gzip no nginx do web** (`ops/web/nginx.conf`: JSON, JS, CSS, SVG e manifest; `gzip_min_length 1024`, nível 5, `Vary: Accept-Encoding`). A busca ampla de produtos (864 SKUs) mede **96,8 KiB → 22,3 KiB (4,3×)** e comprimir custa ~1,6 ms por resposta no nginx (medido em um PC, não na VPS). Teste no `stack-local.sh` (job `stack`): JS do app e `openapi.json` vêm em gzip, `Vary` presente e resposta pura sem `Accept-Encoding` (vermelho antes, verde depois). **Não é garantia de passar o RNF-02:** o efeito sobre o p95 só se confirma re-medindo na VPS com 50 usuários. Medidos e descartados como gargalo: montagem da resposta (~2 ms), validação Zod (~1 ms).
