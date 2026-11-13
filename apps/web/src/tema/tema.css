@@ -149,6 +149,45 @@ h1, h2, h3, h4 {
   overscroll-behavior: none;
 }
 
+/* CampoData (UXM-10, S06): calendário no tema do app. Fundo = superfície; dia selecionado = ação (marca); hoje com
+   anel da marca; dia de 44 px (7 colunas = 308 px cabem no pop-up de 344 px de largura em 360). */
+.ailow-popup-data .mantine-Modal-content { background: var(--ailow-superficie); }
+.ailow-popup-data .mantine-Modal-body { padding: 8px 8px 12px; }
+.ailow-popup-data .mantine-Modal-header { background: transparent; }
+.ailow-data {
+  --dch-control-size: 44px;
+  display: flex;
+  justify-content: center;
+}
+.ailow-data .mantine-DatePicker-calendarHeader { max-width: none; }
+.ailow-data .mantine-DatePicker-calendarHeaderLevel,
+.ailow-data .mantine-DatePicker-calendarHeaderControl {
+  color: var(--ailow-texto);
+  border-radius: var(--mantine-radius-md);
+}
+.ailow-data .mantine-DatePicker-calendarHeaderLevel { font-weight: 650; font-size: 16px; }
+.ailow-data .mantine-DatePicker-weekday { color: var(--ailow-apagado); font-weight: 600; text-transform: lowercase; }
+.ailow-data .mantine-DatePicker-day {
+  --day-size-xl: 44px;
+  color: var(--ailow-texto);
+  border-radius: var(--mantine-radius-md);
+  font-size: 16px;
+}
+.ailow-data .mantine-DatePicker-day:hover:not([data-selected]):not([data-disabled]) { background: var(--ailow-superficie-2); }
+.ailow-data .mantine-DatePicker-day[data-outside] { color: var(--ailow-apagado); opacity: 0.55; }
+.ailow-data .mantine-DatePicker-day[data-disabled] { color: var(--ailow-apagado); opacity: 0.35; }
+.ailow-data .mantine-DatePicker-day[data-today]:not([data-selected]) {
+  color: var(--ailow-marca-texto);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--ailow-acao);
+}
+.ailow-data .mantine-DatePicker-day[data-selected],
+.ailow-data .mantine-DatePicker-day[data-selected]:hover {
+  background: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
+  font-weight: 700;
+}
+
 /* Tabela só no computador; no celular a lista vira cartões (princípio 6). */
 .so-desktop { display: none; }
 @media (min-width: 48em) {

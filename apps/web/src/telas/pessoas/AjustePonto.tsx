@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button, NativeSelect, SegmentedControl, Stack, Text, TextInput } from '@mantine/core';
+import { CampoData } from '../../componentes/CampoData';
 import { Modal } from '../../componentes/navegacao';
 import type { Marca } from '@ailow/shared';
 import { MOTIVO_AJUSTE_MAX, diaDoPonto } from '@ailow/shared/puro';
@@ -119,7 +120,7 @@ function Campos(props: {
 }) {
   return (
     <>
-      <TextInput label="Dia" type="date" size="lg" max={props.hoje} value={props.data} onChange={(e) => props.aoData(e.currentTarget.value)} />
+      <CampoData label="Dia" max={props.hoje} value={props.data} onChange={props.aoData} />
       <TextInput label="Hora (de São Paulo)" type="time" size="lg" value={props.hora} onChange={(e) => props.aoHora(e.currentTarget.value)} />
       <TextInput
         label="Motivo (fica guardado no histórico)"

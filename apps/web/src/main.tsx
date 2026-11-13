@@ -1,12 +1,15 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/dates/styles.css';
 import 'mantine-datatable/styles.css';
+import 'dayjs/locale/pt-br';
 import '@fontsource-variable/sora';
 import '@fontsource-variable/manrope';
 import './tema/tema.css';
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MantineProvider } from '@mantine/core';
+import { DatesProvider } from '@mantine/dates';
 import { Notifications } from '@mantine/notifications';
 import { BrowserRouter } from 'react-router';
 import { temaAilow } from './tema/tema';
@@ -22,16 +25,18 @@ const mostrarCatalogo = Catalogo !== null && new URLSearchParams(location.search
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={temaAilow} defaultColorScheme="dark">
-      <BrowserRouter>
-        <Notifications position="top-center" />
-        {mostrarCatalogo && Catalogo ? (
-          <Suspense fallback={null}>
-            <Catalogo />
-          </Suspense>
-        ) : (
-          <App />
-        )}
-      </BrowserRouter>
+      <DatesProvider settings={{ locale: 'pt-br', firstDayOfWeek: 0 }}>
+        <BrowserRouter>
+          <Notifications position="top-center" />
+          {mostrarCatalogo && Catalogo ? (
+            <Suspense fallback={null}>
+              <Catalogo />
+            </Suspense>
+          ) : (
+            <App />
+          )}
+        </BrowserRouter>
+      </DatesProvider>
     </MantineProvider>
   </StrictMode>,
 );

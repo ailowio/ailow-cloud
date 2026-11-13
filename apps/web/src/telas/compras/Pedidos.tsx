@@ -5,6 +5,7 @@ import type { Fornecedor, Produto, StatusPedido } from '@ailow/shared';
 import { linkPedidoWhatsApp, textoDoPedido, totalDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
+import { CampoData } from '../../componentes/CampoData';
 import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { useAcao } from '../config/comum';
@@ -343,7 +344,7 @@ function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMuda
             Uma parcela no total do pedido (pode marcar como pago depois no Financeiro).
           </Text>
           <TextInput label="Valor da parcela" size="lg" value={parcelaTexto} onChange={(e) => setParcelaTexto(e.currentTarget.value)} />
-          <TextInput label="Vencimento" type="date" size="lg" value={vencimento} onChange={(e) => setVencimento(e.currentTarget.value)} />
+          <CampoData label="Vencimento" value={vencimento} onChange={setVencimento} />
           <Button h={48} loading={pendente} disabled={pendente} onClick={() => void confirmarRecebimento()}>
             Confirmar recebimento
           </Button>

@@ -43,6 +43,10 @@ export function TravaVoltar() {
   return null;
 }
 
+/** Ids dos modais abertos na entrada atual do histórico (a pilha, do mais de baixo ao mais de cima). */
+const modaisDaEntrada = (): string[] =>
+  (window.history.state as { usr?: { modais?: string[] } | null } | null)?.usr?.modais ?? [];
+
 /** Um passo para trás no histórico; sem passo anterior dentro do app, vai para `reserva`. */
 export function useVoltar(reserva = '/'): () => void {
   const navigate = useNavigate();
@@ -62,7 +66,9 @@ export function Modal({ opened, onClose, ...resto }: ModalProps) {
   const location = useLocation();
   // A verdade está na entrada atual do navegador (sincronizada no pushState), não no render do router: assim um
   // Voltar dado antes de o router processar a abertura também fecha o modal.
-  const naEntrada = useCallback(() => (window.history.state as { usr?: { modal?: string } | null } | null)?.usr?.modal === id, [id]);
+  // Modais aninhados (ex.: calendário dentro de "Adicionar ponto"): cada entrada guarda a PILHA de ids abertos,
+  // e o modal de baixo continua "na entrada" enquanto o de cima está aberto.
+  const naEntrada = useCallback(() => modaisDaEntrada().includes(id), [id]);
   const fase = useRef<'fora' | 'empurrando' | 'dentro'>('fora');
   const aoFechar = useRef(onClose);
   aoFechar.current = onClose;
@@ -70,7 +76,7 @@ export function Modal({ opened, onClose, ...resto }: ModalProps) {
   useEffect(() => {
     if (opened && fase.current === 'fora') {
       fase.current = 'empurrando';
-      navigate(location.pathname + location.search, { state: { modal: id } });
+      navigate(location.pathname + location.search, { state: { modais: [...modaisDaEntrada(), id] } });
     } else if (!opened && fase.current !== 'fora') {
       if (fase.current === 'dentro') navigate(-1);
       fase.current = 'fora';
@@ -91,12 +97,18 @@ export function Modal({ opened, onClose, ...resto }: ModalProps) {
   // `navigate` troca de identidade a cada rota: a ref evita que o efeito de saída rode fora da hora.
   const navegar = useRef(navigate);
   navegar.current = navigate;
-  useEffect(
-    () => () => {
-      if (fase.current === 'dentro' && naEntrada()) navegar.current(-1);
-    },
-    [naEntrada],
-  );
+  // A devolução espera um microtask: o StrictMode (dev) desmonta e remonta o componente no mesmo instante, e
+  // devolver a entrada ali fechava na hora todo modal que já nasce aberto (ex.: "Adicionar ponto").
+  const montado = useRef(true);
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
+      queueMicrotask(() => {
+        if (!montado.current && fase.current === 'dentro' && naEntrada()) navegar.current(-1);
+      });
+    };
+  }, [naEntrada]);
 
   // Formato de pop-up de celular (S05/UXM-10): centrado, 16 px de margem lateral, entrada com escala + fade de 180 ms
   // (sem animação com prefers-reduced-motion), fundo escurecido, X de 48 px. Altura máxima e rolagem do corpo: tema.css.

@@ -4,6 +4,7 @@ import { IconAlertCircle } from '@tabler/icons-react';
 import type { FormaPagamento } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
+import { CampoData } from '../../componentes/CampoData';
 import { formatarReais, reaisParaCentavos } from '../../lib/dinheiro';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { useAcao } from '../config/comum';
@@ -101,14 +102,7 @@ function FormDespesa(props: { api: Api; categorias: string[]; aoSalvar: (paga: b
         error={valorComErro ? 'Escreva o valor com vírgula, por exemplo 150,00 (até 20 milhões).' : undefined}
         description={valorValido && centavos !== null ? `Fica ${formatarReais(centavos)}` : undefined}
       />
-      <TextInput
-        label="Vence em"
-        required
-        size="lg"
-        type="date"
-        value={vencimento}
-        onChange={(e) => setVencimento(e.currentTarget.value)}
-      />
+      <CampoData label="Vence em" required value={vencimento} onChange={setVencimento} />
       <Switch
         size="lg"
         label="Já foi paga"
