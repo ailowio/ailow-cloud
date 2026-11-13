@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Group, SegmentedControl, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconChevronDown, IconChevronUp, IconPlus, IconQrcode, IconSearch } from '@tabler/icons-react';
 import type { Perfil, Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, SeloEstoque, Valor } from '../../componentes';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { filtrarPorBusca } from '../../lib/busca';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
+import { PRODUTOS_POR_PAGINA, camposDoProduto } from './busca-produto';
 import { Etiquetas } from './Etiquetas';
 import { NovoProduto } from './NovoProduto';
 import { type SkuAberto, SkuFolha } from './SkuFolha';
 import { linhaDoAlerta, rotuloPorte, tituloDoAlerta } from './rotulos';
+
+const SEM_PRODUTOS: Produto[] = [];
 
 type Vista = 'lista' | 'novo' | 'etiquetas';
 type Aba = 'todos' | 'baixo';
@@ -112,7 +117,7 @@ function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: (
             onChange={(e) => setTexto(e.currentTarget.value)}
           />
           <ListaProdutos
-            key={`${busca}|${rodada}`}
+            key={rodada}
             api={props.api}
             dono={props.dono}
             busca={busca}
@@ -144,10 +149,15 @@ function ListaProdutos(props: {
   aoNovo: () => void;
   aoAbrir: (s: SkuAberto) => void;
 }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos(props.busca));
+  // Lista inteira carregada uma vez (o servidor limita em 200); busca ampla e paginação no cliente.
+  const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos());
+  const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
+  const filtrados = useMemo(() => filtrarPorBusca(todos, props.busca, camposDoProduto), [todos, props.busca]);
+  const pag = usePaginacao(filtrados, PRODUTOS_POR_PAGINA);
   if (carga.fase === 'carregando') return <Carregando />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  const { produtos, truncado } = carga.dados;
+  const { truncado } = carga.dados;
+  const produtos = pag.itens;
 
   if (produtos.length === 0) {
     if (props.busca !== '') {
@@ -168,9 +178,10 @@ function ListaProdutos(props: {
   return (
     <Stack gap="sm">
       {produtos.map((p) => (
-        <CartaoProduto key={p.id} produto={p} dono={props.dono} aberto={produtos.length === 1} aoAbrir={props.aoAbrir} />
+        <CartaoProduto key={p.id} produto={p} dono={props.dono} aberto={filtrados.length === 1} aoAbrir={props.aoAbrir} />
       ))}
-      {truncado && <Text size="sm" c="dimmed">Mostrando os primeiros 200. Digite mais letras do nome, o código ou o preço para achar o resto.</Text>}
+      {truncado && <Text size="sm" c="dimmed">A busca olha os primeiros 200 produtos. Há mais no cadastro.</Text>}
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );
 }
