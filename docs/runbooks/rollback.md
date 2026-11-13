@@ -1,6 +1,6 @@
 # Runbook: rollback (voltar para a versão anterior)
 
-- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado na VPS:** 2026-11-12, parcialmente (mecanismo do §3.1, sem versão anterior real) · **tempo medido:** `web` 37 s, `api` 71 s (`docker service update --rollback`), ver "Não verificado"
+- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado na VPS:** 2026-11-12 (mecanismo `--rollback`) e 2026-11-13 (rollback real por tag, `v1.0.0` → `v0.1.0`) · **tempo medido:** por tag **73 s** (volta `v0.1.0` → `v1.0.0`: 78 s); `docker service update --rollback`: `web` 37 s, `api` 71 s
 - Regras: OPS-05/06/11, AUD-24. Princípio: **voltar o código primeiro (barato, seguro); mexer no banco só se for inevitável.**
 
 ## 1. Sintoma (quando usar)
@@ -56,7 +56,18 @@ Postmortem sem culpa (`harness/templates/postmortem.md`), com ações, dono e pr
 | `web` (start-first) | **37 s** | 1 de 53 checagens ≠ 200 | variável sumiu do spec, 1/1 |
 | `api` (stop-first, `monitor: 60s`) | **71 s** | 6 de 94 checagens ≠ 200 (indisponibilidade curta na troca) | variável sumiu do spec, 1/1 |
 
-**Prova:** o comando do §3.1 opção A funciona nesta stack e devolve o spec anterior com os dois serviços saudáveis. **Não prova:** voltar para uma imagem **diferente** (opção B, trocar `TAG`), o `down` de migração (§3.2), nem rollback com dados reais; o tempo da `api` é dominado pelo período de monitoramento de 60 s.
+**Prova:** o comando do §3.1 opção A funciona nesta stack e devolve o spec anterior com os dois serviços saudáveis. O tempo da `api` é dominado pelo período de monitoramento de 60 s.
+
+### Ensaio da opção B: rollback real por tag (2026-11-13)
+Com a `v1.0.0` publicada passou a existir uma tag anterior. Troca de `TAG` em `ailow.env` + `docker stack deploy` (deploy.md §2), com `GET /health` de fora a cada 1 s:
+
+| Passo | Tempo até `api` e `web` convergirem | `/health` de fora ≠ 200 | Resultado |
+|---|---|---|---|
+| deploy `v0.1.0` → `v1.0.0` | 86 s | 8 de 61 | imagens = digests publicados; 0 erros nos logs |
+| **rollback** `v1.0.0` → `v0.1.0` | **73 s** | 6 de 45 | `api` e `web` na `v0.1.0`, `/health` 200 |
+| volta `v0.1.0` → `v1.0.0` | 78 s | 6 de 52 | estado final `v1.0.0` |
+
+**Não prova:** rollback quando a versão nova trouxe **migração** (as duas tags têm o mesmo schema; o §3.2 segue sem ensaio) nem com dados reais. A indisponibilidade medida (cerca de 6 a 8 segundos) é a da API em `stop-first`.
 
 ## Não verificado (continua aberto depois da S14c)
-Rollback para uma tag anterior real (opção B); o `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal` (§3.2); restauração do banco de produção com dados reais; o gatilho numérico ainda não foi exercitado por uma falha real.
+O `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal` (§3.2); restauração do banco de produção com dados reais; o gatilho numérico ainda não foi exercitado por uma falha real.
