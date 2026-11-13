@@ -6,7 +6,8 @@ import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
 import { GradeAcoes } from '../../componentes/GradeAcoes';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
-import { filtrarPorBusca } from '../../lib/busca';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { useBuscaNoServidor } from '../../lib/useBuscaNoServidor';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
 import { PRODUTOS_POR_PAGINA, camposDoProduto } from './busca-produto';
@@ -132,15 +133,30 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
   const { carga, recarregar, tentarDeNovo } = useCarregar(() => props.api.produtos());
   const [abertoId, setAbertoId] = useState<string | null>(null);
   const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
-  const filtrados = useMemo(() => filtrarPorBusca(todos, props.busca, camposDoProduto), [todos, props.busca]);
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  // Lista cortada em 200: a busca também pergunta ao servidor (?q=) e une com o que já está carregado.
+  const servidor = useBuscaNoServidor(
+    cortada,
+    props.busca,
+    async (q) => {
+      const r = await props.api.produtos(q);
+      return { itens: r.produtos, truncado: r.truncado };
+    },
+    carga,
+  );
+  const filtrados = useMemo(
+    () => (props.busca === '' ? todos : mesclarBusca(todos, servidor.itens, props.busca, camposDoProduto, (p) => p.id)),
+    [todos, servidor.itens, props.busca],
+  );
   const pag = usePaginacao(filtrados, PRODUTOS_POR_PAGINA);
   if (carga.fase === 'carregando') return <Carregando />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  const { truncado } = carga.dados;
+  const truncado = avisoDeCorte(cortada, props.busca, servidor.truncado);
   const produtos = pag.itens;
 
   // O pop-up segue o produto pelo id (não pela busca): renomear o produto não o faz sumir da tela; arquivar o fecha.
-  const aberto = todos.find((p) => p.id === abertoId);
+  // O produto pode ter vindo só da busca no servidor (fora dos 200 carregados): procura nos dois.
+  const aberto = todos.find((p) => p.id === abertoId) ?? servidor.itens.find((p) => p.id === abertoId);
   const detalhe = aberto && (
     <DetalheProduto
       key={aberto.id}
@@ -175,7 +191,7 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
         {produtos.map((p) => (
           <CartaoProduto key={p.id} produto={p} dono={props.dono} aoAbrir={() => setAbertoId(p.id)} />
         ))}
-        {truncado && <Text size="sm" c="dimmed">A busca olha os primeiros 200 produtos. Há mais no cadastro.</Text>}
+        {truncado && <Text size="sm" c="dimmed" data-aviso-corte>{AVISO_CORTE}</Text>}
         <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
       </Stack>
     );

@@ -162,6 +162,8 @@ for (const tema of TEMAS) {
     expect(criado?.cnpj).toBe('12345678000195');
 
     // Editar: mesmo assistente, já preenchido; troca o nome e a API confirma.
+    // A lista é paginada (S14c): num banco com muitos fornecedores o criado pode estar na página 2; a busca o traz.
+    await page.getByLabel('Buscar fornecedor').fill(nome);
     await page.getByRole('button', { name: new RegExp(nome) }).click();
     await passo(page, 'Qual é o nome do fornecedor?', 1, 3, 'editar-nome');
     await expect(page.getByLabel('Nome')).toHaveValue(nome);

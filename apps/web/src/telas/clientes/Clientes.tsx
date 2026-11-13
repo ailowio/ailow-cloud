@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, SegmentedControl, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
 import type { Cliente, Perfil } from '@ailow/shared';
 import { mascararCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { ITENS_POR_PAGINA, camposDoCliente } from '../../lib/campos-busca-listas';
+import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
 import { FichaCliente } from './FichaCliente';
 import { NovoCliente } from './NovoCliente';
+
+const SEM_CLIENTES: Cliente[] = [];
 
 type Vista = 'lista' | 'novo';
 type Situacao = 'ativos' | 'inativos';
@@ -59,14 +65,9 @@ export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
 function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (id: string) => void }) {
   const [texto, setTexto] = useState('');
-  const [busca, setBusca] = useState('');
   const [situacao, setSituacao] = useState<Situacao>('ativos');
-
-  // Espera a pessoa parar de digitar para não chamar a API a cada letra.
-  useEffect(() => {
-    const t = setTimeout(() => setBusca(texto.trim()), 300);
-    return () => clearTimeout(t);
-  }, [texto]);
+  // Espera a pessoa parar de digitar para não filtrar/chamar a API a cada letra.
+  const busca = useTextoComEspera(texto);
 
   return (
     <Stack gap="md">
@@ -97,7 +98,7 @@ function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (i
         onChange={(e) => setTexto(e.currentTarget.value)}
       />
       <ListaClientes
-        key={`${busca}|${situacao}`}
+        key={situacao}
         api={props.api}
         busca={busca}
         situacao={situacao}
@@ -109,10 +110,29 @@ function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (i
 }
 
 function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoNovo: () => void; aoAbrir: (id: string) => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.clientes(props.busca, props.situacao));
+  // Lista carregada uma vez (o servidor corta em 200); busca ampla e paginação no cliente. Cortada: a busca
+  // também pergunta ao servidor (?q=) e une.
+  const { carga, tentarDeNovo } = useCarregar(() => props.api.clientes(undefined, props.situacao));
+  const todos = carga.fase === 'pronto' ? carga.dados.clientes : SEM_CLIENTES;
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  const servidor = useBuscaNoServidor(
+    cortada,
+    props.busca,
+    async (q) => {
+      const r = await props.api.clientes(q, props.situacao);
+      return { itens: r.clientes, truncado: r.truncado };
+    },
+    carga,
+  );
+  const filtrados = useMemo(
+    () => (props.busca === '' ? todos : mesclarBusca(todos, servidor.itens, props.busca, camposDoCliente, (c) => c.id)),
+    [todos, servidor.itens, props.busca],
+  );
+  const pag = usePaginacao(filtrados, ITENS_POR_PAGINA);
   if (carga.fase === 'carregando') return <Carregando />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  const { clientes, truncado } = carga.dados;
+  const clientes = pag.itens;
+  const truncado = avisoDeCorte(cortada, props.busca, servidor.truncado);
 
   if (clientes.length === 0) {
     if (props.situacao === 'inativos') {
@@ -149,10 +169,11 @@ function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoN
         <CartaoCliente key={c.id} cliente={c} aoAbrir={props.aoAbrir} />
       ))}
       {truncado && (
-        <Text size="sm" c="dimmed">
-          Mostrando os primeiros 200. Digite mais letras do nome ou mais números do celular para achar o resto.
+        <Text size="sm" c="dimmed" data-aviso-corte>
+          {AVISO_CORTE}
         </Text>
       )}
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );
 }

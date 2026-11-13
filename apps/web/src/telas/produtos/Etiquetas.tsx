@@ -7,7 +7,8 @@ import type { Api } from '../../api/endpoints';
 import { ErroApi } from '../../api/cliente';
 import { EstadoVazio, Valor } from '../../componentes';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
-import { filtrarPorBusca } from '../../lib/busca';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { useBuscaNoServidor } from '../../lib/useBuscaNoServidor';
 import { avisarErro } from '../../lib/avisos';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
@@ -39,7 +40,21 @@ export function Etiquetas(props: { api: Api }) {
   // Lista inteira carregada uma vez; a busca ampla e a paginação acontecem no cliente (o servidor limita em 200).
   const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos());
   const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
-  const filtrados = useMemo(() => filtrarPorBusca(todos, busca, camposDoProduto), [todos, busca]);
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  // Lista cortada em 200: a busca também pergunta ao servidor (?q=) e une com o que já está carregado.
+  const servidor = useBuscaNoServidor(
+    cortada,
+    busca,
+    async (q) => {
+      const r = await props.api.produtos(q);
+      return { itens: r.produtos, truncado: r.truncado };
+    },
+    carga,
+  );
+  const filtrados = useMemo(
+    () => (busca === '' ? todos : mesclarBusca(todos, servidor.itens, busca, camposDoProduto, (p) => p.id)),
+    [todos, servidor.itens, busca],
+  );
   const pag = usePaginacao(filtrados, ETIQUETAS_POR_PAGINA);
 
   useEffect(() => {
@@ -93,7 +108,7 @@ export function Etiquetas(props: { api: Api }) {
         <ListaParaEtiquetas
           produtos={pag.itens}
           semNenhum={todos.length === 0}
-          truncado={carga.dados.truncado}
+          truncado={avisoDeCorte(cortada, busca, servidor.truncado)}
           quantidades={quantidades}
           aoMudar={mudar}
         />
@@ -162,7 +177,7 @@ function ListaParaEtiquetas(props: {
       {props.produtos.map((p) => (
         <CartaoEtiquetas key={p.id} produto={p} quantidades={props.quantidades} aoMudar={props.aoMudar} />
       ))}
-      {props.truncado && <Text size="sm" c="dimmed">A busca olha os primeiros 200 produtos. Há mais no cadastro.</Text>}
+      {props.truncado && <Text size="sm" c="dimmed" data-aviso-corte>{AVISO_CORTE}</Text>}
     </Stack>
   );
 }

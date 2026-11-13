@@ -1,17 +1,24 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus, IconSearch } from '@tabler/icons-react';
 import type { StatusPedido } from '@ailow/shared';
 import { linkPedidoWhatsApp, textoDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
 import { CampoData } from '../../componentes/CampoData';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { filtrarPorBusca } from '../../lib/busca';
+import { ITENS_POR_PAGINA, camposDoPedido } from '../../lib/campos-busca-listas';
+import { useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { NovoPedido } from './NovoPedido';
 import { ROTULO_STATUS, mensagemCompras } from './rotulos';
+
+type PedidoDaLista = Awaited<ReturnType<Api['pedidosCompra']>>['pedidos'][number];
+const SEM_PEDIDOS: PedidoDaLista[] = [];
 
 type Vista = 'lista' | 'novo' | 'ficha';
 
@@ -66,27 +73,49 @@ export function Pedidos(props: { api: Api }) {
 
 function Lista(props: { api: Api; aoNovo: () => void; aoAbrir: (id: string) => void }) {
   const { carga, tentarDeNovo } = useCarregar(() => props.api.pedidosCompra());
+  const [texto, setTexto] = useState('');
+  const busca = useTextoComEspera(texto);
+  // A API entrega todos os pedidos (sem corte): busca ampla e paginação no cliente.
+  const todos = carga.fase === 'pronto' ? carga.dados.pedidos : SEM_PEDIDOS;
+  const filtrados = useMemo(
+    () => filtrarPorBusca(todos, busca, (p) => camposDoPedido(p, ROTULO_STATUS[p.status])),
+    [todos, busca],
+  );
+  const pag = usePaginacao(filtrados, ITENS_POR_PAGINA);
   return (
     <Stack gap="md">
       <Button h={48} leftSection={<IconPlus aria-hidden />} onClick={props.aoNovo}>
         Novo pedido
       </Button>
+      <TextInput
+        size="lg"
+        aria-label="Buscar pedido"
+        placeholder="Número, fornecedor, status ou valor"
+        leftSection={<IconSearch aria-hidden />}
+        autoComplete="off"
+        maxLength={80}
+        value={texto}
+        onChange={(e) => setTexto(e.currentTarget.value)}
+      />
       {carga.fase === 'carregando' && <Carregando linhas={3} />}
       {carga.fase === 'erro' && <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />}
-      {carga.fase === 'pronto' && carga.dados.pedidos.length === 0 && (
+      {carga.fase === 'pronto' && todos.length === 0 && (
         <EstadoVazio titulo="Nenhum pedido" texto="Monte um rascunho, envie pelo WhatsApp e receba as peças." />
       )}
-      {carga.fase === 'pronto' &&
-        carga.dados.pedidos.map((p) => (
-          <UnstyledButton key={p.id} className="ailow-bloco" mih={72} p="md" w="100%" onClick={() => props.aoAbrir(p.id)}>
-            <Text fw={650}>
-              Pedido {p.numero} · {ROTULO_STATUS[p.status]}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {p.fornecedor_nome} · <Valor centavos={p.total_centavos} />
-            </Text>
-          </UnstyledButton>
-        ))}
+      {carga.fase === 'pronto' && todos.length > 0 && filtrados.length === 0 && (
+        <EstadoVazio titulo="Nenhum pedido encontrado" texto="Tente o número, parte do nome do fornecedor, o status ou o valor." />
+      )}
+      {pag.itens.map((p) => (
+        <UnstyledButton key={p.id} className="ailow-bloco" data-pedido mih={72} p="md" w="100%" onClick={() => props.aoAbrir(p.id)}>
+          <Text fw={650}>
+            Pedido {p.numero} · {ROTULO_STATUS[p.status]}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {p.fornecedor_nome} · <Valor centavos={p.total_centavos} />
+          </Text>
+        </UnstyledButton>
+      ))}
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );
 }

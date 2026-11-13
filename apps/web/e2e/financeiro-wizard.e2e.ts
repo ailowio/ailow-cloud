@@ -74,6 +74,8 @@ test('(a) Contas a pagar abre sem erro de console, de página nem resposta 5xx',
   await page.getByRole('button', { name: 'Contas a pagar' }).click();
   expect((await contas).status()).toBe(200);
   await expect(page.getByRole('heading', { name: 'Contas a pagar', level: 1 })).toBeVisible();
+  // A lista é paginada (S14c): num banco com muitas contas a nova pode estar na página 2; a busca a traz.
+  await page.getByLabel('Buscar conta').fill(`Conta ${s}`);
   await expect(page.getByText(`Conta ${s}`)).toBeVisible();
   await expect(page.getByText('Não foi possível carregar')).toHaveCount(0);
   expect(problemas, 'nada de erro ao abrir Contas a pagar').toEqual([]);

@@ -1,13 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconAlertCircle, IconCamera, IconReportAnalytics, IconShoppingCartCheck } from '@tabler/icons-react';
 import type { Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { Carrinho } from '../../componentes';
 import { GradeAcoes } from '../../componentes/GradeAcoes';
-import { Carregando } from '../estados';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
+import { camposDoProduto } from '../produtos/busca-produto';
+import { Carregando, useCarregar } from '../estados';
 import { MENSAGEM_SEM_ESTOQUE, type ItemVenda, acrescentar, mudarQuantidade } from './carrinho';
 import { Scanner } from './Scanner';
+
+const SEM_PRODUTOS: Produto[] = [];
+const SEM_LINHAS: { key: string; peca: Omit<ItemVenda, 'qtd'> }[] = [];
+/** Peças por página na busca da venda (UXM-09: 10 a 20). */
+const PECAS_POR_PAGINA = 10;
 
 function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda, 'qtd'> {
   return {
@@ -30,40 +39,31 @@ export function MontarVenda(props: {
 }) {
   const [busca, setBusca] = useState('');
   const [lendo, setLendo] = useState(false);
-  const [carregando, setCarregando] = useState(false);
-  const [erroBusca, setErroBusca] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const consulta = useTextoComEspera(busca, 250);
 
-  useEffect(() => {
-    const q = busca.trim();
-    if (q === '') {
-      setProdutos([]);
-      setErroBusca(null);
-      return;
-    }
-    let ativo = true;
-    setCarregando(true);
-    const espera = setTimeout(() => {
-      props.api
-        .produtos(q)
-        .then((r) => {
-          if (!ativo) return;
-          setProdutos(r.produtos);
-          setErroBusca(null);
-        })
-        .catch(() => {
-          if (ativo) setErroBusca('Não consegui buscar. Verifique a conexão e tente de novo.');
-        })
-        .finally(() => {
-          if (ativo) setCarregando(false);
-        });
-    }, 250);
-    return () => {
-      ativo = false;
-      clearTimeout(espera);
-    };
-  }, [busca, props.api]);
+  // Catálogo carregado uma vez (o servidor corta em 200); busca ampla e paginação no cliente. Cortado: a busca
+  // também pergunta ao servidor (?q=) e une. Sem texto, nada a mostrar (a venda parte do escaneamento ou da busca).
+  const { carga } = useCarregar(() => props.api.produtos());
+  const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  const servidor = useBuscaNoServidor(
+    cortada,
+    consulta,
+    async (q) => {
+      const r = await props.api.produtos(q);
+      return { itens: r.produtos, truncado: r.truncado };
+    },
+    carga,
+  );
+  const linhas = useMemo(() => {
+    if (consulta === '') return SEM_LINHAS;
+    const achados = mesclarBusca(todos, servidor.itens, consulta, camposDoProduto, (p) => p.id);
+    return achados.flatMap((p) => p.skus.map((s) => ({ key: s.id, peca: pecaDe(p, s) })));
+  }, [todos, servidor.itens, consulta]);
+  const pag = usePaginacao(linhas, PECAS_POR_PAGINA);
+  const carregando = busca.trim() !== '' && (carga.fase === 'carregando' || busca.trim() !== consulta);
+  const erroBusca = carga.fase === 'erro' ? 'Não consegui buscar. Verifique a conexão e tente de novo.' : null;
 
   function entrar(peca: Omit<ItemVenda, 'qtd'>) {
     const r = acrescentar(props.itens, peca);
@@ -90,8 +90,6 @@ export function MontarVenda(props: {
 
   if (lendo) return <Scanner aoCodigo={(c) => void aoCodigo(c)} aoFechar={() => setLendo(false)} />;
 
-  const linhas = produtos.flatMap((p) => p.skus.map((s) => ({ key: s.id, peca: pecaDe(p, s) }))).slice(0, 8);
-
   return (
     <Stack gap="md">
       <GradeAcoes
@@ -108,11 +106,11 @@ export function MontarVenda(props: {
           {erroBusca}
         </Alert>
       )}
-      {!carregando && busca.trim() !== '' && linhas.length === 0 && !erroBusca && (
+      {!carregando && consulta !== '' && linhas.length === 0 && !erroBusca && (
         <Text c="dimmed">Nenhuma peça com esse texto. Confira o nome ou o código.</Text>
       )}
       <Stack gap="xs">
-        {linhas.map(({ key, peca }) => (
+        {pag.itens.map(({ key, peca }) => (
           <UnstyledButton
             key={key}
             onClick={() => entrar(peca)}
@@ -128,6 +126,12 @@ export function MontarVenda(props: {
             </Text>
           </UnstyledButton>
         ))}
+        {avisoDeCorte(cortada, consulta, servidor.truncado) && consulta !== '' && (
+          <Text size="sm" c="dimmed" data-aviso-corte>
+            {AVISO_CORTE}
+          </Text>
+        )}
+        <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
       </Stack>
       {aviso && (
         <Alert color="red" icon={<IconAlertCircle />} role="alert">

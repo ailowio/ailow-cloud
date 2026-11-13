@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
 import type { Fornecedor } from '@ailow/shared';
 import { mascararCelular, normalizarCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { ITENS_POR_PAGINA, camposDoFornecedor } from '../../lib/campos-busca-listas';
+import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { QuadroDoAssistente, avisoDoPasso, usePassoNoHistorico } from '../../componentes/Assistente';
 import { useSalvarComToast } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
@@ -16,6 +20,8 @@ import {
   validarPassoFornecedor,
 } from './fornecedor-passos';
 import { mensagemCompras } from './rotulos';
+
+const SEM_FORNECEDORES: Fornecedor[] = [];
 
 type Vista = 'lista' | 'novo' | 'editar';
 
@@ -64,11 +70,7 @@ export function Fornecedores(props: { api: Api }) {
 
 function Lista(props: { api: Api; aoNovo: () => void; aoEditar: (f: Fornecedor) => void }) {
   const [texto, setTexto] = useState('');
-  const [busca, setBusca] = useState('');
-  useEffect(() => {
-    const t = setTimeout(() => setBusca(texto.trim()), 300);
-    return () => clearTimeout(t);
-  }, [texto]);
+  const busca = useTextoComEspera(texto);
 
   return (
     <Stack gap="md">
@@ -85,21 +87,43 @@ function Lista(props: { api: Api; aoNovo: () => void; aoEditar: (f: Fornecedor) 
         value={texto}
         onChange={(e) => setTexto(e.currentTarget.value)}
       />
-      <Resultados key={busca} api={props.api} busca={busca} aoEditar={props.aoEditar} />
+      <Resultados api={props.api} busca={busca} aoEditar={props.aoEditar} />
     </Stack>
   );
 }
 
 function Resultados(props: { api: Api; busca: string; aoEditar: (f: Fornecedor) => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.fornecedores(props.busca || undefined));
+  // Lista carregada uma vez (o servidor corta em 200); busca ampla e paginação no cliente. Cortada: a busca
+  // também pergunta ao servidor (?q=) e une.
+  const { carga, tentarDeNovo } = useCarregar(() => props.api.fornecedores());
+  const todos = carga.fase === 'pronto' ? carga.dados.fornecedores : SEM_FORNECEDORES;
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  const servidor = useBuscaNoServidor(
+    cortada,
+    props.busca,
+    async (q) => {
+      const r = await props.api.fornecedores(q);
+      return { itens: r.fornecedores, truncado: r.truncado };
+    },
+    carga,
+  );
+  const filtrados = useMemo(
+    () => (props.busca === '' ? todos : mesclarBusca(todos, servidor.itens, props.busca, camposDoFornecedor, (f) => f.id)),
+    [todos, servidor.itens, props.busca],
+  );
+  const pag = usePaginacao(filtrados, ITENS_POR_PAGINA);
   if (carga.fase === 'carregando') return <Carregando linhas={3} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  if (carga.dados.fornecedores.length === 0) {
-    return <EstadoVazio titulo="Nenhum fornecedor" texto="Cadastre quem manda as peças para montar o pedido." />;
+  if (filtrados.length === 0) {
+    return props.busca !== '' ? (
+      <EstadoVazio titulo="Nenhum fornecedor encontrado" texto="Tente outro pedaço do nome, o WhatsApp ou o CNPJ." />
+    ) : (
+      <EstadoVazio titulo="Nenhum fornecedor" texto="Cadastre quem manda as peças para montar o pedido." />
+    );
   }
   return (
     <Stack gap="sm">
-      {carga.dados.fornecedores.map((f) => (
+      {pag.itens.map((f) => (
         <UnstyledButton key={f.id} className="ailow-bloco" mih={64} p="md" w="100%" onClick={() => props.aoEditar(f)}>
           <Text fw={650}>{f.nome}</Text>
           <Text size="sm" c="dimmed">
@@ -108,11 +132,12 @@ function Resultados(props: { api: Api; busca: string; aoEditar: (f: Fornecedor) 
           </Text>
         </UnstyledButton>
       ))}
-      {carga.dados.truncado && (
-        <Text size="sm" c="dimmed">
-          Mostrando os primeiros resultados. Refine a busca.
+      {avisoDeCorte(cortada, props.busca, servidor.truncado) && (
+        <Text size="sm" c="dimmed" data-aviso-corte>
+          {AVISO_CORTE}
         </Text>
       )}
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );
 }
