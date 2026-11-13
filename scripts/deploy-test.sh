@@ -31,7 +31,18 @@ case "$1 $2" in
   "service inspect")
     svc="${3#ailow_}"
     case "$*" in
-      *UpdateStatus*) echo "${UPDATE_STATE:-completed}" ;;
+      *UpdateStatus*)
+        v="UPDATE_STATE_${svc}"
+        if [ -n "${!v+x}" ]; then
+          # Estado fixo por serviço; vazio imita serviço nunca atualizado (o docker falha no template e o script lê "").
+          echo "${!v}"
+        elif [ -s "$ESTADO/seq_${svc}" ]; then
+          # Sequência de estados: consome uma linha por consulta e repete a última.
+          head -n 1 "$ESTADO/seq_${svc}"
+          [ "$(wc -l < "$ESTADO/seq_${svc}")" -gt 1 ] && sed -i 1d "$ESTADO/seq_${svc}"
+        else
+          echo "${UPDATE_STATE:-completed}"
+        fi ;;
       *ContainerSpec.Image*) echo "ghcr.io/ailowio/ailow-cloud-${svc}:$(cat "$ESTADO/tag")@sha256:${svc}fake" ;;
     esac ;;
 esac
@@ -49,7 +60,7 @@ SH
   printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/sleep"
   chmod +x "$TMP/bin/"*
   export PATH="$TMP/bin:$PATH" ESPERA_MAX_S=20 INTERVALO_S=1 SAUDAVEL_N=3
-  unset FALHA_NA_TAG UPDATE_STATE BACKUP_EXIT
+  unset FALHA_NA_TAG UPDATE_STATE UPDATE_STATE_api UPDATE_STATE_web UPDATE_STATE_db BACKUP_EXIT
 }
 
 chamadas() { grep -c "$1" "$LOG" || true; }
@@ -109,6 +120,36 @@ cenario_atualizacao_revertida_pelo_swarm() {
   afirmar "TAG do ailow.env não fica na versão que falhou" test "$(tag_no_env)" != v1.1.0
 }
 
+cenario_mesma_tag_servico_sem_atualizacao() {
+  echo "== deploy.sh: mesma tag, serviço que não mudou (UpdateStatus vazio) => converge e dá exit 0 (L-0023)"
+  novo_ambiente
+  # Reaplicar a tag em produção (ex.: só mudou um limite): o web não muda e não tem UpdateStatus.
+  export UPDATE_STATE_web=""
+  bash "$DEPLOY" v1.0.0 > "$TMP/saida.txt" 2>&1; local rc=$?
+  afirmar "exit 0" test "$rc" -eq 0
+  afirmar "um único stack deploy" test "$(chamadas 'stack deploy')" -eq 1
+  afirmar "TAG continua v1.0.0" test "$(tag_no_env)" = v1.0.0
+}
+
+cenario_mesma_tag_swarm_reverteu() {
+  echo "== deploy.sh: mesma tag, o Swarm reverte a api sozinho e a stack volta a responder => exit 20, não 21 (L-0023)"
+  novo_ambiente
+  printf 'rollback_started\nrollback_completed\n' > "$ESTADO/seq_api"
+  bash "$DEPLOY" v1.0.0 > "$TMP/saida.txt" 2>&1; local rc=$?
+  afirmar "exit 20 (reversão pelo Swarm confirmada)" test "$rc" -eq 20
+  afirmar "não afirma que a reversão não foi confirmada" bash -c "! grep -q 'REVERSÃO NÃO CONFIRMADA' '$TMP/saida.txt'"
+  afirmar "TAG continua v1.0.0" test "$(tag_no_env)" = v1.0.0
+}
+
+cenario_mesma_tag_sem_recuperar() {
+  echo "== deploy.sh: mesma tag e o /health nunca volta => exit 21 (não finge sucesso)"
+  novo_ambiente
+  export FALHA_NA_TAG=v1.0.0
+  bash "$DEPLOY" v1.0.0 > "$TMP/saida.txt" 2>&1; local rc=$?
+  afirmar "exit 21" test "$rc" -eq 21
+  afirmar "avisa que precisa de intervenção humana" grep -q 'REVERSÃO NÃO CONFIRMADA' "$TMP/saida.txt"
+}
+
 cenario_tag_invalida() {
   echo "== deploy.sh: tag inválida"
   novo_ambiente
@@ -132,5 +173,8 @@ cenario_sucesso
 cenario_health_falha
 cenario_backup_falha
 cenario_atualizacao_revertida_pelo_swarm
+cenario_mesma_tag_servico_sem_atualizacao
+cenario_mesma_tag_swarm_reverteu
+cenario_mesma_tag_sem_recuperar
 cenario_tag_invalida
 if [ "$FALHAS" -eq 0 ]; then echo "TODOS OS CENÁRIOS OK"; else echo "$FALHAS verificação(ões) falharam"; exit 1; fi

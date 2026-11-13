@@ -31,7 +31,7 @@ Os limites são **tetos** (`deploy.resources.limits`), sem reserva; variáveis `
 | RNF-02: buscar produto p95 | ≤ 300 ms | 474 ❌ | 427 ❌ | 529 ❌ |
 | Erro | < 1 % | 0 % | 0 % | 0 % |
 
-A venda passa com folga na configuração acima. A busca **não** passa, e o gargalo **não é CPU** nem o SQL (a consulta da busca ampla executa em 0,23 ms): está no tratamento da resposta HTTP de centenas de SKUs. Correção planejada: perfilar e otimizar o handler em sessão própria (mudança de contrato OpenAPI MINOR). Em ambiente local (S13b2, sem rede e sem host compartilhado) a busca dava 246–268 ms.
+A venda passa com folga na configuração acima. A busca **não** passa, e o gargalo **não é CPU** nem o SQL (a consulta da busca ampla executa em 0,23 ms): nem o tamanho da resposta (a busca por 1 modelo é tão lenta quanto a ampla). Dentro da API a requisição passa ~250 ms esperando com o event loop folgado; a hipótese é fila no pool de 10 conexões do Postgres (`DB_POOL_MAX`), **ainda não medida**. Próximo passo: medir a espera do pool e testar `DB_POOL_MAX` maior só na `api`. Em ambiente local (S13b2, sem rede e sem host compartilhado) a busca dava 246–268 ms.
 
 ## 4. Mínimo recomendado para quem for reproduzir
 Como ponto de partida **prático** (derivado do que rodou, não de um teste de mínimo):

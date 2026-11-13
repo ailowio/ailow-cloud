@@ -4,6 +4,12 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### Corrigido
+- Pipeline de deploy (L-0023; sem mudança de API): `ops/deploy/deploy.sh` agora converge ao **reaplicar a mesma tag** (serviço sem `UpdateStatus`, como o `web`, conta como convergido; a imagem na tag continua obrigatória), **espera o Swarm terminar a reversão** (`rollback_started` não é mais falha imediata) e, com a mesma tag, decide pelo estado real: exit 20 se a stack voltou a responder (antes dizia "reversão NÃO confirmada", exit 21, com tudo de pé). 3 cenários novos em `scripts/deploy-test.sh` (vermelhos antes, verdes depois; canário continua ok). Não exercitado em produção.
+
+### Adicionado
+- Diagnóstico do RNF-02 (sem mudança de limiar nem de API): `ops/k6/carga.js` marca a busca com `tipo` (`modelo` | `ampla`) e o resumo mostra o p95 de cada uma (informativo). 1ª rodada local: modelo p95 535 ms, ampla 507 ms, ou seja, a busca ampla **não** explica o p95.
+
 ### Documentação
 - S14e, fechamento da S14 (sem mudança de código nem de API, OpenAPI continua 0.14.0): resultado do RNF-01/02 em produção com a `v1.0.1` (RNF-01 passou; **RNF-02 reprovou em 3 rodadas, incluindo uma medição pontual com 1,5 CPU que refutou a hipótese do teto de CPU**); decisão do Pedro de otimizar a busca ampla em sessão própria; EX-02 do deploy manual encerrada; primeira falha real do pipeline registrada (`rollback.md`); `docs/runbooks/dimensionamento-minimo.md` (configuração mínima para o pacote do curso).
 
