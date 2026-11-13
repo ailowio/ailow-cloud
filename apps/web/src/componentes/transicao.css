@@ -1,0 +1,71 @@
+/* UXM-07: transição de usuário (entrada, saída, troca). Só CSS; a duração total (820 ms) é a do keyframe + folga
+   e precisa bater com DURACAO_MS em TransicaoUsuario.tsx. Tela cheia, sem rolagem, sem capturar toque. */
+.ailow-transicao {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--mantine-color-body);
+  animation: ailow-transicao-fundo 800ms ease-in-out both;
+}
+
+.ailow-transicao__marca {
+  width: min(46vw, 168px);
+  height: auto;
+  animation: ailow-transicao-escala 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ailow-transicao__marca path {
+  fill: var(--ailow-marca);
+  stroke: var(--ailow-marca);
+  stroke-width: 5;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation:
+    ailow-transicao-traco 520ms ease-out both,
+    ailow-transicao-preenche 280ms ease-out 360ms both;
+}
+
+@keyframes ailow-transicao-fundo {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes ailow-transicao-escala {
+  from { transform: scale(0.9); }
+  to { transform: scale(1); }
+}
+
+@keyframes ailow-transicao-traco {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes ailow-transicao-preenche {
+  from { fill-opacity: 0; }
+  to { fill-opacity: 1; }
+}
+
+/* Movimento reduzido: sem traço nem escala; só um fade curto (≤ 200 ms) com a marca já pronta. */
+@media (prefers-reduced-motion: reduce) {
+  .ailow-transicao {
+    animation: ailow-transicao-fade 180ms linear both;
+  }
+  .ailow-transicao__marca,
+  .ailow-transicao__marca path {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+@keyframes ailow-transicao-fade {
+  0% { opacity: 0; }
+  40% { opacity: 1; }
+  100% { opacity: 0; }
+}

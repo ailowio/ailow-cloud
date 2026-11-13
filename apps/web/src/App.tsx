@@ -9,6 +9,7 @@ import { modulosPara, type Modulo } from './acesso/modulos';
 import { useTravaInatividade } from './acesso/useTrava';
 import { TravaVoltar, useVoltar } from './componentes/navegacao';
 import { SessaoContexto } from './componentes/sessao';
+import { TransicaoUsuario } from './componentes/TransicaoUsuario';
 import { DefinirPin } from './telas/DefinirPin';
 import { Entrar } from './telas/Entrar';
 import { Inicio } from './telas/Inicio';
@@ -53,11 +54,16 @@ export function App() {
   navRef.current = navigate;
   const ir = useCallback((para: string, opcoes?: NavigateOptions) => void navRef.current(para, opcoes), []);
   const voltarParaQuemUsa = useVoltar('/quem-usa');
+  // UXM-07: contador que dispara a transição (entrada, saída, troca). Cada ponto onde a sessão do usuário muda chama `transicao`.
+  const [disparo, setDisparo] = useState(0);
+  const [saiu, setSaiu] = useState(false);
+  const transicao = useCallback(() => setDisparo((n) => n + 1), []);
 
   const irParaQuemUsa = useCallback(
     async (aviso?: string) => {
       try {
         const r = await api.quemUsa();
+        setSaiu(false);
         setSessao(null);
         setUsuarios(r.usuarios);
         setAvisoQuemUsa(aviso);
@@ -109,10 +115,12 @@ export function App() {
     if (r.precisa_definir_pin) {
       senhaTemporaria.current = senha;
       setUsuarioPin(r.usuario);
+      transicao();
       ir('/definir-pin', { replace: true });
       return;
     }
     await api.sair().catch(() => {});
+    transicao();
     await irParaQuemUsa();
   }
 
@@ -130,6 +138,7 @@ export function App() {
       await api.pin(escolhido.id, pin);
       const eu = await api.eu();
       setSessao({ usuario: eu.usuario, inatividade: eu.inatividade_minutos });
+      transicao();
       ir('/', { replace: true });
       return null;
     } catch (e) {
@@ -147,9 +156,10 @@ export function App() {
   const sairParaQuemUsa = useCallback(
     async (aviso?: string) => {
       await api.sair().catch(() => {});
+      transicao();
       await irParaQuemUsa(aviso);
     },
-    [api, irParaQuemUsa],
+    [api, irParaQuemUsa, transicao],
   );
 
   const aoTrocar = useCallback(() => void sairParaQuemUsa(), [sairParaQuemUsa]);
@@ -158,10 +168,12 @@ export function App() {
   // aparelho (ADR 004: "não há revogação do aparelho em si"), então o vínculo continua; recarregar abre "Quem está usando?".
   const aoSair = useCallback(async () => {
     await api.sair().catch(() => {});
+    setSaiu(true);
     setSessao(null);
     setAvisoEntrar('Você saiu. Para entrar de novo, use o e-mail e a senha do Dono.');
+    transicao();
     ir('/entrar', { replace: true });
-  }, [api, ir]);
+  }, [api, ir, transicao]);
 
   let corpo: ReactNode;
   if (carga.fase === 'carregando') {
@@ -196,10 +208,15 @@ export function App() {
     );
   } else {
     // Sem sessão, qualquer rota que não seja de entrada cai na tela de entrada do aparelho.
-    const padrao = usuarios ? '/quem-usa' : '/entrar';
+    // Depois de "Sair" o destino é /entrar; sem isso o fallback "*" (renderizado antes da navegação) o jogava em /quem-usa.
+    const padrao = usuarios && !saiu ? '/quem-usa' : '/entrar';
     corpo = (
       <Routes>
-        <Route path="/entrar" element={<Entrar aviso={avisoEntrar} aoEntrar={aoEntrar} />} />
+        {/* `usuarios` só é preenchido quando "Quem está usando?" respondeu, ou seja, o aparelho está vinculado (ADR 004). */}
+        <Route
+          path="/entrar"
+          element={<Entrar aviso={avisoEntrar} aoEntrar={aoEntrar} aoTrocarUsuario={usuarios ? () => void irParaQuemUsa() : undefined} />}
+        />
         <Route
           path="/definir-pin"
           element={usuarioPin ? <DefinirPin nome={usuarioPin.nome} aoDefinir={aoDefinirPin} /> : <Navigate to={padrao} replace />}
@@ -238,6 +255,7 @@ export function App() {
     <>
       <TravaVoltar />
       {corpo}
+      <TransicaoUsuario disparo={disparo} />
     </>
   );
 }
