@@ -24,6 +24,7 @@ import type {
   PontoBatido,
   PontoEstado,
   Produto,
+  ProdutoEditar,
   ProdutoNovo,
   Relatorio,
   RelatorioCompras,
@@ -99,6 +100,8 @@ export function criarApi(c: Cliente) {
     },
     criarProduto: (n: ProdutoNovo) =>
       p<{ id: string; numero: number; skus: { id: string; codigo: string }[] }>('POST', '/produtos', n),
+    editarProduto: (id: string, e: ProdutoEditar) => p<{ id: string }>('PUT', `/produtos/${id}`, e),
+    arquivarProduto: (id: string) => p<{ id: string }>('POST', `/produtos/${id}/arquivar`),
     ajustarEstoque: (skuId: string, a: AjusteEstoque) => p<{ estoque: number }>('POST', `/skus/${skuId}/estoque`, a),
     movimentos: (skuId: string) => p<{ movimentos: Movimento[] }>('GET', `/skus/${skuId}/movimentos`),
     alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),

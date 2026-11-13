@@ -328,6 +328,117 @@ describe('Produtos (API)', () => {
     });
   });
 
+  describe('S09: editar e arquivar produto (CRUD; nada é apagado)', () => {
+    const edicao = (lado: Lado, extra: Record<string, unknown> = {}) => ({
+      nome: `Editado ${randomUUID().slice(0, 8)}`,
+      categoria_id: lado.categoria,
+      porte: 'plus',
+      atributos: ['Aro'],
+      fornecedor: 'Outro fornecedor',
+      custo_centavos: 5000,
+      preco_centavos: 11_990,
+      ...extra,
+    });
+
+    it('o Dono edita nome, preço, custo, porte, atributos e fornecedor; a lista reflete e o SKU não muda', async () => {
+      const p = await criar(a);
+      const novo = edicao(a);
+      const res = await a.dono.put(`/produtos/${p.id}`, novo);
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ id: p.id });
+      const depois = (await listar(a.dono, novo.nome)).json.produtos.find((x) => x.id === p.id);
+      expect(depois).toMatchObject({
+        nome: novo.nome,
+        porte: 'plus',
+        atributos: ['Aro'],
+        fornecedor: 'Outro fornecedor',
+        custo_centavos: 5000,
+        preco_centavos: 11_990,
+        numero: p.numero,
+      });
+      expect(depois?.skus[0]).toMatchObject({ codigo: p.skus[0]?.codigo, estoque: 5 });
+      expect(await eventos(p.id)).toEqual(['produto_criado', 'produto_editado']);
+    });
+
+    it('o Vendedor continua sem ver o custo depois da edição e vê o novo preço', async () => {
+      const p = await criar(a);
+      const novo = edicao(a, { custo_centavos: 7777 });
+      expect((await a.dono.put(`/produtos/${p.id}`, novo)).statusCode).toBe(200);
+      const r = await listar(a.vendedor, novo.nome);
+      expect(r.json.produtos.find((x) => x.id === p.id)).toMatchObject({ preco_centavos: 11_990 });
+      expect(r.corpo).not.toMatch(/custo|fornecedor|:7777\b/);
+    });
+
+    it('o Vendedor não edita nem arquiva (403) e nada muda', async () => {
+      const p = await criar(a);
+      expect((await a.vendedor.put(`/produtos/${p.id}`, edicao(a))).statusCode).toBe(403);
+      expect((await a.vendedor.post(`/produtos/${p.id}/arquivar`)).statusCode).toBe(403);
+      expect((await new Cliente(app).put(`/produtos/${p.id}`, edicao(a))).statusCode).toBe(401);
+      const ainda = (await listar(a.dono, p.skus[0]?.codigo)).json.produtos.find((x) => x.id === p.id);
+      expect(ainda).toMatchObject({ preco_centavos: 8990, ativo: true });
+    });
+
+    it('uma empresa não edita nem arquiva produto da outra (404)', async () => {
+      const pb = await criar(b);
+      expect((await a.dono.put(`/produtos/${pb.id}`, edicao(a))).statusCode).toBe(404);
+      expect((await a.dono.post(`/produtos/${pb.id}/arquivar`)).statusCode).toBe(404);
+      const intacto = (await listar(b.dono, pb.skus[0]?.codigo)).json.produtos.find((x) => x.id === pb.id);
+      expect(intacto).toMatchObject({ preco_centavos: 8990 });
+    });
+
+    it.each([
+      ['nome vazio', { nome: '   ' }],
+      ['nome com 81 caracteres', { nome: 'x'.repeat(81) }],
+      ['preço zero', { preco_centavos: 0 }],
+      ['preço negativo', { preco_centavos: -1 }],
+      ['preço fracionário', { preco_centavos: 10.5 }],
+      ['custo negativo', { custo_centavos: -1 }],
+      ['porte desconhecido', { porte: 'gigante' }],
+    ])('recusa %s com 400 e não altera o produto', async (_n, extra) => {
+      const p = await criar(a);
+      const res = await a.dono.put(`/produtos/${p.id}`, edicao(a, extra));
+      expect(res.statusCode).toBe(400);
+      const ainda = (await listar(a.dono, p.skus[0]?.codigo)).json.produtos.find((x) => x.id === p.id);
+      expect(ainda).toMatchObject({ preco_centavos: 8990, custo_centavos: 4500 });
+    });
+
+    it('recusa categoria inexistente e atributo que a categoria não tem', async () => {
+      const p = await criar(a);
+      const cat = await a.dono.put(`/produtos/${p.id}`, edicao(a, { categoria_id: randomUUID() }));
+      expect(cat.statusCode).toBe(400);
+      expect(cat.json()).toMatchObject({ erro: 'categoria_invalida' });
+      const atr = await a.dono.put(`/produtos/${p.id}`, edicao(a, { atributos: ['Inexistente'] }));
+      expect(atr.statusCode).toBe(400);
+      expect(atr.json()).toMatchObject({ erro: 'atributos_invalidos' });
+    });
+
+    it('arquivar tira da lista e da venda, mas guarda SKUs, estoque e movimentos (nada é apagado)', async () => {
+      const p = await criar(a);
+      const skuId = p.skus[0]?.id as string;
+      const res = await a.dono.post(`/produtos/${p.id}/arquivar`);
+      expect(res.statusCode).toBe(200);
+      expect((await listar(a.dono, p.skus[0]?.codigo)).json.produtos.map((x) => x.id)).not.toContain(p.id);
+      expect((await a.vendedor.get(`/skus/por-codigo?codigo=${p.skus[0]?.codigo}`)).statusCode).toBe(404);
+      const linha = await owner.query('SELECT ativo FROM produtos WHERE id = $1', [p.id]);
+      expect(linha.rows[0]).toEqual({ ativo: false });
+      const sku = await owner.query('SELECT estoque FROM skus WHERE id = $1', [skuId]);
+      expect(sku.rows[0]).toEqual({ estoque: 5 });
+      const mov = await owner.query('SELECT count(*)::int AS n FROM movimentos_estoque WHERE sku_id = $1', [skuId]);
+      expect(mov.rows[0]).toEqual({ n: 1 });
+      expect(await eventos(p.id)).toEqual(['produto_criado', 'produto_arquivado']);
+    });
+
+    it('arquivar de novo devolve 409 e produto arquivado não se edita (404)', async () => {
+      const p = await criar(a);
+      expect((await a.dono.post(`/produtos/${p.id}/arquivar`)).statusCode).toBe(200);
+      const outra = await a.dono.post(`/produtos/${p.id}/arquivar`);
+      expect(outra.statusCode).toBe(409);
+      expect(outra.json()).toMatchObject({ erro: 'ja_arquivado' });
+      expect((await a.dono.put(`/produtos/${p.id}`, edicao(a))).statusCode).toBe(404);
+      expect(await eventos(p.id)).toEqual(['produto_criado', 'produto_arquivado']);
+    });
+  });
+
   describe('RN-05: preço sugerido é só uma sugestão', () => {
     it('a API guarda o preço digitado, mesmo diferente de custo × markup (sempre editável)', async () => {
       const nome = `Preço livre ${randomUUID()}`;

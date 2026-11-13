@@ -3,6 +3,7 @@ import {
   type Movimento,
   type Perfil,
   type Produto,
+  type ProdutoEditar,
   type ProdutoNovo,
   type Sku,
   atribuirCodigosDeCor,
@@ -100,6 +101,41 @@ export async function criarProduto(
     skus.push({ id: skuId, codigo });
   }
   return { id: produtoId, numero, skus };
+}
+
+/**
+ * S09: edita o modelo do produto (a grade, o número e os códigos dos SKUs não mudam). Devolve false se o produto não
+ * existe, é de outra empresa (a RLS esconde) ou está arquivado. Mesmas conferências de categoria e atributos do cadastro.
+ */
+export async function editarProduto(c: pg.PoolClient, id: string, p: ProdutoEditar): Promise<boolean> {
+  const atual = await c.query('SELECT 1 FROM produtos WHERE id = $1 AND ativo FOR UPDATE', [id]);
+  if (atual.rowCount !== 1) return false;
+
+  const cat = await c.query("SELECT atributos FROM categorias WHERE id = $1 AND tipo = 'produto' AND ativa", [p.categoria_id]);
+  if (cat.rowCount !== 1) throw new ErroProduto('categoria_invalida');
+  const daCategoria = new Map((cat.rows[0].atributos as string[]).map((a) => [a.toLowerCase(), a]));
+  const atributos = p.atributos.map((a) => daCategoria.get(a.toLowerCase()));
+  if (atributos.some((a) => a === undefined)) throw new ErroProduto('atributos_invalidos');
+
+  await c.query(
+    `UPDATE produtos
+        SET nome = $2, categoria_id = $3, porte = $4, atributos = $5, fornecedor = $6, custo_centavos = $7, preco_centavos = $8
+      WHERE id = $1`,
+    [id, p.nome, p.categoria_id, p.porte, atributos, p.fornecedor, p.custo_centavos, p.preco_centavos],
+  );
+  return true;
+}
+
+/**
+ * S09: arquivar = `ativo = false`. Some da lista, da busca da venda e das etiquetas; SKUs, saldo e movimentos ficam
+ * (nada é apagado). 'nao_encontrado' = não existe ou é de outra empresa; 'ja_arquivado' = já estava arquivado.
+ */
+export async function arquivarProduto(c: pg.PoolClient, id: string): Promise<'arquivado' | 'nao_encontrado' | 'ja_arquivado'> {
+  const r = await c.query('SELECT ativo FROM produtos WHERE id = $1 FOR UPDATE', [id]);
+  if (r.rowCount !== 1) return 'nao_encontrado';
+  if (r.rows[0].ativo === false) return 'ja_arquivado';
+  await c.query('UPDATE produtos SET ativo = false WHERE id = $1', [id]);
+  return 'arquivado';
 }
 
 // --------------------------------------------------------------------------- consulta (RF-PRO-03, RF-PRO-07)

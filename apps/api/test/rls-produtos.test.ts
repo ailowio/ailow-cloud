@@ -201,17 +201,23 @@ describe('produtos, SKUs e movimentos: isolamento e restrições (banco)', () =>
       await expect(withEmpresa(app, empresaA, (c) => c.query(`TRUNCATE ${tabela}`))).rejects.toMatchObject({ code: '42501' });
     });
 
+    // S09 (migração 20261118120000): nome, categoria, porte, atributos, fornecedor, custo, preço e `ativo` passam a
+    // poder mudar (editar/arquivar produto); a identidade do produto continua imutável.
     it.each([
-      ['nome', 'Outro'],
-      ['preco_centavos', 1],
-      ['custo_centavos', 1],
-      ['categoria_id', randomUUID()],
       ['numero', 9000],
       ['empresa_id', randomUUID()],
+      ['criado_por', randomUUID()],
     ])('o papel de runtime não reescreve produtos.%s', async (coluna, valor) => {
       await expect(
         withEmpresa(app, empresaA, (c) => c.query(`UPDATE produtos SET ${coluna} = $1 WHERE id = $2`, [valor, prodA])),
       ).rejects.toMatchObject({ code: '42501' });
+    });
+
+    it('nome, preço, custo e situação do produto podem mudar (S09)', async () => {
+      const r = await withEmpresa(app, empresaA, (c) =>
+        c.query('UPDATE produtos SET nome = $2, preco_centavos = 7777, custo_centavos = 3333, ativo = true WHERE id = $1', [prodA, 'Renomeado']),
+      );
+      expect(r.rowCount).toBe(1);
     });
 
     it.each([

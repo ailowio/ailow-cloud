@@ -22,7 +22,7 @@ export interface SkuAberto {
   estoque_minimo?: number;
 }
 
-type Acao = 'chegou' | 'mais' | 'tirar';
+export type Acao = 'chegou' | 'mais' | 'tirar';
 
 const ACOES: { id: Acao; rotulo: string; sugestoes: string[] }[] = [
   { id: 'chegou', rotulo: 'Chegou mercadoria (+)', sugestoes: ['Chegou pedido', 'Reposição'] },
@@ -44,6 +44,8 @@ export function SkuFolha(props: {
   api: Api;
   dono: boolean;
   sku: SkuAberto;
+  /** Qual ação já vem marcada (o pop-up do produto abre direto em "Chegou mercadoria" ou "Ajustar"). */
+  acaoInicial?: Acao;
   aoFechar: () => void;
   // Avisa a lista que o saldo mudou (ela recarrega ao fechar a folha).
   aoMudar: () => void;
@@ -98,6 +100,7 @@ export function SkuFolha(props: {
               api={props.api}
               skuId={sku.id}
               estoque={estoque}
+              acaoInicial={props.acaoInicial}
               aoAjustar={(novo) => {
                 setEstoque(novo);
                 setMudou(true);
@@ -115,8 +118,8 @@ export function SkuFolha(props: {
   );
 }
 
-function AjusteForm(props: { api: Api; skuId: string; estoque: number; aoAjustar: (novo: number) => void }) {
-  const [acao, setAcao] = useState<Acao>('chegou');
+function AjusteForm(props: { api: Api; skuId: string; estoque: number; acaoInicial?: Acao; aoAjustar: (novo: number) => void }) {
+  const [acao, setAcao] = useState<Acao>(props.acaoInicial ?? 'chegou');
   const [quantidadeTexto, setQuantidadeTexto] = useState('');
   const [motivo, setMotivo] = useState('');
   const { pendente, erro, rodar } = useAcao(mensagemProdutos);

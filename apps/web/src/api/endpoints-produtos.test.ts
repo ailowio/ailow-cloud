@@ -49,6 +49,19 @@ describe('endpoints de Produtos', () => {
     expect(chamadas).toEqual([{ url: '/produtos', metodo: 'POST', corpo: produto }]);
   });
 
+  it('editar produto: PUT /produtos/{id} com o corpo do contrato (S09)', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { id: 'abc' } });
+    const { skus: _skus, ...edicao } = produto;
+    expect(await api.editarProduto('abc', edicao)).toEqual({ id: 'abc' });
+    expect(chamadas).toEqual([{ url: '/produtos/abc', metodo: 'PUT', corpo: edicao }]);
+  });
+
+  it('arquivar produto: POST /produtos/{id}/arquivar (S09)', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { id: 'abc' } });
+    await api.arquivarProduto('abc');
+    expect(chamadas).toEqual([{ url: '/produtos/abc/arquivar', metodo: 'POST', corpo: undefined }]);
+  });
+
   it('entrada/ajuste de estoque: POST em /skus/{id}/estoque', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { estoque: 7 } });
     const ajuste = { tipo: 'ajuste' as const, quantidade: -2, motivo: 'Peça com defeito' };
