@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Badge, Button, Modal, Stack, Text } from '@mantine/core';
+import { Alert, Badge, Button, Stack, Text } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import { IconAlertCircle, IconBrandWhatsapp } from '@tabler/icons-react';
 import type { Cliente } from '@ailow/shared';
 import { linkWhatsApp, mascararCelular } from '@ailow/shared/puro';

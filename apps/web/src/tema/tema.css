@@ -30,6 +30,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* UXM-01/02: sem rolagem de página nem puxar-para-atualizar. A rolagem existe só dentro dos componentes
+   (corpo da tela, listas, tabelas, modais) e também não "vaza" para a página (overscroll-behavior). */
+html,
+body,
+#root {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.ailow-rolagem {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+
+.mantine-Modal-content,
+.mantine-Modal-body {
+  overscroll-behavior: none;
+}
+
 h1, h2, h3, h4 {
   text-wrap: balance;
   letter-spacing: -0.01em;
@@ -112,6 +134,16 @@ h1, h2, h3, h4 {
 }
 
 @media print {
+  /* A página fixa em 100dvh cortaria a impressão: no papel, tudo flui. */
+  html,
+  body,
+  #root,
+  .ailow-tela,
+  .ailow-rolagem {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   .ailow-topo,
   .nao-imprimir {
     display: none !important;

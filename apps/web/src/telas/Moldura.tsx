@@ -34,7 +34,8 @@ export function Moldura(props: {
   children: ReactNode;
 }) {
   return (
-    <Box mih="100dvh" style={{ display: 'flex', flexDirection: 'column' }}>
+    // UXM-01: a tela tem altura fixa; só o <main> rola (o topo fica parado).
+    <Box className="ailow-tela" h="100dvh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <a href="#conteudo" className="ailow-pular">Ir para o conteúdo</a>
       <Box component="header" className="ailow-topo">
         <Container size={560} px="md">
@@ -57,28 +58,28 @@ export function Moldura(props: {
           </Group>
         </Container>
       </Box>
-      <Container component="main" id="conteudo" size={560} px="md" py="lg" w="100%" style={{ flex: 1 }} tabIndex={-1}>
-        <Stack gap="lg">
-          {props.voltar && (
-            <Button
-              variant="subtle"
-              size="md"
-              h={48}
-              px="xs"
-              w="fit-content"
-              leftSection={<IconArrowLeft />}
-              onClick={props.voltar.aoVoltar}
-            >
-              {props.voltar.rotulo}
-            </Button>
-          )}
-          <Stack gap={4}>
-            <Title order={1} fz={28} style={{ overflowWrap: 'anywhere' }}>{props.titulo}</Title>
-            {props.subtitulo && <Text c="dimmed">{props.subtitulo}</Text>}
+      <Box component="main" id="conteudo" className="ailow-rolagem" tabIndex={-1}>
+        <Container size={560} px="md" py="lg" w="100%">
+          <Stack gap="lg">
+            {props.voltar && (
+              // UXM-03: só a seta (o mesmo passo para trás do botão Voltar do sistema); o destino vai no rótulo de acessibilidade.
+              <ActionIcon
+                variant="subtle"
+                size={48}
+                aria-label={`Voltar para ${props.voltar.rotulo}`}
+                onClick={props.voltar.aoVoltar}
+              >
+                <IconArrowLeft />
+              </ActionIcon>
+            )}
+            <Stack gap={4}>
+              <Title order={1} fz={28} style={{ overflowWrap: 'anywhere' }}>{props.titulo}</Title>
+              {props.subtitulo && <Text c="dimmed">{props.subtitulo}</Text>}
+            </Stack>
+            {props.children}
           </Stack>
-          {props.children}
-        </Stack>
-      </Container>
+        </Container>
+      </Box>
     </Box>
   );
 }

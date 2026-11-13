@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Stack, Text, TextInput } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import { IconAlertCircle, IconBrandWhatsapp } from '@tabler/icons-react';
 import type { Venda } from '@ailow/shared';
 import { linkComprovanteWhatsApp, textoDoComprovante } from '@ailow/shared/puro';

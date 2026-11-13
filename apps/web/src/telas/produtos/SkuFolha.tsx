@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Group, Stack, Text, TextInput } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import type { AjusteEstoque } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';

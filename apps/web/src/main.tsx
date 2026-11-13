@@ -8,6 +8,7 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
+import { BrowserRouter } from 'react-router';
 import { temaAilow } from './tema/tema';
 import { App } from './App';
 import { registrarServiceWorker } from './pwa/registrar';
@@ -21,14 +22,16 @@ const mostrarCatalogo = Catalogo !== null && new URLSearchParams(location.search
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={temaAilow} defaultColorScheme="dark">
-      <Notifications position="bottom-center" />
-      {mostrarCatalogo && Catalogo ? (
-        <Suspense fallback={null}>
-          <Catalogo />
-        </Suspense>
-      ) : (
-        <App />
-      )}
+      <BrowserRouter>
+        <Notifications position="bottom-center" />
+        {mostrarCatalogo && Catalogo ? (
+          <Suspense fallback={null}>
+            <Catalogo />
+          </Suspense>
+        ) : (
+          <App />
+        )}
+      </BrowserRouter>
     </MantineProvider>
   </StrictMode>,
 );

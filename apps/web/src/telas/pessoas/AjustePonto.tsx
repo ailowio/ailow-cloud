@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Modal, NativeSelect, SegmentedControl, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, NativeSelect, SegmentedControl, Stack, Text, TextInput } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import type { Marca } from '@ailow/shared';
 import { MOTIVO_AJUSTE_MAX, diaDoPonto } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';

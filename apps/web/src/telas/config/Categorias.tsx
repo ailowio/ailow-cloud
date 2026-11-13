@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Badge, Button, Group, Modal, SegmentedControl, Stack, Switch, TagsInput, Text, TextInput } from '@mantine/core';
+import { Alert, Badge, Button, Group, SegmentedControl, Stack, Switch, TagsInput, Text, TextInput } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
 import type { Categoria, TipoCategoria } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';

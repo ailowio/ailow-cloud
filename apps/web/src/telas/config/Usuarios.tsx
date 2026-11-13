@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Badge, Button, Group, Modal, PasswordInput, PinInput, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Badge, Button, Group, PasswordInput, PinInput, Stack, Text, TextInput } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import { IconAlertCircle, IconLock, IconPlus } from '@tabler/icons-react';
 import type { Api, UsuarioAdminItem } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Modal, SimpleGrid, Stack, Text, Textarea } from '@mantine/core';
+import { Alert, Button, SimpleGrid, Stack, Text, Textarea } from '@mantine/core';
+import { Modal } from '../../componentes/navegacao';
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import type { FormaPagamento } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
