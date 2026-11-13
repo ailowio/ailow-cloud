@@ -1,21 +1,32 @@
 import { useState } from 'react';
-import { Alert, Button, Select, Stack, Switch, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Group, Stack, Switch, Text, TextInput, Title, UnstyledButton } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { IconCheck } from '@tabler/icons-react';
 import type { FormaPagamento } from '@ailow/shared';
+import { ErroApi } from '../../api/cliente';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
+import { ProgressoDoPasso, RodapeDoAssistente, usePassoNoHistorico } from '../../componentes/Assistente';
 import { CampoData } from '../../componentes/CampoData';
-import { formatarReais, reaisParaCentavos } from '../../lib/dinheiro';
-import { hojeEmSaoPaulo } from '../../lib/datas';
-import { useAcao } from '../config/comum';
+import { formatarData, hojeEmSaoPaulo } from '../../lib/datas';
+import { formatarReais } from '../../lib/dinheiro';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { CampoDinheiro } from '../produtos/CampoDinheiro';
+import { PASSOS_DESPESA, type PassoDespesa, type RascunhoDespesa, despesaParaApi, validarPasso } from './despesa-passos';
 import { EscolhaForma } from './Modais';
-import { mensagemFinanceiro } from './rotulos';
+import { mensagemFinanceiro, rotuloForma } from './rotulos';
 
-const VALOR_MAXIMO = 2_000_000_000;
+const TITULOS: Record<PassoDespesa, string> = {
+  categoria: 'Que tipo de despesa é?',
+  valor: 'Quanto é?',
+  quando: 'Quando vence?',
+  confirmar: 'Confira e salve',
+};
 
-/** RF-FIN-02: nova despesa (descrição, categoria, valor, vencimento); pode já nascer paga. */
-export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void }) {
+const avisoErro = (message: string) => notifications.show({ message, color: 'red', autoClose: 4500, withCloseButton: false });
+
+/** RF-FIN-02: nova despesa em passos curtos (tipo → valor → vencimento → confirmar); pode já nascer paga. */
+export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void; aoCancelar: () => void }) {
   // A categoria é uma das categorias FINANCEIRAS ativas da empresa (Configurações › Categorias).
   const { carga, tentarDeNovo } = useCarregar(() =>
     props.api.categorias('financeira').then((r) => r.categorias.filter((c) => c.ativa).map((c) => c.nome)),
@@ -30,95 +41,138 @@ export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void
       />
     );
   }
-  return <FormDespesa api={props.api} categorias={carga.dados} aoSalvar={props.aoSalvar} />;
+  return <Assistente api={props.api} categorias={carga.dados} aoSalvar={props.aoSalvar} aoCancelar={props.aoCancelar} />;
 }
 
-function FormDespesa(props: { api: Api; categorias: string[]; aoSalvar: (paga: boolean) => void }) {
-  const [descricao, setDescricao] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [valorTexto, setValorTexto] = useState('');
-  const [vencimento, setVencimento] = useState(() => hojeEmSaoPaulo());
-  const [paga, setPaga] = useState(false);
-  const [forma, setForma] = useState<FormaPagamento | null>(null);
-  const { pendente, erro, rodar } = useAcao(mensagemFinanceiro);
-
-  const centavos = reaisParaCentavos(valorTexto);
-  const valorValido = centavos !== null && centavos >= 1 && centavos <= VALOR_MAXIMO;
-  const valorComErro = valorTexto.trim() !== '' && !valorValido;
-  const pronto =
-    descricao.trim() !== '' && categoria.trim() !== '' && valorValido && vencimento !== '' && (!paga || forma !== null);
+function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: boolean) => void; aoCancelar: () => void }) {
+  const [r, setR] = useState<RascunhoDespesa>(() => ({
+    categoria: '',
+    descricao: '',
+    valor: null,
+    vencimento: hojeEmSaoPaulo(),
+    paga: false,
+    forma: null,
+  }));
+  const [pendente, setPendente] = useState(false);
+  const { atual, indice, ultimo, avancar, recuar } = usePassoNoHistorico(PASSOS_DESPESA);
+  const mudar = (parcial: Partial<RascunhoDespesa>) => setR((x) => ({ ...x, ...parcial }));
 
   async function salvar() {
-    if (!pronto || centavos === null) return;
-    const ok = await rodar(
-      () =>
-        props.api.novaDespesa({
-          descricao: descricao.trim(),
-          categoria: categoria.trim(),
-          valor_centavos: centavos,
-          vencimento,
-          forma_pagamento: paga ? forma : null,
-          paga,
-        }),
-      paga ? 'Despesa salva e paga' : 'Despesa salva em contas a pagar',
-    );
-    if (ok) props.aoSalvar(paga);
+    const corpo = despesaParaApi(r);
+    if (!corpo) return;
+    setPendente(true);
+    try {
+      await props.api.novaDespesa(corpo);
+      notifications.show({
+        message: r.paga ? 'Despesa salva e paga' : 'Despesa salva em contas a pagar',
+        color: 'teal',
+        autoClose: 3500,
+        withCloseButton: false,
+      });
+      props.aoSalvar(r.paga);
+    } catch (e) {
+      avisoErro(mensagemFinanceiro(e instanceof ErroApi ? e : new ErroApi(500, 'erro_interno')));
+      setPendente(false);
+    }
+  }
+
+  // O botão principal nunca fica desabilitado: o que falta vira toast (não mexe no layout) e a pessoa fica no passo.
+  function principal() {
+    const problema = validarPasso(atual, r);
+    if (problema) {
+      avisoErro(problema);
+      return;
+    }
+    if (ultimo) void salvar();
+    else avancar();
   }
 
   return (
-    <Stack gap="md">
-      <TextInput
-        label="O que é?"
-        required
-        size="lg"
-        maxLength={120}
-        placeholder="Ex.: Condomínio de novembro"
-        value={descricao}
-        onChange={(e) => setDescricao(e.currentTarget.value)}
-      />
-      <Select
-        label="Categoria"
-        placeholder="Escolha uma categoria"
-        required
-        size="lg"
-        allowDeselect={false}
-        data={props.categorias}
-        classNames={{ option: 'ailow-opcao' }}
-        comboboxProps={{ withinPortal: true }}
-        value={categoria || null}
-        onChange={(v) => setCategoria(v ?? '')}
-      />
-      <TextInput
-        label="Valor"
-        required
-        size="lg"
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder="150,00"
-        leftSection={<Text fw={600}>R$</Text>}
-        leftSectionWidth={48}
-        value={valorTexto}
-        onChange={(e) => setValorTexto(e.currentTarget.value)}
-        error={valorComErro ? 'Escreva o valor com vírgula, por exemplo 150,00 (até 20 milhões).' : undefined}
-        description={valorValido && centavos !== null ? `Fica ${formatarReais(centavos)}` : undefined}
-      />
-      <CampoData label="Vence em" required value={vencimento} onChange={setVencimento} />
-      <Switch
-        size="lg"
-        label="Já foi paga"
-        description="Se ligar, o dinheiro sai hoje e a conta não vai para “A pagar”."
-        checked={paga}
-        onChange={(e) => setPaga(e.currentTarget.checked)}
-      />
-      {paga && <EscolhaForma rotulo="Como foi pago?" valor={forma} aoMudar={setForma} />}
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
+    <Stack gap="md" className="ailow-cartao" p="md" data-assistente={atual}>
+      <Title order={2} fz="lg" style={{ overflowWrap: 'anywhere' }}>
+        {TITULOS[atual]}
+      </Title>
+      <ProgressoDoPasso indice={indice} total={PASSOS_DESPESA.length} />
+
+      {atual === 'categoria' && (
+        <Stack gap="xs" role="group" aria-label="Tipo de despesa">
+          {props.categorias.map((nome) => {
+            const marcada = r.categoria === nome;
+            return (
+              <UnstyledButton
+                key={nome}
+                className="ailow-bloco"
+                mih={56}
+                p="sm"
+                w="100%"
+                aria-pressed={marcada}
+                data-destaque={marcada ? 'true' : 'false'}
+                onClick={() => mudar({ categoria: nome })}
+              >
+                <Group wrap="nowrap" gap="xs">
+                  {marcada && <IconCheck size={20} aria-hidden />}
+                  <Text fw={650} style={{ overflowWrap: 'anywhere' }}>
+                    {nome}
+                  </Text>
+                </Group>
+              </UnstyledButton>
+            );
+          })}
+        </Stack>
       )}
-      <Button h={48} onClick={() => void salvar()} loading={pendente} disabled={!pronto}>
-        Salvar despesa
-      </Button>
+
+      {atual === 'valor' && (
+        <Stack gap="lg">
+          <CampoDinheiro label="Valor" valor={r.valor} aoMudar={(valor) => mudar({ valor })} descricao="Até R$ 20 milhões." />
+          <TextInput
+            label="O que é?"
+            required
+            size="lg"
+            maxLength={120}
+            placeholder="Ex.: Condomínio de novembro"
+            value={r.descricao}
+            onChange={(e) => mudar({ descricao: e.currentTarget.value })}
+          />
+        </Stack>
+      )}
+
+      {atual === 'quando' && (
+        <Stack gap="lg">
+          <CampoData label="Vence em" required value={r.vencimento} onChange={(vencimento) => mudar({ vencimento })} />
+          <Switch
+            size="lg"
+            label="Já foi paga"
+            description="Se ligar, o dinheiro sai hoje e a conta não vai para “A pagar”."
+            checked={r.paga}
+            onChange={(e) => mudar({ paga: e.currentTarget.checked, forma: e.currentTarget.checked ? r.forma : null })}
+          />
+          {r.paga && <EscolhaForma rotulo="Como foi pago?" valor={r.forma} aoMudar={(forma: FormaPagamento) => mudar({ forma })} />}
+        </Stack>
+      )}
+
+      {atual === 'confirmar' && (
+        <Stack gap={4} p="sm" className="ailow-cartao">
+          <Text fw={650} fz="lg" style={{ overflowWrap: 'anywhere' }}>
+            {r.descricao.trim()}
+          </Text>
+          <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
+            {r.categoria}
+          </Text>
+          <Text fz={28} fw={700}>
+            {formatarReais(r.valor ?? 0)}
+          </Text>
+          <Text>Vence em {formatarData(r.vencimento)}</Text>
+          <Text>{r.paga && r.forma ? `Já paga (${rotuloForma(r.forma)})` : 'Fica em contas a pagar'}</Text>
+        </Stack>
+      )}
+
+      <RodapeDoAssistente
+        rotuloSecundario={indice === 0 ? 'Cancelar' : 'Voltar'}
+        rotuloPrincipal={ultimo ? 'Salvar despesa' : 'Continuar'}
+        aoSecundario={indice === 0 ? props.aoCancelar : recuar}
+        aoPrincipal={principal}
+        ocupado={pendente}
+      />
     </Stack>
   );
 }

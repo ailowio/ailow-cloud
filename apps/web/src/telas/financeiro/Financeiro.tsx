@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Group, Stack, Text, UnstyledButton } from '@mantine/core';
-import { IconCalendarDue, IconChartBar, IconChevronRight, IconReceipt } from '@tabler/icons-react';
+import { IconCalendarDue, IconChartBar, IconReceipt } from '@tabler/icons-react';
 import type { Api } from '../../api/endpoints';
+import { GradeAcoes } from '../../componentes/GradeAcoes';
 import { Moldura } from '../Moldura';
 import { ContasAPagar } from './ContasAPagar';
 import { NovaDespesa } from './NovaDespesa';
@@ -9,48 +9,42 @@ import { Relatorio } from './Relatorio';
 
 type Secao = 'menu' | 'despesa' | 'contas' | 'relatorio';
 
-const ITENS: { id: Exclude<Secao, 'menu'>; titulo: string; texto: string; icone: React.ReactNode }[] = [
-  { id: 'despesa', titulo: 'Nova despesa', texto: 'Água, luz, aluguel, sacolas…', icone: <IconReceipt aria-hidden /> },
-  { id: 'contas', titulo: 'Contas a pagar', texto: 'O que vence e marcar como pago', icone: <IconCalendarDue aria-hidden /> },
-  { id: 'relatorio', titulo: 'Relatório', texto: 'O que entrou e saiu, no dia ou no mês', icone: <IconChartBar aria-hidden /> },
-];
+const TITULOS: Record<Exclude<Secao, 'menu'>, string> = {
+  despesa: 'Nova despesa',
+  contas: 'Contas a pagar',
+  relatorio: 'Relatório',
+};
 
-/** Financeiro (só Dono, RN-10): menu de 3 áreas, uma decisão por tela. */
+/**
+ * Financeiro (só Dono, RN-10): menu em ícones (UXM-10), uma decisão por tela. Nova receita e Contas a receber não
+ * têm botão: o backend não permite entrada manual nem conta a receber (ADR 013).
+ */
 export function Financeiro(props: { api: Api; aoVoltar: () => void }) {
   const [secao, setSecao] = useState<Secao>('menu');
-  const item = ITENS.find((i) => i.id === secao);
+  const titulo = secao === 'menu' ? undefined : TITULOS[secao];
 
   return (
     <Moldura
-      titulo={item?.titulo ?? 'Financeiro'}
+      titulo={titulo ?? 'Financeiro'}
       logoEmpresa
       voltar={{
-        rotulo: item ? 'Financeiro' : 'Início',
-        aoVoltar: item ? () => setSecao('menu') : props.aoVoltar,
+        rotulo: titulo ? 'Financeiro' : 'Início',
+        aoVoltar: titulo ? () => setSecao('menu') : props.aoVoltar,
       }}
     >
       {secao === 'menu' && (
-        <Stack gap="sm">
-          {ITENS.map((i) => (
-            <UnstyledButton key={i.id} className="ailow-bloco" mih={72} p="md" w="100%" onClick={() => setSecao(i.id)}>
-              <Group wrap="nowrap" gap="md">
-                {i.icone}
-                <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-                  <Text fw={650} fz="lg">
-                    {i.titulo}
-                  </Text>
-                  <Text size="sm" c="dimmed">
-                    {i.texto}
-                  </Text>
-                </Stack>
-                <IconChevronRight aria-hidden />
-              </Group>
-            </UnstyledButton>
-          ))}
-        </Stack>
+        <GradeAcoes
+          acoes={[
+            { id: 'despesa', rotulo: 'Nova despesa', icone: <IconReceipt size={32} stroke={1.75} />, aoTocar: () => setSecao('despesa') },
+            { id: 'contas', rotulo: 'Contas a pagar', icone: <IconCalendarDue size={32} stroke={1.75} />, aoTocar: () => setSecao('contas') },
+            { id: 'relatorio', rotulo: 'Relatório', icone: <IconChartBar size={32} stroke={1.75} />, aoTocar: () => setSecao('relatorio') },
+          ]}
+        />
       )}
       {/* Despesa em aberto leva às contas a pagar (onde ela aparece); despesa paga volta ao menu. */}
-      {secao === 'despesa' && <NovaDespesa api={props.api} aoSalvar={(paga) => setSecao(paga ? 'menu' : 'contas')} />}
+      {secao === 'despesa' && (
+        <NovaDespesa api={props.api} aoSalvar={(paga) => setSecao(paga ? 'menu' : 'contas')} aoCancelar={() => setSecao('menu')} />
+      )}
       {secao === 'contas' && <ContasAPagar api={props.api} aoNovaDespesa={() => setSecao('despesa')} />}
       {secao === 'relatorio' && <Relatorio api={props.api} />}
     </Moldura>

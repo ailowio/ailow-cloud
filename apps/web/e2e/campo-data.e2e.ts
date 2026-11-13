@@ -29,6 +29,7 @@ async function token(page: Page, propriedade: 'background-color' | 'color', valo
   );
 }
 
+const continuar = (page: Page) => page.locator('[data-botao="principal"]').click();
 const dialogo = (page: Page) => page.getByRole('dialog', { name: 'Escolher o dia' });
 const dia = (alvo: Locator, n: number) => alvo.locator('.mantine-DatePicker-day:not([data-outside]):not([data-disabled])').getByText(String(n), { exact: true });
 
@@ -117,6 +118,12 @@ test('seletor de data do tema: Nova despesa e Adicionar ponto, 2 temas, toque no
     await abrirInicio(page);
     await page.getByRole('button', { name: 'Financeiro' }).click();
     await page.getByRole('button', { name: /Nova despesa/ }).click();
+    // Wizard (S11): passo 1 tipo, passo 2 valor e "o que é", passo 3 vencimento.
+    await page.getByRole('button', { name: `Data ${s}` }).click();
+    await continuar(page);
+    await page.getByLabel('Valor').fill('10,00');
+    await page.getByLabel('O que é?').fill(`Data ${s} ${tema}`);
+    await continuar(page);
     await expect(page.getByRole('textbox', { name: /Vence em/ })).toHaveValue(esperado(Number(hojeEmSaoPaulo().slice(8))));
 
     const d = await abrirEMedir(page, 'Vence em', tema);
@@ -133,10 +140,7 @@ test('seletor de data do tema: Nova despesa e Adicionar ponto, 2 temas, toque no
     await expect(page.getByRole('textbox', { name: /Vence em/ })).toHaveValue(esperado(28));
 
     // (b) o valor GRAVADO (corpo do POST) é o dia tocado
-    await page.getByLabel('O que é?').fill(`Data ${s} ${tema}`);
-    await page.getByPlaceholder('Escolha uma categoria').click();
-    await page.getByRole('option', { name: `Data ${s}` }).click();
-    await page.getByLabel('Valor').fill('10,00');
+    await continuar(page); // passo 3 -> 4 (confira e salve)
     const envio = page.waitForRequest((r) => r.url().includes('/financeiro/despesas') && r.method() === 'POST');
     await page.getByRole('button', { name: 'Salvar despesa' }).click();
     expect((await envio).postDataJSON().vencimento, `${tema}: vencimento gravado`).toBe(iso(28));
