@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, Button, Group, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Group, Stack, Text, TextInput } from '@mantine/core';
 import { Modal } from '../../componentes/navegacao';
-import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { IconCheck } from '@tabler/icons-react';
 import type { AjusteEstoque } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { SeloEstoque } from '../../componentes';
@@ -122,7 +122,7 @@ function AjusteForm(props: { api: Api; skuId: string; estoque: number; acaoInici
   const [acao, setAcao] = useState<Acao>(props.acaoInicial ?? 'chegou');
   const [quantidadeTexto, setQuantidadeTexto] = useState('');
   const [motivo, setMotivo] = useState('');
-  const { pendente, erro, rodar } = useAcao(mensagemProdutos);
+  const { pendente, rodar } = useAcao(mensagemProdutos);
 
   const quantidade = inteiroOuNulo(quantidadeTexto);
   const valida = quantidade !== null && quantidade > 0;
@@ -195,11 +195,6 @@ function AjusteForm(props: { api: Api; skuId: string; estoque: number; acaoInici
           </Button>
         ))}
       </Group>
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
-      )}
       <Button h={48} onClick={() => void registrar()} loading={pendente} disabled={!pronto}>
         Registrar
       </Button>

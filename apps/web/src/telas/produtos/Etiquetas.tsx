@@ -8,6 +8,7 @@ import { ErroApi } from '../../api/cliente';
 import { EstadoVazio, Valor } from '../../componentes';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { filtrarPorBusca } from '../../lib/busca';
+import { avisarErro } from '../../lib/avisos';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { ETIQUETAS_POR_PAGINA, camposDoProduto } from './busca-produto';
@@ -20,7 +21,7 @@ import {
   textoDoResumo,
 } from './selecao-etiquetas';
 
-type Envio = { fase: 'parado' } | { fase: 'gerando' } | { fase: 'pronto'; arquivo: string } | { fase: 'erro'; mensagem: string };
+type Envio = { fase: 'parado' } | { fase: 'gerando' } | { fase: 'pronto'; arquivo: string };
 
 const SEM_PRODUTOS: Produto[] = [];
 
@@ -59,7 +60,9 @@ export function Etiquetas(props: { api: Api }) {
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setEnvio({ fase: 'pronto', arquivo });
     } catch (e) {
-      setEnvio({ fase: 'erro', mensagem: e instanceof ErroApi ? mensagemEtiquetas(e) : 'Algo deu errado. Tente de novo.' });
+      // UXM-04: o erro de uma ação é toast; o bloco inline movia os botões da barra fixa.
+      avisarErro(e instanceof ErroApi ? mensagemEtiquetas(e) : 'Algo deu errado. Tente de novo.');
+      setEnvio({ fase: 'parado' });
     }
   }
 
@@ -112,11 +115,6 @@ export function Etiquetas(props: { api: Api }) {
             <Text size="sm" c="red" role="alert">
               No máximo {MAX_ETIQUETAS_POR_PDF} etiquetas por PDF. Diminua as quantidades ou gere em duas vezes.
             </Text>
-          )}
-          {envio.fase === 'erro' && (
-            <Alert color="red" role="alert">
-              {envio.mensagem}
-            </Alert>
           )}
           {envio.fase === 'pronto' && (
             <Alert color="green">

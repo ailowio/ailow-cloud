@@ -159,7 +159,8 @@ for (const tema of ['dark', 'light'] as const) {
     await page.locator('[data-botao="principal"]').click();
     await expect(page.getByText(/cadastrado/).first()).toBeVisible();
 
-    const lista = await api.get('/produtos');
+    // Busca pela API (?q=): a lista sem filtro é truncada em banco cheio.
+    const lista = await api.get(`/produtos?q=${encodeURIComponent(nome)}`);
     const criado = ((await lista.json()) as { produtos: ProdutoApi[] }).produtos.find((p) => p.nome === nome) as ProdutoApi;
     expect(criado, 'produto na API').toBeTruthy();
     expect(criado.preco_centavos).toBe(9000);

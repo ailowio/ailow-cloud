@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Stack, TextInput } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Button, Stack, TextInput } from '@mantine/core';
 import { mascararCelular, normalizarCelular } from '@ailow/shared/puro';
 import { useAcao } from '../config/comum';
 import { mensagemClientes } from './rotulos';
@@ -28,7 +27,7 @@ export function FormCliente<T = void>(props: {
   const [celular, setCelular] = useState(props.inicial ? mascararCelular(props.inicial.celular) : '');
   // O erro do celular só aparece depois que a pessoa sai do campo: não reclamar no meio da digitação.
   const [celularVisitado, setCelularVisitado] = useState(false);
-  const { pendente, erro, rodar } = useAcao(mensagemClientes);
+  const { pendente, rodar } = useAcao(mensagemClientes);
 
   const numero = normalizarCelular(celular);
   const celularComErro = celularVisitado && celular.trim() !== '' && numero === null;
@@ -71,11 +70,6 @@ export function FormCliente<T = void>(props: {
         error={celularComErro ? 'Escreva o celular com DDD e 9 dígitos, por exemplo (21) 98888-0001.' : undefined}
         description={numero !== null ? `Fica ${mascararCelular(numero)}` : undefined}
       />
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
-      )}
       <Button h={48} onClick={() => void salvar()} loading={pendente} disabled={!pronto}>
         {props.rotuloSalvar}
       </Button>

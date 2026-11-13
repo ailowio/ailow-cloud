@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Button, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import type { FormaPagamento, VendaFinalizar } from '@ailow/shared';
 import { calcularFechamento, normalizarCelular, totaisDaVenda } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -17,7 +16,7 @@ type Desconto =
 
 /** RF-VEN-05: celular (cria o cliente se faltar), desconto e uma ou mais formas. O Pix do caminho curto leva o total. */
 export function Fechamento(props: { api: Api; itens: ItemVenda[]; aoVoltar: () => void; aoFinalizar: (vendaId: string) => void }) {
-  const { pendente, erro, rodar } = useAcao(mensagemVenda);
+  const { pendente, rodar } = useAcao(mensagemVenda);
   const [celular, setCelular] = useState('');
   const [nome, setNome] = useState('');
   const [nomeAchado, setNomeAchado] = useState<string | null>(null);
@@ -162,11 +161,6 @@ export function Fechamento(props: { api: Api; itens: ItemVenda[]; aoVoltar: () =
         </Button>
       )}
 
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
-      )}
       {total !== null && (
         <Text fz="xl" fw={700}>
           Total <Valor centavos={total} destaque />

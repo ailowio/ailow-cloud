@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, Badge, Button, Group, PasswordInput, PinInput, Stack, Text, TextInput } from '@mantine/core';
+import { Badge, Button, Group, PasswordInput, PinInput, Stack, Text, TextInput } from '@mantine/core';
 import { Modal } from '../../componentes/navegacao';
-import { IconAlertCircle, IconLock, IconPlus } from '@tabler/icons-react';
+import { IconLock, IconPlus } from '@tabler/icons-react';
 import type { Api, UsuarioAdminItem } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
@@ -84,7 +84,7 @@ export function Usuarios(props: { api: Api; eu: string }) {
 function NovoVendedor(props: { aberto: boolean; api: Api; aoFechar: () => void; aoCriar: () => void }) {
   const [nome, setNome] = useState('');
   const [pin, setPin] = useState('');
-  const { pendente, erro, rodar } = useAcao();
+  const { pendente, rodar } = useAcao();
 
   async function salvar() {
     if (!(await rodar(() => props.api.criarVendedor(nome.trim(), pin), 'Vendedor criado'))) return;
@@ -106,11 +106,6 @@ function NovoVendedor(props: { aberto: boolean; api: Api; aoFechar: () => void; 
             O vendedor usa este PIN para abrir o app.
           </Text>
         </Stack>
-        {erro && (
-          <Alert color="red" icon={<IconAlertCircle />} role="alert">
-            {erro}
-          </Alert>
-        )}
         <Button onClick={() => void salvar()} loading={pendente} disabled={!nome.trim() || pin.length !== 4}>
           Criar vendedor
         </Button>
@@ -130,7 +125,7 @@ function OpcoesUsuario(props: {
   const [modo, setModo] = useState<Modo>('menu');
   const [pin, setPin] = useState('');
   const [senha, setSenha] = useState('');
-  const { pendente, erro, limparErro, rodar } = useAcao();
+  const { pendente, rodar } = useAcao();
   const ehVendedor = alvo.perfil === 'vendedor';
 
   // Trocar de modo limpa o que foi digitado: PIN e senha não ficam esperando em memória.
@@ -138,7 +133,6 @@ function OpcoesUsuario(props: {
     setModo(m);
     setPin('');
     setSenha('');
-    limparErro();
   };
   async function executar(fn: () => Promise<unknown>, ok: string) {
     if (await rodar(fn, ok)) props.aoMudar();
@@ -147,12 +141,6 @@ function OpcoesUsuario(props: {
   return (
     <Modal opened onClose={props.aoFechar} title={alvo.nome} centered closeButtonProps={fecharModal}>
       <Stack gap="sm">
-        {erro && (
-          <Alert color="red" icon={<IconAlertCircle />} role="alert">
-            {erro}
-          </Alert>
-        )}
-
         {modo === 'menu' && (
           <>
             {/* PIN do Vendedor é redefinido pelo Dono; o do Dono, por ele mesmo com a senha (a API exige). */}

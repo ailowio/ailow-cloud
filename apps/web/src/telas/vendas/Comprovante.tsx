@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, Button, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Stack, Text, TextInput } from '@mantine/core';
 import { Modal } from '../../componentes/navegacao';
-import { IconAlertCircle, IconBrandWhatsapp } from '@tabler/icons-react';
+import { IconBrandWhatsapp } from '@tabler/icons-react';
 import type { Venda } from '@ailow/shared';
 import { linkComprovanteWhatsApp, textoDoComprovante } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -20,7 +20,7 @@ export function Comprovante(props: { api: Api; id: string; aoNova: () => void })
 }
 
 function Folha(props: { api: Api; venda: Venda; aoMudar: () => void; aoNova: () => void }) {
-  const { pendente, erro, rodar } = useAcao(mensagemVenda);
+  const { pendente, rodar } = useAcao(mensagemVenda);
   const [aberto, setAberto] = useState(false);
   const [motivo, setMotivo] = useState('');
   const v = props.venda;
@@ -100,11 +100,6 @@ function Folha(props: { api: Api; venda: Venda; aoMudar: () => void; aoNova: () 
         <Button h={48} variant="default" onClick={props.aoNova}>
           Nova venda
         </Button>
-        {erro && (
-          <Alert color="red" icon={<IconAlertCircle />} role="alert">
-            {erro}
-          </Alert>
-        )}
       </Stack>
 
       <Modal opened={aberto} onClose={() => setAberto(false)} title="Cancelar esta venda" closeButtonProps={fecharModal}>

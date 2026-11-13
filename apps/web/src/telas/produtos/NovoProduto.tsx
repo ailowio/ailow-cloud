@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Group, Progress, SimpleGrid, Stack, Switch, Text, TextInput, Title, UnstyledButton } from '@mantine/core';
-import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { IconCheck } from '@tabler/icons-react';
 import { useLocation, useNavigate } from 'react-router';
 import type { Categoria, Porte } from '@ailow/shared';
 import { MAX_SKUS_POR_PRODUTO, PRECO_MAXIMO_CENTAVOS, chaveCor } from '@ailow/shared/puro';
@@ -100,7 +100,7 @@ function Assistente(props: {
   const [fornecedor, setFornecedor] = useState('');
   const [linhas, setLinhas] = useState<Record<string, LinhaEstoque>>({});
   const [criado, setCriado] = useState<{ numero: number; codigos: string[] } | null>(null);
-  const { pendente, erro, rodar } = useAcao(mensagemProdutos);
+  const { pendente, rodar } = useAcao(mensagemProdutos);
 
   const categoria = props.categorias.find((c) => c.id === categoriaId) ?? null;
 
@@ -394,12 +394,6 @@ function Assistente(props: {
       )}
 
       {passoAtual === 'estoque' && <EstoquePorSku grade={grade} linhas={linhas} aoMudar={setLinhas} pendentes={pendentes} />}
-
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
-      )}
 
       {/* Mesma ordem em todos os passos: secundário (contornado, 1/3) à esquerda e principal (cheio, 2/3) à direita. */}
       <Box className="ailow-rodape-assistente" data-rodape-assistente>

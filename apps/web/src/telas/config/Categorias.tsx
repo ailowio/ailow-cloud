@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, Badge, Button, Group, SegmentedControl, Stack, Switch, TagsInput, Text, TextInput } from '@mantine/core';
+import { Badge, Button, Group, SegmentedControl, Stack, Switch, TagsInput, Text, TextInput } from '@mantine/core';
 import { Modal } from '../../componentes/navegacao';
-import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
 import type { Categoria, TipoCategoria } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
@@ -119,7 +119,7 @@ function FormCategoria(props: {
   const [nome, setNome] = useState(categoria?.nome ?? '');
   const [atributos, setAtributos] = useState<string[]>(categoria?.atributos ?? []);
   const [ativa, setAtiva] = useState(categoria?.ativa ?? true);
-  const { pendente, erro, rodar } = useAcao('Já existe uma categoria com esse nome.');
+  const { pendente, rodar } = useAcao('Já existe uma categoria com esse nome.');
 
   async function salvar() {
     // Só categoria de produto tem atributos; o tipo é definido na criação e não muda depois.
@@ -159,11 +159,6 @@ function FormCategoria(props: {
             checked={ativa}
             onChange={(e) => setAtiva(e.currentTarget.checked)}
           />
-        )}
-        {erro && (
-          <Alert color="red" icon={<IconAlertCircle />} role="alert">
-            {erro}
-          </Alert>
         )}
         <Button onClick={() => void salvar()} loading={pendente} disabled={!nome.trim()}>
           Salvar

@@ -60,11 +60,17 @@ async function montarProduto(api: APIRequestContext, sufixo: string): Promise<Mo
   });
   expect(prod.status(), 'produto').toBe(201);
   const { id } = (await prod.json()) as { id: string };
+  buscaPorProduto.set(id, sufixo);
   return { id, nome, categoriaA, categoriaB, nomeCategoriaB };
 }
 
+// A lista sem filtro é truncada (LIMITE_PRODUTOS_NA_LISTA) num banco cheio: o produto do teste é localizado pela
+// busca da própria API (?q=), com o sufixo único presente no nome antes e depois da edição.
+const buscaPorProduto = new Map<string, string>();
+
 async function doApi(api: APIRequestContext, id: string): Promise<ProdutoApi | undefined> {
-  const r = await api.get('/produtos');
+  const q = buscaPorProduto.get(id);
+  const r = await api.get(q ? `/produtos?q=${encodeURIComponent(q)}` : '/produtos');
   expect(r.ok(), 'lista de produtos').toBe(true);
   return ((await r.json()) as { produtos: ProdutoApi[] }).produtos.find((p) => p.id === id);
 }

@@ -153,7 +153,7 @@ function BaterPonto(props: { api: Api; aoBater: (m: Marca) => void }) {
 }
 
 function Botao(props: { api: Api; estado: PontoEstado; aoBater: (m: Marca) => void }) {
-  const { pendente, erro, rodar } = useAcao(mensagemPonto);
+  const { pendente, rodar } = useAcao(mensagemPonto);
   const entrando = props.estado.proximo === 'entrada';
   const ultima = props.estado.ultima;
 
@@ -186,11 +186,6 @@ function Botao(props: { api: Api; estado: PontoEstado; aoBater: (m: Marca) => vo
       >
         {entrando ? 'Bater entrada' : 'Bater saída'}
       </Button>
-      {erro && (
-        <Text c="red" role="alert" size="sm">
-          {erro}
-        </Text>
-      )}
     </Stack>
   );
 }

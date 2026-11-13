@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Button, FileButton, Group, NumberInput, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Button, FileButton, Group, NumberInput, Stack, Text, TextInput } from '@mantine/core';
 import type { Empresa as DadosEmpresa } from '@ailow/shared';
 import { LOGO_MAX_BYTES } from '@ailow/shared';
 import { ErroApi } from '../../api/cliente';
@@ -224,7 +223,7 @@ export function Markup({ api }: Pick<Props, 'api'>) {
 function FormMarkup(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Promise<void> }) {
   const { atual } = props;
   const [percentual, setPercentual] = useState<number | string>(bpsParaPercentual(atual.markup_bps));
-  const { pendente, erro, rodar } = useAcao();
+  const { pendente, rodar } = useAcao();
   const bps = percentualParaBps(percentual);
 
   // Se o servidor devolver outro valor (ex.: outra aba salvou), o campo acompanha.
@@ -255,11 +254,6 @@ function FormMarkup(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Prom
       <Text size="sm" aria-live="polite">
         Exemplo: uma peça que custa <Valor centavos={10_000} /> sai sugerida por <Valor centavos={exemploPrecoCentavos(bps)} destaque />.
       </Text>
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
-      )}
       <Button onClick={() => void salvar()} loading={pendente} disabled={percentual === ''}>
         Salvar markup
       </Button>

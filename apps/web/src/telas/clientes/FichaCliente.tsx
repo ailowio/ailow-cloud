@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Alert, Badge, Button, Stack, Text } from '@mantine/core';
+import { Badge, Button, Stack, Text } from '@mantine/core';
 import { Modal } from '../../componentes/navegacao';
-import { IconAlertCircle, IconBrandWhatsapp } from '@tabler/icons-react';
+import { IconBrandWhatsapp } from '@tabler/icons-react';
 import type { Cliente } from '@ailow/shared';
 import { linkWhatsApp, mascararCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -128,7 +128,7 @@ function Conteudo(props: { api: Api; dono: boolean; cliente: Cliente; aoMudar: (
 }
 
 function Aviso(props: { api: Api; cliente: Cliente; aoAvisar: () => void }) {
-  const { pendente, erro, rodar } = useAcao(mensagemClientes);
+  const { pendente, rodar } = useAcao(mensagemClientes);
   const avisado = props.cliente.aviso_lgpd_em !== null;
 
   async function registrar() {
@@ -145,11 +145,6 @@ function Aviso(props: { api: Api; cliente: Cliente; aoAvisar: () => void }) {
         <Text c="dimmed" size="sm">
           Avise o cliente que o número serve para falar da compra e das novidades da loja e toque no botão abaixo.
         </Text>
-      )}
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          {erro}
-        </Alert>
       )}
       {!avisado && (
         <Button h={48} variant="default" onClick={() => void registrar()} loading={pendente}>
@@ -193,11 +188,6 @@ function AcoesDoDono(props: { api: Api; cliente: Cliente; aoMudar: () => void; a
             ? 'Some da lista, mas o número continua reservado. Dá para reativar depois.'
             : 'Este cliente não aparece na lista de ativos. Reative para voltar a usá-lo.'}
         </Text>
-        {situacao.erro && (
-          <Alert color="red" icon={<IconAlertCircle />} role="alert">
-            {situacao.erro}
-          </Alert>
-        )}
       </Stack>
 
       {!confirmando ? (
@@ -210,11 +200,6 @@ function AcoesDoDono(props: { api: Api; cliente: Cliente; aoMudar: () => void; a
           <Text size="sm">
             O nome e o celular são apagados do sistema e não dá para desfazer. Se é só para tirar da lista, use “Inativar”.
           </Text>
-          {exclusao.erro && (
-            <Alert color="red" icon={<IconAlertCircle />} role="alert">
-              {exclusao.erro}
-            </Alert>
-          )}
           <Button h={48} color="red" onClick={() => void excluir()} loading={exclusao.pendente}>
             Sim, excluir de vez
           </Button>

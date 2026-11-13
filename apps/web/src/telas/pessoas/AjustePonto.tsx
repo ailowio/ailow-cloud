@@ -60,7 +60,7 @@ export function AjustarMarca(props: { api: Api; marca: Marca; nome: string; aoFe
   const [hora, setHora] = useState(horaEmSaoPaulo(marca.registrado_em));
   const [motivo, setMotivo] = useState('');
   const [confirmando, setConfirmando] = useState(false);
-  const { pendente, erro, rodar } = useAcao(mensagemAjuste);
+  const { pendente, rodar } = useAcao(mensagemAjuste);
   const pronto = data !== '' && hora !== '' && motivo.trim() !== '';
 
   async function aplicar(acao: () => Promise<unknown>, sucesso: string) {
@@ -78,11 +78,6 @@ export function AjustarMarca(props: { api: Api; marca: Marca; nome: string; aoFe
           {props.nome} · {ROTULO_TIPO[marca.tipo]} de {formatarData(diaDoPonto(marca.registrado_em))}, {horaEmSaoPaulo(marca.registrado_em)}
         </Text>
         <Campos data={data} hora={hora} motivo={motivo} hoje={hoje} aoData={setData} aoHora={setHora} aoMotivo={setMotivo} />
-        {erro && (
-          <Alert color="red" role="alert">
-            {erro}
-          </Alert>
-        )}
         {!confirmando && (
           <>
             <Button

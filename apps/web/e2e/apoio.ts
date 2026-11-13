@@ -48,12 +48,17 @@ export async function criarPeca(api: APIRequestContext, sufixo: string, estoque 
   });
   expect(prod.status(), 'produto').toBe(201);
   const { skus } = (await prod.json()) as { skus: { id: string; codigo: string }[] };
+  codigoPorSku.set(skus[0]!.id, skus[0]!.codigo);
   return { skuId: skus[0]!.id, codigo: skus[0]!.codigo };
 }
 
+const codigoPorSku = new Map<string, string>();
+
 export async function saldo(api: APIRequestContext, skuId: string): Promise<number> {
   // Não há GET de saldo por SKU: o saldo vem da lista de produtos (a mesma que a tela usa).
-  const r = await api.get('/produtos');
+  // A lista sem filtro é truncada em 200 itens num banco cheio: busca pelo código do SKU criado (?q=).
+  const codigo = codigoPorSku.get(skuId);
+  const r = await api.get(codigo ? `/produtos?q=${encodeURIComponent(codigo)}` : '/produtos');
   expect(r.ok(), 'lista de produtos').toBe(true);
   const { produtos } = (await r.json()) as { produtos: { skus: { id: string; estoque: number }[] }[] };
   const sku = produtos.flatMap((p) => p.skus).find((s) => s.id === skuId);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Alert, Badge, Box, Button, Group, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle, IconBan } from '@tabler/icons-react';
+import { Badge, Box, Button, Group, Stack, Text, TextInput } from '@mantine/core';
+import { IconBan } from '@tabler/icons-react';
 import type { Venda } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { Valor } from '../../componentes';
@@ -42,7 +42,7 @@ function Corpo(props: { api: Api; id: string; aoMudar: () => void }) {
 
 function Folha(props: { api: Api; venda: Venda; aoCancelada: () => void }) {
   const v = props.venda;
-  const { pendente, erro, limparErro, rodar } = useAcao(mensagemVenda);
+  const { pendente, rodar } = useAcao(mensagemVenda);
   const [confirmando, setConfirmando] = useState(false);
   const [motivo, setMotivo] = useState('');
 
@@ -115,10 +115,7 @@ function Folha(props: { api: Api; venda: Venda; aoCancelada: () => void }) {
               id: 'cancelar-venda',
               rotulo: 'Cancelar venda',
               icone: <IconBan size={32} stroke={1.75} />,
-              aoTocar: () => {
-                limparErro();
-                setConfirmando(true);
-              },
+              aoTocar: () => setConfirmando(true),
             },
           ]}
         />
@@ -131,11 +128,6 @@ function Folha(props: { api: Api; venda: Venda; aoCancelada: () => void }) {
             como cancelada (nada é apagado).
           </Text>
           <TextInput size="lg" label="Motivo" value={motivo} onChange={(e) => setMotivo(e.currentTarget.value)} autoComplete="off" />
-          {erro && (
-            <Alert color="red" icon={<IconAlertCircle />} role="alert">
-              {erro}
-            </Alert>
-          )}
           <Button h={48} color="red" loading={pendente} disabled={motivo.trim().length < 3} onClick={() => void cancelar()}>
             Confirmar cancelamento
           </Button>

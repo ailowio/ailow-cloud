@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconAlertCircle, IconPlus } from '@tabler/icons-react';
+import { Button, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { IconPlus } from '@tabler/icons-react';
 import type { StatusPedido } from '@ailow/shared';
 import { linkPedidoWhatsApp, textoDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -93,7 +93,7 @@ function Lista(props: { api: Api; aoNovo: () => void; aoAbrir: (id: string) => v
 
 function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMudar: () => void }) {
   const { carga, tentarDeNovo } = useCarregar(() => props.api.pedidoCompra(props.id));
-  const { pendente, erro, rodar } = useAcao(mensagemCompras);
+  const { pendente, rodar } = useAcao(mensagemCompras);
   const [receber, setReceber] = useState(false);
   const [parcelaTexto, setParcelaTexto] = useState('');
   const [vencimento, setVencimento] = useState(() => hojeEmSaoPaulo());
@@ -151,11 +151,6 @@ function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMuda
           {i.quantidade}× {i.codigo} · {i.cor} · <Valor centavos={i.custo_unitario_centavos * i.quantidade} />
         </Text>
       ))}
-      {erro && (
-        <Alert color="red" icon={<IconAlertCircle aria-hidden />}>
-          {erro}
-        </Alert>
-      )}
       {ped.status === 'rascunho' && (
         <Button h={48} loading={pendente} disabled={pendente} onClick={() => void enviar()}>
           Enviar pelo WhatsApp
