@@ -275,7 +275,7 @@ function telaDoModulo(
     case 'clientes':
       return <Clientes api={api} perfil={usuario.perfil} aoVoltar={aoVoltar} />;
     case 'pessoas':
-      return <Pessoas api={api} perfil={usuario.perfil} aoVoltar={aoVoltar} />;
+      return <Pessoas api={api} perfil={usuario.perfil} usuarioId={usuario.id} aoVoltar={aoVoltar} />;
     case 'compras':
       return <Compras api={api} aoVoltar={aoVoltar} />;
     case 'financeiro':

@@ -149,9 +149,13 @@ test('seletor de data do tema: Nova despesa e Adicionar ponto, 2 temas, toque no
     await page.goto('/');
     await abrirInicio(page);
     await page.getByRole('button', { name: 'Pessoas' }).click();
-    await expect(page.getByText('Total no mês:')).toBeVisible();
+    // S12: "Adicionar ponto" agora é um assistente (Pessoas > Histórico de pontos > Adicionar ponto); o "Dia" fica no passo 2.
+    await page.getByRole('button', { name: 'Histórico de pontos' }).click();
     await page.getByRole('button', { name: 'Adicionar ponto' }).click();
-    await expect(page.getByRole('dialog', { name: 'Adicionar ponto' })).toBeVisible();
+    await expect(page.getByText('Passo 1 de 4')).toBeVisible();
+    await page.locator('[data-assistente="pessoa"] button').first().click();
+    await continuar(page);
+    await expect(page.getByText('Passo 2 de 4')).toBeVisible();
     const p = await abrirEMedir(page, 'Dia', tema);
     await dia(p, 1).tap();
     await expect(dialogo(page)).toBeHidden();

@@ -1,59 +1,171 @@
-import { useMemo, useState } from 'react';
-import { Alert, Button, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core';
-import { IconChevronRight, IconLogin2, IconLogout2, IconPlus } from '@tabler/icons-react';
-import type { Espelho, Marca, PontoEstado } from '@ailow/shared';
-import { diaDoPonto, formatarDuracao, type DiaDePonto } from '@ailow/shared/puro';
+import { useState } from 'react';
+import { Button, Group, Stack, Text } from '@mantine/core';
+import { IconChartBar, IconHistory, IconLogin2, IconLogout2, IconCircleCheck, IconUsers } from '@tabler/icons-react';
+import { Navigate, useLocation, useNavigate } from 'react-router';
+import type { Marca, PontoEstado } from '@ailow/shared';
+import { diaDoPonto } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
-import { ErroApi } from '../../api/cliente';
-import { EstadoVazio } from '../../componentes';
-import { deslocarPeriodo, formatarData, hojeEmSaoPaulo, horaEmSaoPaulo, rotuloDoPeriodo } from '../../lib/datas';
+import type { ErroApi } from '../../api/cliente';
+import { GradeAcoes } from '../../componentes/GradeAcoes';
+import { useVoltar } from '../../componentes/navegacao';
+import { formatarData, horaEmSaoPaulo } from '../../lib/datas';
+import { Usuarios } from '../config/Usuarios';
 import { useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
-import { AdicionarPonto, AjustarMarca } from './AjustePonto';
+import { AdicionarPonto } from './AdicionarPonto';
+import { HistoricoPontos } from './HistoricoPontos';
+import { RelatorioPontos } from './RelatorioPontos';
 
 function mensagemPonto(e: ErroApi): string {
   if (e.codigo === 'muito_rapido') return 'O ponto acabou de ser registrado. Espere alguns segundos para bater de novo.';
   return 'Não foi possível registrar o ponto. Tente de novo.';
 }
 
-const ROTULO_TIPO = { entrada: 'Entrada', saida: 'Saída' } as const;
-const textoDaMarca = (m: Marca, dia: string) =>
-  `${ROTULO_TIPO[m.tipo]} ${horaEmSaoPaulo(m.registrado_em)}${diaDoPonto(m.registrado_em) !== dia ? ' (dia seguinte)' : ''}${m.ajustado ? ' · ajustado' : ''}`;
+type Tela = 'menu' | 'gerenciar' | 'historico' | 'adicionar' | 'relatorio';
 
-/** Pessoas (RF-PES-01/02/03): bater ponto e espelho do mês. O Vendedor só vê o próprio; só o Dono ajusta (ADR 008). */
-export function Pessoas(props: { api: Api; perfil: 'dono' | 'vendedor'; aoVoltar: () => void }) {
-  // Cada batida ou ajuste muda o botão e o espelho: a versão faz os dois buscarem de novo (o mês escolhido não zera).
-  const [versao, setVersao] = useState(0);
-  const mudou = () => setVersao((v) => v + 1);
+/** Cada tela é uma subrota de /pessoas: o Voltar do sistema (e a seta do topo) recua uma tela por vez. */
+function telaDaRota(caminho: string): Tela | null {
+  const sub = caminho.replace(/^\/pessoas\/?/, '').replace(/\/$/, '');
+  switch (sub) {
+    case '':
+      return 'menu';
+    case 'gerenciar':
+    case 'historico':
+    case 'relatorio':
+      return sub;
+    case 'historico/adicionar':
+      return 'adicionar';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Pessoas (RF-PES-01/02/03): bater ponto + menu em ícones (UXM-10). O Vendedor vê só o próprio histórico e relatório
+ * (a API impõe, RN-10); gerenciar pessoas e ajustar ponto são só do Dono (ADR 008).
+ * Lacunas do backend (sem rota): editar o nome de uma pessoa e reativar quem foi desativado.
+ */
+export function Pessoas(props: { api: Api; perfil: 'dono' | 'vendedor'; usuarioId: string; aoVoltar: () => void }) {
+  const navigate = useNavigate();
+  const tela = telaDaRota(useLocation().pathname);
+  const voltarUm = useVoltar('/pessoas');
+  const dono = props.perfil === 'dono';
+
+  if (tela === null || (tela === 'gerenciar' && !dono) || (tela === 'adicionar' && !dono)) {
+    return <Navigate to="/pessoas" replace />;
+  }
+  if (tela === 'gerenciar') {
+    return (
+      <Moldura titulo="Gerenciar pessoas" logoEmpresa voltar={{ rotulo: 'Pessoas', aoVoltar: voltarUm }}>
+        <Usuarios api={props.api} eu={props.usuarioId} />
+      </Moldura>
+    );
+  }
+  if (tela === 'historico') {
+    return (
+      <Moldura titulo="Histórico de pontos" logoEmpresa voltar={{ rotulo: 'Pessoas', aoVoltar: voltarUm }}>
+        <HistoricoPontos api={props.api} dono={dono} aoAdicionar={() => navigate('/pessoas/historico/adicionar', { replace: true })} />
+      </Moldura>
+    );
+  }
+  if (tela === 'adicionar') {
+    return (
+      // O assistente substitui o histórico na pilha (replace): o fim dele troca de novo, e o Voltar cai em Pessoas.
+      <Moldura titulo="Adicionar ponto" logoEmpresa voltar={{ rotulo: 'Pessoas', aoVoltar: voltarUm }}>
+        <AdicionarPonto
+          api={props.api}
+          aoCancelar={voltarUm}
+          aoVerHistorico={(mes) => navigate('/pessoas/historico', { replace: true, state: { mes } })}
+        />
+      </Moldura>
+    );
+  }
+  if (tela === 'relatorio') {
+    return (
+      <Moldura titulo="Relatório de pontos" logoEmpresa voltar={{ rotulo: 'Pessoas', aoVoltar: voltarUm }}>
+        <RelatorioPontos api={props.api} dono={dono} />
+      </Moldura>
+    );
+  }
   return (
     <Moldura titulo="Pessoas" logoEmpresa voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
-      <Stack gap="xl">
-        <BaterPonto key={`ponto-${versao}`} api={props.api} aoBater={mudou} />
-        <EspelhoDoMes api={props.api} perfil={props.perfil} versao={versao} aoMudar={mudou} />
-      </Stack>
+      <Menu api={props.api} dono={dono} />
     </Moldura>
   );
 }
 
-function BaterPonto(props: { api: Api; aoBater: () => void }) {
+function Menu(props: { api: Api; dono: boolean }) {
+  const navigate = useNavigate();
+  // Cada batida muda o botão: a versão faz o estado ser buscado de novo.
+  const [versao, setVersao] = useState(0);
+  const [batida, setBatida] = useState<Marca | null>(null);
+  return (
+    <Stack gap="xl">
+      <Stack gap="md">
+        <BaterPonto
+          key={`ponto-${versao}`}
+          api={props.api}
+          aoBater={(m) => {
+            setBatida(m);
+            setVersao((v) => v + 1);
+          }}
+        />
+        {batida && <ConfirmacaoDaBatida marca={batida} aoVer={() => navigate('/pessoas/historico')} />}
+      </Stack>
+      <GradeAcoes
+        acoes={[
+          ...(props.dono
+            ? [{ id: 'gerenciar', rotulo: 'Gerenciar pessoas', icone: <IconUsers size={32} stroke={1.75} />, aoTocar: () => navigate('/pessoas/gerenciar') }]
+            : []),
+          { id: 'historico', rotulo: 'Histórico de pontos', icone: <IconHistory size={32} stroke={1.75} />, aoTocar: () => navigate('/pessoas/historico') },
+          { id: 'relatorio', rotulo: 'Relatório de pontos', icone: <IconChartBar size={32} stroke={1.75} />, aoTocar: () => navigate('/pessoas/relatorio') },
+        ]}
+      />
+    </Stack>
+  );
+}
+
+/** Resultado explícito da batida: tipo, dia e hora gravados pelo servidor (não o que a tela supõe). */
+function ConfirmacaoDaBatida(props: { marca: Marca; aoVer: () => void }) {
+  const { marca } = props;
+  return (
+    <Stack gap="sm" className="ailow-cartao" p="md" data-resultado-ponto role="status">
+      <Group gap="xs" wrap="nowrap">
+        <IconCircleCheck size={28} color="var(--mantine-color-teal-6)" aria-hidden />
+        <Text fw={700}>{marca.tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada às {horaEmSaoPaulo(marca.registrado_em)}</Text>
+      </Group>
+      <Text size="sm" c="dimmed">
+        Dia {formatarData(diaDoPonto(marca.registrado_em))}. Já está no histórico.
+      </Text>
+      <Button h={48} variant="default" onClick={props.aoVer}>
+        Ver no histórico
+      </Button>
+    </Stack>
+  );
+}
+
+function BaterPonto(props: { api: Api; aoBater: (m: Marca) => void }) {
   const { carga, tentarDeNovo } = useCarregar(() => props.api.estadoDoPonto());
   if (carga.fase === 'carregando') return <Carregando linhas={1} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
   return <Botao api={props.api} estado={carga.dados} aoBater={props.aoBater} />;
 }
 
-function Botao(props: { api: Api; estado: PontoEstado; aoBater: () => void }) {
+function Botao(props: { api: Api; estado: PontoEstado; aoBater: (m: Marca) => void }) {
   const { pendente, erro, rodar } = useAcao(mensagemPonto);
   const entrando = props.estado.proximo === 'entrada';
   const ultima = props.estado.ultima;
 
   async function bater() {
+    let marca: Marca | null = null;
     const ok = await rodar(
-      () => props.api.baterPonto(),
+      async () => {
+        marca = (await props.api.baterPonto()).marca;
+      },
       entrando ? 'Entrada registrada.' : 'Saída registrada.',
     );
-    if (ok) props.aoBater();
+    if (ok && marca) props.aoBater(marca);
   }
 
   return (
@@ -75,113 +187,8 @@ function Botao(props: { api: Api; estado: PontoEstado; aoBater: () => void }) {
         {entrando ? 'Bater entrada' : 'Bater saída'}
       </Button>
       {erro && (
-        <Alert color="red" role="alert">
+        <Text c="red" role="alert" size="sm">
           {erro}
-        </Alert>
-      )}
-    </Stack>
-  );
-}
-
-function EspelhoDoMes(props: { api: Api; perfil: 'dono' | 'vendedor'; versao: number; aoMudar: () => void }) {
-  const hoje = useMemo(() => hojeEmSaoPaulo(), []);
-  const [mes, setMes] = useState(`${hoje.slice(0, 7)}-01`);
-  const [adicionando, setAdicionando] = useState(false);
-  const [ajustando, setAjustando] = useState<{ marca: Marca; nome: string } | null>(null);
-  const proximo = deslocarPeriodo('mes', mes, 1);
-  const noFuturo = proximo.slice(0, 7) > hoje.slice(0, 7);
-  const dono = props.perfil === 'dono';
-
-  return (
-    <Stack gap="md">
-      <Text fw={700} fz="lg" component="h2">
-        {dono ? 'Espelho de ponto da equipe' : 'Meu espelho de ponto'}
-      </Text>
-      <SimpleGrid cols={2} spacing="xs">
-        <Button h={48} variant="default" onClick={() => setMes(deslocarPeriodo('mes', mes, -1))}>
-          Anterior
-        </Button>
-        <Button h={48} variant="default" disabled={noFuturo} onClick={() => setMes(proximo)}>
-          Próximo
-        </Button>
-      </SimpleGrid>
-      <Text fw={650}>{rotuloDoPeriodo('mes', mes)}</Text>
-      {dono && (
-        <Button h={48} variant="default" leftSection={<IconPlus size={20} aria-hidden />} onClick={() => setAdicionando(true)}>
-          Adicionar ponto
-        </Button>
-      )}
-      <Conteudo
-        key={`${mes}-${props.versao}`}
-        api={props.api}
-        mes={mes}
-        aoAjustar={dono ? (marca, nome) => setAjustando({ marca, nome }) : undefined}
-      />
-      {adicionando && <AdicionarPonto api={props.api} aoFechar={() => setAdicionando(false)} aoMudou={props.aoMudar} />}
-      {ajustando && (
-        <AjustarMarca
-          api={props.api}
-          marca={ajustando.marca}
-          nome={ajustando.nome}
-          aoFechar={() => setAjustando(null)}
-          aoMudou={props.aoMudar}
-        />
-      )}
-    </Stack>
-  );
-}
-
-function Conteudo(props: { api: Api; mes: string; aoAjustar?: (m: Marca, nome: string) => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.espelhoDePonto(props.mes));
-  if (carga.fase === 'carregando') return <Carregando linhas={3} />;
-  if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  return <ListaEspelho dados={carga.dados} aoAjustar={props.aoAjustar} />;
-}
-
-function ListaEspelho(props: { dados: Espelho; aoAjustar?: (m: Marca, nome: string) => void }) {
-  if (props.dados.usuarios.length === 0) {
-    return <EstadoVazio titulo="Nenhum ponto neste mês" texto="Quando alguém bater o ponto, aparece aqui." />;
-  }
-  return (
-    <Stack gap="md">
-      {props.dados.usuarios.map((u) => (
-        <Stack key={u.usuario_id} gap="xs" className="ailow-bloco" p="md">
-          <Text fw={700} style={{ overflowWrap: 'anywhere' }}>
-            {u.nome}
-          </Text>
-          <Text size="sm" c="dimmed">
-            Total no mês: <strong>{formatarDuracao(u.total_segundos)}</strong>
-          </Text>
-          {u.dias.map((d) => (
-            <Dia key={d.data} dia={d} aoAjustar={props.aoAjustar ? (m) => props.aoAjustar?.(m, u.nome) : undefined} />
-          ))}
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
-
-function Dia(props: { dia: DiaDePonto; aoAjustar?: (m: Marca) => void }) {
-  const { dia, aoAjustar } = props;
-  return (
-    <Stack gap={2} py={6} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-      <Text fw={650} size="sm">
-        {formatarData(dia.data)} · {dia.em_aberto ? 'em aberto' : formatarDuracao(dia.trabalhado_segundos)}
-        {dia.em_aberto && dia.trabalhado_segundos > 0 ? ` (fechado: ${formatarDuracao(dia.trabalhado_segundos)})` : ''}
-      </Text>
-      {aoAjustar ? (
-        // Dono: cada registro é um alvo de toque que abre o ajuste (editar horário ou excluir).
-        dia.marcas.map((m) => (
-          <UnstyledButton key={m.id} mih={48} px="xs" onClick={() => aoAjustar(m)} aria-label={`Ajustar: ${textoDaMarca(m, dia.data)}`}>
-            <Text size="sm" component="span" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <span style={{ overflowWrap: 'anywhere' }}>{textoDaMarca(m, dia.data)}</span>
-              <IconChevronRight size={18} aria-hidden />
-            </Text>
-          </UnstyledButton>
-        ))
-      ) : (
-        <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
-          {dia.marcas.map((m) => textoDaMarca(m, dia.data)).join(' · ')}
         </Text>
       )}
     </Stack>
