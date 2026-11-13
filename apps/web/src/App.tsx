@@ -8,6 +8,7 @@ import { mensagemPin } from './acesso/mensagens';
 import { modulosPara, type Modulo } from './acesso/modulos';
 import { useTravaInatividade } from './acesso/useTrava';
 import { TravaVoltar, useVoltar } from './componentes/navegacao';
+import { SessaoContexto } from './componentes/sessao';
 import { DefinirPin } from './telas/DefinirPin';
 import { Entrar } from './telas/Entrar';
 import { Inicio } from './telas/Inicio';
@@ -143,10 +144,24 @@ export function App() {
   }
 
   // "Trocar" e a trava por inatividade encerram a sessão no servidor (o cookie deixa de valer) antes de voltar.
-  async function sairParaQuemUsa(aviso?: string) {
+  const sairParaQuemUsa = useCallback(
+    async (aviso?: string) => {
+      await api.sair().catch(() => {});
+      await irParaQuemUsa(aviso);
+    },
+    [api, irParaQuemUsa],
+  );
+
+  const aoTrocar = useCallback(() => void sairParaQuemUsa(), [sairParaQuemUsa]);
+
+  // UXM-06 "Sair": encerra a sessão no servidor e volta ao login do Dono. Não existe endpoint para desvincular o
+  // aparelho (ADR 004: "não há revogação do aparelho em si"), então o vínculo continua; recarregar abre "Quem está usando?".
+  const aoSair = useCallback(async () => {
     await api.sair().catch(() => {});
-    await irParaQuemUsa(aviso);
-  }
+    setSessao(null);
+    setAvisoEntrar('Você saiu. Para entrar de novo, use o e-mail e a senha do Dono.');
+    ir('/entrar', { replace: true });
+  }, [api, ir]);
 
   let corpo: ReactNode;
   if (carga.fase === 'carregando') {
@@ -174,7 +189,8 @@ export function App() {
         inatividade={sessao.inatividade}
         api={api}
         aoMudarInatividade={(minutos) => setSessao({ ...sessao, inatividade: minutos })}
-        aoTrocar={() => void sairParaQuemUsa()}
+        aoTrocar={aoTrocar}
+        aoSair={aoSair}
         aoTravar={() => void sairParaQuemUsa(TRAVADO)}
       />
     );
@@ -258,6 +274,7 @@ function Logado(props: {
   api: ReturnType<typeof criarApi>;
   aoMudarInatividade: (minutos: number) => void;
   aoTrocar: () => void;
+  aoSair: () => void;
   aoTravar: () => void;
 }) {
   // Enquanto a pessoa usa o app sem chamar a API, avisa o servidor (senão a sessão expira por baixo dela).
@@ -265,9 +282,15 @@ function Logado(props: {
   const navigate = useNavigate();
   const voltar = useVoltar('/');
 
+  const sessaoUi = useMemo(
+    () => ({ nome: props.usuario.nome, aoTrocar: props.aoTrocar, aoSair: props.aoSair }),
+    [props.usuario.nome, props.aoTrocar, props.aoSair],
+  );
+
   return (
+    <SessaoContexto.Provider value={sessaoUi}>
     <Routes>
-      <Route path="/" element={<Inicio usuario={props.usuario} api={props.api} aoAbrir={(m) => navigate(`/${m}`)} aoTrocar={props.aoTrocar} />} />
+      <Route path="/" element={<Inicio usuario={props.usuario} api={props.api} aoAbrir={(m) => navigate(`/${m}`)} />} />
       {modulosPara(props.usuario.perfil).map((m) => (
         <Route
           key={m.id}
@@ -277,5 +300,6 @@ function Logado(props: {
       ))}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </SessaoContexto.Provider>
   );
 }

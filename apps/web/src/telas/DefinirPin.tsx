@@ -1,25 +1,23 @@
 import { useState } from 'react';
-import { Alert, Stack, Text } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { Stack, Text } from '@mantine/core';
 import { ErroApi } from '../api/cliente';
+import { avisarErro } from '../lib/avisos';
 import { TecladoPin } from '../componentes';
 import { Moldura } from './Moldura';
 
 /** Primeiro PIN do Dono (precisa_definir_pin): digita duas vezes para confirmar. */
 export function DefinirPin(props: { nome: string; aoDefinir: (pin: string) => Promise<void> }) {
   const [primeiro, setPrimeiro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   async function completo(pin: string) {
     if (primeiro === null) {
       setPrimeiro(pin);
-      setAviso(null);
       return;
     }
     if (pin !== primeiro) {
       setPrimeiro(null);
-      setAviso('Os dois PINs são diferentes. Vamos de novo: escolha o PIN.');
+      avisarErro('Os dois PINs são diferentes. Vamos de novo: escolha o PIN.');
       return;
     }
     setEnviando(true);
@@ -28,7 +26,7 @@ export function DefinirPin(props: { nome: string; aoDefinir: (pin: string) => Pr
     } catch (e) {
       setPrimeiro(null);
       setEnviando(false);
-      setAviso(
+      avisarErro(
         e instanceof ErroApi && e.status === 0
           ? 'Sem conexão. Verifique a internet e tente de novo.'
           : 'Não foi possível salvar o PIN. Tente de novo.',
@@ -42,7 +40,6 @@ export function DefinirPin(props: { nome: string; aoDefinir: (pin: string) => Pr
       subtitulo={`${props.nome}, o PIN de 4 dígitos é como você abre o app no dia a dia.`}
     >
       <Stack gap="md" align="center">
-        {aviso && <Alert color="red" icon={<IconAlertCircle />} role="alert" w="100%">{aviso}</Alert>}
         <Text c="dimmed" size="sm" role="status">
           {primeiro === null ? 'Passo 1 de 2' : 'Passo 2 de 2: confirme'}
         </Text>

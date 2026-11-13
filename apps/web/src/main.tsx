@@ -23,7 +23,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={temaAilow} defaultColorScheme="dark">
       <BrowserRouter>
-        <Notifications position="bottom-center" />
+        <Notifications position="top-center" />
         {mostrarCatalogo && Catalogo ? (
           <Suspense fallback={null}>
             <Catalogo />

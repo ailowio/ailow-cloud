@@ -4,6 +4,7 @@ import {
 } from '@mantine/core';
 import { IconBackspace } from '@tabler/icons-react';
 import { formatarReais } from '../lib/dinheiro';
+import { vibrarToque } from '../lib/haptico';
 
 /** Quadrado da tela inicial: 1 palavra, ícone grande, selo de alerta opcional. */
 export function BlocoAcao(props: { rotulo: string; icone: ReactNode; destaque?: boolean; alerta?: number; emBreve?: boolean; onClick?: () => void }) {
@@ -58,6 +59,7 @@ export function TecladoPin({ onCompleto, desabilitado }: { onCompleto: (pin: str
   const [pin, setPin] = useState('');
   const tecla = (k: string) => {
     if (desabilitado) return;
+    vibrarToque();
     const novo = pin + k;
     if (novo.length > 4) return;
     if (novo.length === 4) { setPin(''); onCompleto(novo); return; }

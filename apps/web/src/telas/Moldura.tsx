@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ActionIcon, Box, Button, Container, Group, Stack, Text, Title, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconArrowLeft, IconMoon, IconSun } from '@tabler/icons-react';
 import { Logo } from '../componentes/Logo';
+import { MenuUsuario } from '../componentes/sessao';
 
 /** Alterna claro/escuro. Alvo de 48 px; o rótulo diz a ação, não o estado. */
 function AlternarTema() {
@@ -48,6 +49,8 @@ export function Moldura(props: {
               </Text>
             </Group>
             <Group gap="xs" wrap="nowrap">
+              {/* UXM-06: com sessão aberta o nome do usuário abre o menu Trocar/Sair em toda tela. */}
+              <MenuUsuario />
               {props.acaoTopo && (
                 <Button variant="default" size="md" h={48} onClick={props.acaoTopo.aoClicar}>
                   {props.acaoTopo.rotulo}
