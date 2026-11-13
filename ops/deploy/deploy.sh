@@ -4,9 +4,12 @@
 # Regras: OPS-04 (automatizado, repetível, serializado), OPS-05 (gatilho de reversão numérico), OPS-11, AUD-24/27.
 #
 # Fluxo: backup (aborta sem mexer na stack se falhar) -> grava a TAG -> docker stack deploy -> espera os dois serviços
-# convergirem E 3 checagens seguidas de /health = 200 -> se não, volta a TAG anterior e espera de novo.
+# convergirem E 3 checagens seguidas de /health = 200 -> se não, volta a TAG anterior e espera de novo. Se a tag pedida
+# é a que já estava no ar (reaplicar a mesma tag), não há versão para voltar: confere se o Swarm terminou de reverter
+# sozinho e a stack responde (20) ou não (21).
 # Códigos de saída: 0 ok | 2 tag inválida | 10 backup falhou (nada foi alterado) | 20 deploy falhou e a reversão
 # FUNCIONOU | 21 falhou e a reversão também falhou (intervenção humana, ver rollback.md).
+# Mudar o limite/imagem do db e da api no mesmo deploy provoca corrida de DNS (L-0023): faça em deploys separados.
 # Comentários sempre em linha própria.
 set -euo pipefail
 
@@ -53,11 +56,41 @@ esperar_saudavel() {
       estado="$(docker service inspect "${STACK}_${svc}" --format '{{.UpdateStatus.State}}' 2>/dev/null || true)"
       imagem="$(docker service inspect "${STACK}_${svc}" --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}' 2>/dev/null || true)"
       case "$estado" in
-        rollback_started | rollback_completed | paused) log "serviço ${svc} em estado ${estado}"; return 1 ;;
+        rollback_completed | paused) log "serviço ${svc} em estado ${estado}"; return 1 ;;
       esac
-      [ "$estado" = completed ] && [[ "$imagem" == *":${esperada}"* ]] || convergiu=0
+      # Vazio = serviço que nunca foi atualizado (o docker falha no template): acontece com o web ao reaplicar a mesma
+      # tag, e vale como convergido. A imagem na tag esperada continua obrigatória. `rollback_started` não é falha
+      # imediata: espera o Swarm terminar a reversão (rollback_completed) antes de decidir (L-0023).
+      { [ "$estado" = completed ] || [ -z "$estado" ]; } && [[ "$imagem" == *":${esperada}"* ]] || convergiu=0
     done
     if [ "$convergiu" = 1 ] && [ "$(curl -s -o /dev/null -m 5 -w '%{http_code}' "https://${dominio}/health" || true)" = 200 ]; then
+      saudaveis=$((saudaveis + 1))
+    else
+      saudaveis=0
+    fi
+    [ "$saudaveis" -ge "$SAUDAVEL_N" ] && return 0
+    sleep "$INTERVALO_S"
+  done
+  return 1
+}
+
+# 0 = nenhum serviço atualizando/revertendo e N checagens seguidas de /health = 200 (qualquer tag); 1 = não estabilizou.
+# Usado quando a tag pedida é a que já estava no ar: não há "versão anterior" para a qual voltar, e o que vale é o
+# estado real depois que o Swarm terminou de reverter sozinho (failure_action: rollback).
+esperar_estavel() {
+  local dominio saudaveis=0 n=0 maximo svc estado instavel
+  dominio="$(valor_env DOMINIO)"
+  maximo=$((ESPERA_MAX_S / INTERVALO_S))
+  while [ "$n" -lt "$maximo" ]; do
+    n=$((n + 1))
+    instavel=0
+    for svc in api web; do
+      estado="$(docker service inspect "${STACK}_${svc}" --format '{{.UpdateStatus.State}}' 2>/dev/null || true)"
+      case "$estado" in
+        updating | rollback_started | paused) instavel=1 ;;
+      esac
+    done
+    if [ "$instavel" = 0 ] && [ "$(curl -s -o /dev/null -m 5 -w '%{http_code}' "https://${dominio}/health" || true)" = 200 ]; then
       saudaveis=$((saudaveis + 1))
     else
       saudaveis=0
@@ -99,6 +132,13 @@ if [ -n "$anterior" ] && [ "$anterior" != "$tag" ]; then
   implantar
   if esperar_saudavel "$anterior"; then
     log "reversão concluída para ${anterior} segundos=$(($(date +%s) - inicio))"
+    resumo
+    exit 20
+  fi
+elif [ "$anterior" = "$tag" ]; then
+  # Mesma tag: nada a restaurar no ailow.env. Confere o estado real e não finge nem condena (L-0023).
+  if esperar_estavel; then
+    log "a reaplicação de ${tag} falhou e o Swarm reverteu o serviço; a stack voltou a responder segundos=$(($(date +%s) - inicio))"
     resumo
     exit 20
   fi
