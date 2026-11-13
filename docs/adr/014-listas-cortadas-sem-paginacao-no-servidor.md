@@ -17,6 +17,8 @@ Quando `truncado` é verdadeiro, a busca (debounce de 300 ms) também consulta `
 2. **Busca por caracteres soltos não chega ao servidor:** `?q=` é substring; "cmst" só acha, entre os itens fora do corte, se outro termo digitado (ex.: o sufixo do nome) for um pedaço contínuo.
 3. **Faixa de preço:** o servidor casa "89" como R$ 89,00 a 89,99; a busca local casa só exato. Com um termo só, vale o servidor.
 
+4. **(S15) Seletor de fornecedor do "Novo pedido"** também usa a lista cortada: corrigido com a mesma busca (campo "Buscar fornecedor" + `?q=` e aviso de corte). `GET /fornecedores?q=` já existia, sem mudança de API. Sem busca, quem passa de 200 fornecedores ainda não alcança o 201º (mesma lacuna 1).
+
 ## Alternativas (para o Pedro decidir)
 
 - **A. Manter como está** (custo zero; aceitável enquanto a loja tiver poucas centenas de itens).

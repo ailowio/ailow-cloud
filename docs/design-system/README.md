@@ -78,6 +78,19 @@ Nome de produto, cliente ou fornecedor **nunca** usa reticências: quebra linha 
 | **EstadoVazio** | `Stack` em cartão | Título + frase + 1 botão |
 | Avisos | `@mantine/notifications` | Sucesso na cor da marca 3 s; erro vermelho até fechar |
 
+Componentes da rodada UX mobile (S01–S15):
+
+| Componente | Caminho (`apps/web/src/`) | Quando usar |
+|---|---|---|
+| **Assistente** (`QuadroDoAssistente`, `usePassoNoHistorico`, `avisoDoPasso`) | `componentes/Assistente.tsx` | Cadastro com 3+ campos ou decisões: "Passo X de N", Voltar do sistema recua um passo, erro de passo em toast |
+| **GradeAcoes** | `componentes/GradeAcoes.tsx` | Ações de uma ficha/tela como quadrados com ícone (mesmo padrão da tela inicial) |
+| **Paginacao** (`usePaginacao`) | `componentes/Paginacao.tsx` | Lista longa no cliente: páginas de poucos itens, sem rolagem infinita |
+| **CampoData** | `componentes/CampoData.tsx` | Qualquer data digitada ou escolhida (teclado numérico/seletor, `dd/mm/aaaa`) |
+| **CampoDinheiro** | `telas/produtos/CampoDinheiro.tsx` | Valor em reais: só dígitos, os 2 últimos são centavos, valor em centavos inteiros (RN-01) |
+| **Modal** (pop-up) | `componentes/navegacao.tsx` | Pop-up ligado ao histórico: o Voltar do sistema fecha o modal, não a tela |
+| **Toasts** (`avisarErro`) | `lib/avisos.ts` | Erro de formulário/rede sempre em toast no topo (um por vez), nunca bloco que empurra a tela |
+| **Busca no servidor** | `lib/busca-servidor.ts`, `lib/useBuscaNoServidor.ts` | Lista que a API corta em 200 (`truncado`): busca local + `?q=` e aviso "Mostrando os primeiros 200; refine a busca." |
+
 Classes utilitárias: `.ailow-cartao`, `.ailow-bloco`, `.so-desktop`. Ícones: Tabler Icons, traço 1,75.
 
 ## 4. Voz

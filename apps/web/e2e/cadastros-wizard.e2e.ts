@@ -196,6 +196,8 @@ for (const tema of TEMAS) {
 
     await passo(page, 'De quem vai comprar?', 1, 3, 'fornecedor');
     await recusa(page, 'Escolha o fornecedor.', 'De quem vai comprar?');
+    // Com a lista cortada em 200 pela API, o recém-criado só aparece buscando (?q= no servidor).
+    await page.getByLabel('Buscar fornecedor').fill(nomeForn);
     await page.getByRole('button', { name: nomeForn }).click();
     await principal(page).click();
 
@@ -221,9 +223,12 @@ for (const tema of TEMAS) {
     await expect(page.locator('[data-assistente]')).toContainText('R$ 76,50');
     await expect(principal(page)).toHaveText('Salvar rascunho');
     const envio = page.waitForRequest((r) => r.url().includes('/compras') && r.method() === 'POST');
+    // Espera também a resposta: a conferência pela API abaixo só vale depois de o pedido ser gravado (corrida vista no stack efêmero).
+    const resposta = page.waitForResponse((r) => r.url().includes('/compras') && r.request().method() === 'POST');
     await principal(page).click();
     const corpo = (await envio).postDataJSON() as { itens: { custo_centavos: number; quantidade: number }[] };
     expect(corpo.itens[0]).toMatchObject({ custo_centavos: 2550, quantidade: 3 });
+    expect((await resposta).ok(), 'POST /compras respondeu ok').toBe(true);
 
     await expect(page.getByText(nomeForn).first()).toBeVisible();
     const lista = (await (await api.get('/compras')).json()) as { pedidos: { id: string; fornecedor_nome: string; status: string; total_centavos: number }[] };

@@ -4,6 +4,14 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### UX mobile, rodada 1 (S01–S15; só front, sem mudança de API, banco ou OpenAPI)
+- Paleta única derivada da logo, contraste WCAG medido em código nos 2 temas (UXM-08); componentes novos listados em `docs/design-system/README.md` §3.
+- Cadastros com 3+ campos viraram **assistente em passos** (novo cliente, fornecedor, novo pedido, dados da empresa): "Passo X de N", Voltar do sistema recua um passo, erro de passo em toast sem mover o botão.
+- Ações em **grade** (`GradeAcoes`), **pop-up** ligado ao histórico (`Modal`), `CampoData` e `CampoDinheiro`; erros de formulário e de rede em toast (`avisarErro`).
+- Listas com **paginação** no cliente e **busca ampla** (nome, código, preço, caracteres soltos); quando a API corta em 200 a tela também consulta `?q=` e avisa "Mostrando os primeiros 200; refine a busca." (S14c, ADR 014 proposto: paginação no servidor é lacuna aberta).
+- Novo pedido (S15): o passo "De quem vai comprar?" ganhou busca de fornecedor (local + `?q=`); antes, com mais de 200 fornecedores, o recém-criado podia não aparecer.
+- Verificação: E2E em 360×640 nos 2 temas (toques, rolagem lateral, tamanho de alvo, Voltar), conferindo o efeito pela API (L-0017).
+
 ### Segurança
 - S14, threat model #3 e #5 (SEC-07, SEC-17; OpenAPI 0.14.0): **rate limit por IP** em `POST /acesso/entrar` e `POST /admin/login` (`@fastify/rate-limit` 11.2.2; padrão 10 por 60 s; resposta `429 {erro: "muitas_tentativas"}` com `Retry-After`; `LOGIN_RATE_MAX`, `LOGIN_RATE_JANELA_S`) e **segredo TOTP do Admin cifrado em repouso** (AES-256-GCM, chave `TOTP_CHAVE` **obrigatória**, formato `v1.`). `TRUST_PROXY` (IPs/CIDRs) para ler o IP real atrás do proxy: o Fastify 5 não aceita número de saltos. **Quebra:** `criarAdmin` recebe a cifra; Admins de dev criados antes têm o segredo em claro e precisam ser recriados (`npm run admin:criar`). ADR 010 (hospedagem portável) aceito.
 

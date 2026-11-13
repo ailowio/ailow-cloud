@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Group, NumberInput, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
 import type { Fornecedor, Produto } from '@ailow/shared';
@@ -6,7 +6,10 @@ import { totalDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
 import { QuadroDoAssistente, avisoDoPasso, usePassoNoHistorico } from '../../componentes/Assistente';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { camposDoFornecedor } from '../../lib/campos-busca-listas';
 import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
+import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { useSalvarComToast } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import {
@@ -33,11 +36,47 @@ export function NovoPedido(props: { api: Api; aoCancelar: () => void; aoCriar: (
   if (forn.carga.dados.fornecedores.length === 0) {
     return <EstadoVazio titulo="Cadastre um fornecedor" texto="Antes do pedido, informe quem vai receber o WhatsApp." />;
   }
-  return <Assistente api={props.api} fornecedores={forn.carga.dados.fornecedores} aoCancelar={props.aoCancelar} aoCriar={props.aoCriar} />;
+  return (
+    <Assistente
+      api={props.api}
+      fornecedores={forn.carga.dados.fornecedores}
+      cortada={forn.carga.dados.truncado}
+      versao={forn.carga}
+      aoCancelar={props.aoCancelar}
+      aoCriar={props.aoCriar}
+    />
+  );
 }
 
-function Assistente(props: { api: Api; fornecedores: Fornecedor[]; aoCancelar: () => void; aoCriar: (id: string) => void }) {
+function Assistente(props: {
+  api: Api;
+  fornecedores: Fornecedor[];
+  cortada: boolean;
+  versao: unknown;
+  aoCancelar: () => void;
+  aoCriar: (id: string) => void;
+}) {
   const [r, setR] = useState<RascunhoPedido>({ fornecedorId: null, linhas: [] });
+  // O escolhido pode ter vindo da busca no servidor (fora dos 200 carregados): guarda o objeto inteiro.
+  const [escolhido, setEscolhido] = useState<Fornecedor | null>(null);
+  const [textoForn, setTextoForn] = useState('');
+  const buscaForn = useTextoComEspera(textoForn);
+  const servidorForn = useBuscaNoServidor(
+    props.cortada,
+    buscaForn,
+    async (q) => {
+      const x = await props.api.fornecedores(q);
+      return { itens: x.fornecedores, truncado: x.truncado };
+    },
+    props.versao,
+  );
+  const fornecedoresVisiveis = useMemo(
+    () =>
+      buscaForn === ''
+        ? props.fornecedores
+        : mesclarBusca(props.fornecedores, servidorForn.itens, buscaForn, camposDoFornecedor, (f) => f.id),
+    [props.fornecedores, servidorForn.itens, buscaForn],
+  );
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
   const { atual, indice, ultimo, avancar, recuar } = usePassoNoHistorico(PASSOS_PEDIDO);
@@ -53,7 +92,7 @@ function Assistente(props: { api: Api; fornecedores: Fornecedor[]; aoCancelar: (
   const total = totalDoPedido(
     r.linhas.map((l) => ({ quantidade: l.quantidade, custoCentavos: reaisParaCentavos(l.custoTexto) ?? 0 })),
   );
-  const fornecedor = props.fornecedores.find((f) => f.id === r.fornecedorId);
+  const fornecedor = escolhido ?? undefined;
 
   async function salvar() {
     const corpo = pedidoParaApi(r);
@@ -90,7 +129,21 @@ function Assistente(props: { api: Api; fornecedores: Fornecedor[]; aoCancelar: (
     >
       {atual === 'fornecedor' && (
         <Stack gap="xs" role="group" aria-label="Fornecedor">
-          {props.fornecedores.map((f) => {
+          <TextInput
+            size="lg"
+            aria-label="Buscar fornecedor"
+            placeholder="Nome ou WhatsApp"
+            autoComplete="off"
+            maxLength={80}
+            value={textoForn}
+            onChange={(e) => setTextoForn(e.currentTarget.value)}
+          />
+          {fornecedoresVisiveis.length === 0 && (
+            <Text size="sm" c="dimmed">
+              Nenhum fornecedor encontrado. Tente outro pedaço do nome ou o WhatsApp.
+            </Text>
+          )}
+          {fornecedoresVisiveis.map((f) => {
             const marcado = r.fornecedorId === f.id;
             return (
               <UnstyledButton
@@ -101,7 +154,10 @@ function Assistente(props: { api: Api; fornecedores: Fornecedor[]; aoCancelar: (
                 w="100%"
                 aria-pressed={marcado}
                 data-destaque={marcado ? 'true' : 'false'}
-                onClick={() => setR((x) => ({ ...x, fornecedorId: f.id }))}
+                onClick={() => {
+                  setEscolhido(f);
+                  setR((x) => ({ ...x, fornecedorId: f.id }));
+                }}
               >
                 <Group wrap="nowrap" gap="xs">
                   {marcado && <IconCheck size={20} aria-hidden />}
@@ -112,6 +168,11 @@ function Assistente(props: { api: Api; fornecedores: Fornecedor[]; aoCancelar: (
               </UnstyledButton>
             );
           })}
+          {avisoDeCorte(props.cortada, buscaForn, servidorForn.truncado) && (
+            <Text size="sm" c="dimmed" data-aviso-corte>
+              {AVISO_CORTE}
+            </Text>
+          )}
         </Stack>
       )}
 
