@@ -11,6 +11,10 @@ const N = NOMES.length;
 
 const letrasDe = (sufixo: string) => sufixo.replace(/\d/g, (d) => 'abcdefghij'[Number(d)] as string);
 
+// A busca aceita caracteres soltos: 8 letras (a-j) casam, em ordem, com nomes de outros testes e inflam a lista
+// filtrada num banco acumulado. Com a marca dobrada (16 letras) a coincidência deixa de ser plausível.
+const marcaLonga = (sufixo: string) => letrasDe(sufixo).repeat(2);
+
 async function abrirModulo(page: Page, modulo: string, tema: (typeof TEMAS)[number] = 'dark') {
   await page.addInitScript((t) => localStorage.setItem('mantine-color-scheme-value', t), tema);
   await abrirInicio(page);
@@ -75,7 +79,7 @@ async function criarClientes(api: APIRequestContext, letras: string, sufixo: str
 test('Clientes: busca por caracteres soltos e por pedaço do celular; Próxima/Anterior; mudar a busca volta à pág. 1', async ({ page }) => {
   const api = await entrarComoDono(page);
   const sufixo = sufixoUnico();
-  const letras = letrasDe(sufixo);
+  const letras = marcaLonga(sufixo);
   await criarClientes(api, letras, sufixo);
   await abrirModulo(page, 'Clientes');
   const cartoes = page.locator('.ailow-bloco');
@@ -101,7 +105,7 @@ for (const tema of TEMAS) {
   test(`Clientes (tema ${tema}): sem rolagem de página nem overflow a 360 px, paginação fixa`, async ({ page }) => {
     const api = await entrarComoDono(page);
     const sufixo = sufixoUnico();
-    const letras = letrasDe(sufixo);
+    const letras = marcaLonga(sufixo);
     await criarClientes(api, letras, sufixo);
     await abrirModulo(page, 'Clientes', tema);
     await page.getByLabel('Buscar cliente', { exact: true }).fill(`cli ${letras}`);
