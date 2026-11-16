@@ -146,8 +146,9 @@ function Resultados(props: { api: Api; busca: string; aoEditar: (f: Fornecedor) 
           {AVISO_CORTE}
         </Text>
       )}
-      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
+      {/* "Carregar mais" acima da paginação sticky: se ficar embaixo, o rodapé cobre o botão e o toque não chega. */}
       {props.busca === '' && <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />}
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );
 }

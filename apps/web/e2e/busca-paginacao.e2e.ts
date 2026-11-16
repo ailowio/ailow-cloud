@@ -80,22 +80,26 @@ for (const tela of ['Produtos', 'Etiquetas'] as const) {
     const busca = page.getByLabel('Buscar produto');
 
     // "cmst bra <letras>": caracteres soltos de "Camiseta" + "branca" + o sufixo único.
+    // Espera o debounce (300 ms) e o cartão com o nome único (evita ler a página ainda sem filtro).
     await busca.fill(`cmst bra ${c.letras}`);
+    await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
-    await expect(cartoes(page).first()).toContainText(c.nome);
 
     // Tokens fora de ordem.
     await busca.fill(`${c.letras} bra cmst`);
+    await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
 
     // Por código do SKU.
     await busca.fill(c.codigo);
-    await expect(cartoes(page).first()).toContainText(c.nome);
+    await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
 
     // Por preço: "77,77" e "7777" (centavos), junto do sufixo para isolar a peça.
     await busca.fill(`77,77 ${c.letras}`);
+    await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
     await busca.fill(`7777 ${c.letras}`);
+    await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
 
     // Sem resultado.

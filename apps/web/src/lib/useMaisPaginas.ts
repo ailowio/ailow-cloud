@@ -19,15 +19,18 @@ export function useMaisPaginas<T>(
   buscar.current = buscarPagina;
   // Identidade da primeira página: outra rodada de carga invalida as páginas extras (e uma resposta atrasada).
   const rodada = useRef(0);
+  // Dependemos dos dados, não do objeto wrapper (um `{...r}` novo a cada render resetaria a página e descartaria o GET).
+  const itensPrimeira = primeira?.itens;
+  const proximoPrimeira = primeira?.proximo ?? null;
 
   // Sem trocar o estado à toa: um array vazio NOVO mudaria a identidade de `todos` e a paginação voltaria à página 1
   // (a pessoa que já tocou em "Próxima" seria jogada de volta).
   useEffect(() => {
     rodada.current += 1;
     setExtras((x) => (x.length === 0 ? x : NADA));
-    setProximo(primeira?.proximo ?? null);
+    setProximo(proximoPrimeira);
     setCarregando(false);
-  }, [primeira]);
+  }, [itensPrimeira, proximoPrimeira]);
 
   const carregarMais = useCallback(() => {
     if (!proximo || carregando) return;

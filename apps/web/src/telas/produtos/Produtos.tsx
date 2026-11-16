@@ -214,10 +214,11 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
           <CartaoProduto key={p.id} produto={p} dono={props.dono} aoAbrir={() => setAbertoId(p.id)} />
         ))}
         {truncado && <Text size="sm" c="dimmed" data-aviso-corte>{AVISO_CORTE}</Text>}
-        <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
+        {/* "Carregar mais" acima da paginação sticky: se ficar embaixo, o rodapé cobre o botão e o toque não chega. */}
         {props.busca === '' && (
           <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />
         )}
+        <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
       </Stack>
     );
   }

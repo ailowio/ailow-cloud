@@ -16,6 +16,7 @@ export function CarregarMais(props: { proximo: string | null; carregando: boolea
       leftSection={<IconChevronDown aria-hidden />}
       onClick={props.aoTocar}
       aria-description={`${props.quantos} carregados`}
+      data-carregados={props.quantos}
     >
       Carregar mais
     </Button>
