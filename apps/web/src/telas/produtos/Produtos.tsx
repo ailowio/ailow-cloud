@@ -55,8 +55,9 @@ export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
   if (vista === 'novo') {
     return (
-      // A seta diz "Voltar para Produtos": sai do assistente inteiro (devolve os passos), sem deixar passos fantasma.
-      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: () => sair() }}>
+      // Seta padronizada (decisão do Pedro, 2026-11-16): recua UM passo, como o Voltar do sistema e os outros
+      // assistentes; no 1º passo, volta à lista de Produtos.
+      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: voltarUm }}>
         <NovoProduto
           api={props.api}
           aoCancelar={() => sair()}
