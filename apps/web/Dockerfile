@@ -14,6 +14,9 @@ RUN npm ci --ignore-scripts --workspace=@ailow/web --workspace=@ailow/shared
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/web apps/web
+# Tag SemVer (ex.: v1.1.0) entra no rodapé do app; no CI sem ARG fica "dev".
+ARG VERSION=dev
+ENV VITE_APP_VERSION=$VERSION
 RUN npm run build -w @ailow/shared && npm run build -w @ailow/web
 
 # ---- runtime: nginx sem root, só arquivos estáticos + proxy da API ----
