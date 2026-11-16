@@ -1,0 +1,66 @@
+# Publica as imagens (api e web) no GHCR quando uma tag de versão é criada (S14b, ADR 010 item 5).
+# A VPS só faz `pull`; nada compila no host. Rollback = voltar a tag anterior (docs/runbooks/rollback.md).
+# Regras: OPS-*, SEC-12 (scan antes de publicar), CI-07 (permissão mínima), CI-18 (actions fixadas por SHA), AUD-24.
+# Só roda em tag `vX.Y.Z` (criada pelo humano, no commit já mergeado e com CI verde): nenhum push de branch publica.
+name: Publicar imagens
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+# Escrita em pacotes só neste workflow; nenhum outro job do repositório tem esta permissão.
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publicar-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Minúsculas: o GHCR não aceita maiúsculas no nome do repositório.
+      REGISTRO: ghcr.io/ailowio
+      VERSAO: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # O merge-base abaixo precisa do histórico.
+          fetch-depth: 0
+      - name: a tag tem de apontar para um commit que está na main
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "tag fora da main: não publico" >&2; exit 1; }
+      - name: build das imagens
+        run: |
+          docker build -f apps/api/Dockerfile -t "$REGISTRO/ailow-cloud-api:$VERSAO" .
+          docker build -f apps/web/Dockerfile -t "$REGISTRO/ailow-cloud-web:$VERSAO" .
+      # SEC-12: nada com CRITICAL/HIGH corrigível sobe para o registro.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/ailowio/ailow-cloud-api:${{ github.ref_name }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/ailowio/ailow-cloud-web:${{ github.ref_name }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: login no GHCR (token do próprio workflow, sem segredo novo)
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: publica e registra o digest (evidência da release)
+        run: |
+          for img in api web; do
+            docker push "$REGISTRO/ailow-cloud-$img:$VERSAO"
+            echo "### ailow-cloud-$img:$VERSAO" >> "$GITHUB_STEP_SUMMARY"
+            docker inspect --format '{{index .RepoDigests 0}}' "$REGISTRO/ailow-cloud-$img:$VERSAO" >> "$GITHUB_STEP_SUMMARY"
+          done

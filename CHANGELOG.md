@@ -1,16 +1,43 @@
 # Changelog
 
-Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada será `v1.0.0` (S14).
+Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
 ## [Não lançado]
 
-### UX mobile, rodada 1 (S01–S15; só front, sem mudança de API, banco ou OpenAPI)
+### UX mobile, rodada 1 (S01–S16; API aditiva: `GET /vendas/lista`, `PUT /produtos/{id}`, `POST /produtos/{id}/arquivar`)
 - Paleta única derivada da logo, contraste WCAG medido em código nos 2 temas (UXM-08); componentes novos listados em `docs/design-system/README.md` §3.
 - Cadastros com 3+ campos viraram **assistente em passos** (novo cliente, fornecedor, novo pedido, dados da empresa): "Passo X de N", Voltar do sistema recua um passo, erro de passo em toast sem mover o botão.
 - Ações em **grade** (`GradeAcoes`), **pop-up** ligado ao histórico (`Modal`), `CampoData` e `CampoDinheiro`; erros de formulário e de rede em toast (`avisarErro`).
 - Listas com **paginação** no cliente e **busca ampla** (nome, código, preço, caracteres soltos); quando a API corta em 200 a tela também consulta `?q=` e avisa "Mostrando os primeiros 200; refine a busca." (S14c, ADR 014 proposto: paginação no servidor é lacuna aberta).
 - Novo pedido (S15): o passo "De quem vai comprar?" ganhou busca de fornecedor (local + `?q=`); antes, com mais de 200 fornecedores, o recém-criado podia não aparecer.
 - Verificação: E2E em 360×640 nos 2 temas (toques, rolagem lateral, tamanho de alvo, Voltar), conferindo o efeito pela API (L-0017).
+
+### Corrigido
+- Pipeline de deploy (L-0023; sem mudança de API): `ops/deploy/deploy.sh` agora converge ao **reaplicar a mesma tag** (serviço sem `UpdateStatus`, como o `web`, conta como convergido; a imagem na tag continua obrigatória), **espera o Swarm terminar a reversão** (`rollback_started` não é mais falha imediata) e, com a mesma tag, decide pelo estado real: exit 20 se a stack voltou a responder (antes dizia "reversão NÃO confirmada", exit 21, com tudo de pé). 3 cenários novos em `scripts/deploy-test.sh` (vermelhos antes, verdes depois; canário continua ok). Não exercitado em produção.
+
+### Adicionado
+- Diagnóstico do RNF-02 (sem mudança de limiar nem de API): `ops/k6/carga.js` marca a busca com `tipo` (`modelo` | `ampla`) e o resumo mostra o p95 de cada uma (informativo). 1ª rodada local: modelo p95 535 ms, ampla 507 ms, ou seja, a busca ampla **não** explica o p95.
+
+### Documentação
+- S14e, fechamento da S14 (sem mudança de código nem de API, OpenAPI continua 0.14.0): resultado do RNF-01/02 em produção com a `v1.0.1` (RNF-01 passou; **RNF-02 reprovou em 3 rodadas, incluindo uma medição pontual com 1,5 CPU que refutou a hipótese do teto de CPU**); decisão do Pedro de otimizar a busca ampla em sessão própria; EX-02 do deploy manual encerrada; primeira falha real do pipeline registrada (`rollback.md`); `docs/runbooks/dimensionamento-minimo.md` (configuração mínima para o pacote do curso).
+
+## [1.0.1] - 2026-11-13
+
+Primeira versão implantada **pelo pipeline** (workflow `Deploy`, run 43344269690, aprovado pelo Pedro; 106 s no servidor).
+
+### Alterado
+- Desempenho (RNF-02; sem mudança de API, OpenAPI continua 0.14.0): **compressão gzip no nginx do web** (`ops/web/nginx.conf`: JSON, JS, CSS, SVG e manifest; `gzip_min_length 1024`, nível 5, `Vary: Accept-Encoding`). A busca ampla de produtos (864 SKUs) mede **96,8 KiB → 22,3 KiB (4,3×)** e comprimir custa ~1,6 ms por resposta no nginx (medido em um PC, não na VPS). Teste no `stack-local.sh` (job `stack`): JS do app e `openapi.json` vêm em gzip, `Vary` presente e resposta pura sem `Accept-Encoding` (vermelho antes, verde depois). **Não é garantia de passar o RNF-02:** o efeito sobre o p95 só se confirma re-medindo na VPS com 50 usuários. Medidos e descartados como gargalo: montagem da resposta (~2 ms), validação Zod (~1 ms).
+
+### Adicionado
+- S14d, **pipeline de deploy** (ADR 012; sem mudança de API, OpenAPI continua 0.14.0): workflow `deploy.yml` (disparo manual com a tag; valida formato, existência, commit na `main` e as imagens no GHCR; job de implantação no Environment `producao` com **revisor obrigatório**, só `main`; chave SSH dedicada com host key fixada); `ops/deploy/ssh-entrada.sh` (comando forçado: aceita só `deploy vX.Y.Z`, serializa com `flock`, confere a tag na `main`) e `ops/deploy/deploy.sh` (backup antes; espera `api`/`web` e 3 `/health` seguidos; **reversão automática** para a tag anterior; códigos de saída 0/2/10/20/21). Testes sem VPS em `scripts/deploy-test.sh` (comando injetado, sucesso, health falhando ⇒ reversão, backup falhando ⇒ nada alterado, Swarm revertendo sozinho) mais um **canário** que reprova se a reversão quebrar, ambos no job `stack` do CI. Runbook de deploy reescrito (§2 pipeline, §2b emergência) e inventários de acessos, rotinas (R-05) e interfaces (I-07) atualizados. Encerra a exceção EX-02 depois do 1º deploy por ele em produção.
+
+## [1.0.0] - 2026-11-13
+
+Primeira versão em produção (`https://cloud.ailow.com.br`, VPS compartilhada com o Swarm da Copel). A `v0.1.0` (2026-11-12, mesmo código da `main` em `fcf532b`) foi a tag de teste que exercitou o `publicar.yml` e o deploy; a `v1.0.0` acrescenta só os arquivos de operação abaixo e a documentação com a evidência real, **sem mudança de API** (OpenAPI continua 0.14.0).
+
+### Adicionado
+- S14c, operação na VPS (sem mudança de API): **timer diário do backup** `ops/backup/systemd/` (`ailow-backup.service`/`.timer`, 06:00 UTC) com `OnFailure` para `ailow-backup-alerta.service` e `ops/backup/alerta.sh` (journal sempre; POST/ping em `/etc/ailow/alerta.env` se configurado). Evidência: stack no Swarm do host, `/health` 200 e `/metrics` 404 pela internet, HSTS, certificado Let's Encrypt, 4 fluxos do E2E contra o domínio, k6 smoke (p95 busca 209 ms, venda 170 ms), rollback ensaiado (`web` 37 s, `api` 71 s), backup real e restore-ensaio a partir do Drive cifrado (10,5 s com banco de teste). Inventários de acessos, rotinas e interfaces e os runbooks de deploy, rollback e backup atualizados com os números e as ressalvas.
+- S14b, deploy portável (ADR 010; sem mudança de API, OpenAPI continua 0.14.0): **stack do Swarm** `ops/stack/ailow.yaml` (parametrizada por `TAG`, `DOMINIO`, `CERT_RESOLVER`, `PROXY_NETWORK`; segredos em Swarm secrets; rede `internal`; limites de memória/CPU), **imagem do web** (nginx sem root + `dist` do Vite, proxy da API, `/metrics` 404), Traefik mínimo para host novo (`ops/traefik/`), **backup cifrado** (`ops/backup/backup.sh`, rclone `crypt` → Drive) e **ensaio de restauração** (`restore-ensaio.sh`), `scripts/stack-local.sh` (valida a stack num Swarm descartável; job `stack` do CI), workflow `publicar.yml` (imagens no GHCR só em tag `vX.Y.Z`, com Trivy), job `imagem` agora escaneia também o web, runbooks (`backup.md`, deploy e rollback para Swarm) e inventários de auditoria (rotinas, interfaces, acessos). Teste novo trava a lista de rotas do nginx = a do Vite.
 
 ### Segurança
 - S14, threat model #3 e #5 (SEC-07, SEC-17; OpenAPI 0.14.0): **rate limit por IP** em `POST /acesso/entrar` e `POST /admin/login` (`@fastify/rate-limit` 11.2.2; padrão 10 por 60 s; resposta `429 {erro: "muitas_tentativas"}` com `Retry-After`; `LOGIN_RATE_MAX`, `LOGIN_RATE_JANELA_S`) e **segredo TOTP do Admin cifrado em repouso** (AES-256-GCM, chave `TOTP_CHAVE` **obrigatória**, formato `v1.`). `TRUST_PROXY` (IPs/CIDRs) para ler o IP real atrás do proxy: o Fastify 5 não aceita número de saltos. **Quebra:** `criarAdmin` recebe a cifra; Admins de dev criados antes têm o segredo em claro e precisam ser recriados (`npm run admin:criar`). ADR 010 (hospedagem portável) aceito.

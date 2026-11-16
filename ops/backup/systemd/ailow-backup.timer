@@ -1,0 +1,11 @@
+# Todos os dias às 06:00 UTC (03:00 em Brasília), fora do horário de venda. Persistent: se a VPS estava desligada, roda ao ligar.
+[Unit]
+Description=Backup diário do Ailow Cloud
+
+[Timer]
+OnCalendar=*-*-* 06:00:00 UTC
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,46 +1,81 @@
 # Runbook: rollback (voltar para a versão anterior)
 
-- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-12 · **Ensaiado:** nunca **[NÃO VERIFICADO — S14]** · tempo medido: __ min
+- **Serviço:** Ailow Cloud · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado na VPS:** 2026-11-12 (mecanismo `--rollback`) e 2026-11-13 (rollback real por tag, `v1.0.0` → `v0.1.0`) · **tempo medido:** por tag **73 s** (volta `v0.1.0` → `v1.0.0`: 78 s); `docker service update --rollback`: `web` 37 s, `api` 71 s
 - Regras: OPS-05/06/11, AUD-24. Princípio: **voltar o código primeiro (barato, seguro); mexer no banco só se for inevitável.**
 
 ## 1. Sintoma (quando usar)
 Gatilho do deploy: `GET /health` ≠ 200 em 3 checagens seguidas, 5xx > 1 % nas rotas de venda, fluxo do smoke falhando, ou perda/corrupção de dados suspeita (esta última vai direto para §4).
 
 ## 2. Confirmar
-- `docker compose ps` e `curl -fsS http://127.0.0.1:3000/health`.
-- `docker compose logs --since 15m api` (procure `request_id` do erro) e `docker compose logs migrate` (a migração falhou? aplicou parcialmente?).
-- O que mudou: a tag implantada (`git describe --tags`) e se a versão trouxe migração (`apps/api/migrations/` entre as duas tags).
+- `docker service ls`, `docker service ps ailow_api --no-trunc` e `curl -fsS https://DOMINIO/health`.
+- `docker service logs --since 15m ailow_api` (procure `request_id` do erro; a migração roda no início da `api`, então o erro dela aparece aqui: a migração falhou? aplicou parcialmente?).
+- O que mudou: a tag implantada (`docker service inspect ailow_api --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'`) e se a versão trouxe migração (`apps/api/migrations/` entre as duas tags).
 
 ## 3. Mitigar (em ordem — do mais barato ao mais invasivo)
 
 ### 3.1 Versão **sem migração nova**, ou migração compatível com a anterior (caso normal — OPS-11)
 ```bash
-git fetch --tags && git checkout vANTERIOR     # a tag anterior registrada no release
-docker compose up -d --build                   # `migrate` não tem nada novo a aplicar
-curl -fsS http://127.0.0.1:3000/health
+# Opção A (a nova versão nem chegou a ficar saudável): o Swarm já reverte sozinho (failure_action: rollback). Para forçar:
+docker service update --rollback ailow_api && docker service update --rollback ailow_web
+# Opção B (a versão subiu mas está errada): reimplantar a tag anterior, registrada no release.
+#   Edite TAG=vANTERIOR em ailow.env e repita o deploy (deploy.md §2, passos 1 e 3). A migração da `api` não tem nada novo a aplicar.
+curl -fsS https://DOMINIO/health
 ```
 O banco fica como está: a versão anterior tem de funcionar com o schema novo (é o que a regra expand → migrate → contract garante; a migração `20261117120000_vendas-fk-adiavel`, por exemplo, só torna FKs adiáveis — pela leitura, a versão antiga continua válida; não ensaiado). Se a versão a ser abandonada fez o **"contract"** (removeu coluna/tabela que a anterior usa), este caminho **não vale**: ir para 3.2.
 
 ### 3.2 Migração incompatível com a versão anterior
-1. Parar a escrita: `docker compose stop api` (o app fica fora; avisar a loja).
+1. Parar a escrita: `docker service scale ailow_api=0` (o app fica fora; avisar a loja).
 2. **Antes de qualquer coisa**, tirar um backup do estado atual (para não perder as vendas feitas depois do deploy): ver [`migrar-vps.md` §3](migrar-vps.md).
 3. Desfazer a migração: todas as migrações têm `-- Down Migration`. Com a imagem **da versão nova** (a que conhece a migração):
    ```bash
-   docker compose run --rm migrate node ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js \
+   # Contêiner avulso na rede do banco, com a imagem DA VERSÃO NOVA e os segredos do Swarm não disponíveis a ele:
+   # monte a URL a partir do segredo no próprio host, sem imprimir. Exemplo (ajuste REDE ao nome real: docker network ls):
+   docker run --rm --network ailow_ailow_internal -e DATABASE_URL="postgresql://ailow:$(docker exec $(docker ps -q -f name=^ailow_db\.) cat /run/secrets/ailow_postgres_password)@db:5432/ailow" \
+     ghcr.io/ailowio/ailow-cloud-api:vNOVA node ../../node_modules/node-pg-migrate/bin/node-pg-migrate.js \
      -m migrations --migrations-table pgmigrations down 1
    ```
+   **[NÃO VERIFICADO — S14c]** a rede `ailow_ailow_internal` é `internal` e não anexável por `docker run` simples; se o comando recusar, o caminho é um serviço temporário na stack. Ensaiar antes de precisar.
    `down` perde o que a migração criou (colunas/tabelas novas e seus dados). Só com o backup do passo 2 em mãos.
-4. Subir a versão anterior: `git checkout vANTERIOR && docker compose up -d --build`; conferir `/health` e o smoke.
+4. Subir a versão anterior: `TAG=vANTERIOR` e repetir o deploy (`deploy.md §2`); conferir `/health` e o smoke.
 5. Se o `down` falhar ou o banco ficar inconsistente: **restaurar o backup do §3 do deploy** (pré-deploy) — perde as vendas posteriores a ele; decisão do Pedro com o Dono da loja.
 
-### 3.3 Tag anterior não construída / registro de imagens
-Hoje a imagem é construída na própria VPS a partir da tag (sem registro). Se a S14 adotar registro de imagens, o rollback passa a ser "apontar o compose para o digest anterior" — atualizar este runbook.
+### 3.3 Tag anterior ausente no registro
+As imagens vêm do GHCR (publicadas por `publicar.yml` em cada tag `vX.Y.Z`); a VPS não compila nada. Se a imagem da tag anterior não estiver mais no registro (pacote apagado, retenção), republique-a rodando de novo o workflow da tag anterior; **nunca** reconstrua à mão na VPS. O digest de cada versão está no resumo do run do workflow (guardado no release).
 
 ## 4. Suspeita de perda ou exposição de dados
-Parar a `api` (`docker compose stop api`), **não** apagar nada, preservar logs e o volume, e seguir `harness/checklists/incidente.md`. Não rodar `down -v`.
+Parar a `api` (`docker service scale ailow_api=0`), **não** apagar nada, preservar logs e o volume `ailow_dbdata`, e seguir `harness/checklists/incidente.md`. Nunca `docker stack rm` seguido de remover o volume.
 
 ## 5. Depois
 Postmortem sem culpa (`harness/templates/postmortem.md`), com ações, dono e prazo; lição no registro (MC); registrar no release: versão revertida, motivo, duração da indisponibilidade, **tempo medido: __ min** (alimenta o MTTR, OPS-01).
 
-## Não verificado (depende da S14)
-Todo o procedimento em VPS; o `down` de cada migração contra dados reais; backup/restore reais; tempo de rollback; existência de registro de imagens.
+## Ensaio na VPS (S14c, 2026-11-12) e o que ele prova e não prova
+**Como:** com uma única tag implantada não existe "versão anterior", então o ensaio mudou o spec de cada serviço (`docker service update --env-add ENSAIO_ROLLBACK=1`) e voltou com `docker service update --detach=false --rollback`, medindo o tempo e fazendo `GET /health` de fora a cada 1 s. Não tocou em banco nem volume.
+
+| Serviço | Rollback (comando até convergir) | `/health` de fora durante o ensaio | Estado final |
+|---|---|---|---|
+| `web` (start-first) | **37 s** | 1 de 53 checagens ≠ 200 | variável sumiu do spec, 1/1 |
+| `api` (stop-first, `monitor: 60s`) | **71 s** | 6 de 94 checagens ≠ 200 (indisponibilidade curta na troca) | variável sumiu do spec, 1/1 |
+
+**Prova:** o comando do §3.1 opção A funciona nesta stack e devolve o spec anterior com os dois serviços saudáveis. O tempo da `api` é dominado pelo período de monitoramento de 60 s.
+
+### Ensaio da opção B: rollback real por tag (2026-11-13)
+Com a `v1.0.0` publicada passou a existir uma tag anterior. Troca de `TAG` em `ailow.env` + `docker stack deploy` (deploy.md §2), com `GET /health` de fora a cada 1 s:
+
+| Passo | Tempo até `api` e `web` convergirem | `/health` de fora ≠ 200 | Resultado |
+|---|---|---|---|
+| deploy `v0.1.0` → `v1.0.0` | 86 s | 8 de 61 | imagens = digests publicados; 0 erros nos logs |
+| **rollback** `v1.0.0` → `v0.1.0` | **73 s** | 6 de 45 | `api` e `web` na `v0.1.0`, `/health` 200 |
+| volta `v0.1.0` → `v1.0.0` | 78 s | 6 de 52 | estado final `v1.0.0` |
+
+**Não prova:** rollback quando a versão nova trouxe **migração** (as duas tags têm o mesmo schema; o §3.2 segue sem ensaio) nem com dados reais. A indisponibilidade medida (cerca de 6 a 8 segundos) é a da API em `stop-first`.
+
+### Pipeline em produção (2026-11-13)
+- **Deploy normal pelo pipeline** (workflow `Deploy`, run 43344269690, `v1.0.0` → `v1.0.1`, aprovado pelo Pedro): `deploy ok segundos=106` no servidor; job de implantação **1 min 55 s** (inclui backup e a verificação de fora). Nenhum comando manual na VPS.
+- **Primeira falha real (2 runs, 43348140648 cancelado antes da aprovação; 43348529282 e 43348976707 falharam):** reimplantação da **mesma tag** `v1.0.1` só para mudar limites de CPU numa medição. O que ficou provado e o que não:
+  - **Provado:** o `failure_action: rollback` do Swarm funciona sob falha real. A nova tarefa da `api` saiu com código 1 (`getaddrinfo EAI_AGAIN db`, porque o `db` também estava sendo reiniciado pela mudança de limite), o Swarm reverteu só a `api` (`rollback_completed`) e `/health` ficou 200, sem perda de dados (backup pré-deploy feito).
+  - **Falha do script (`ops/deploy/deploy.sh`), CORRIGIDA depois com teste** (3 cenários novos em `scripts/deploy-test.sh`, vermelhos antes e verdes depois; L-0023). O que estava errado: (1) com tag anterior **igual** à pedida ele pula a reversão e termina com "reversão NÃO confirmada" (exit 21) mesmo com o Swarm já recuperado; (2) com a mesma tag o `web` não muda e nunca fica com `UpdateStatus=completed`, então a espera estoura os 300 s e o run falha embora `api` e `db` estejam saudáveis; (3) ao ver `rollback_started` ele sai sem esperar `rollback_completed`. Agora: `UpdateStatus` vazio (serviço que não mudou) conta como convergido, mantendo a exigência da imagem na tag; `rollback_started` espera o fim da reversão; e, com a mesma tag, o script confere o estado real (sem serviço atualizando/revertendo e `/health` 200 em 3 checagens): exit 20 se a stack voltou a responder, 21 se não. **Não verificado em produção** (só nos testes sem VPS).
+  - **Regra prática:** nunca mude no mesmo deploy o limite do `db` (ou a imagem do Postgres) e a `api`: o reinício do `db` derruba a resolução de nome para a `api`. Mudança no `db` vai sozinha, com a `api` estável.
+- Volta de limites (1,5 → 1,0 CPU) feita por `docker service update --limit-cpu` em sequência (`db`, depois `api`) e `ailow.env` restaurado: mudança manual registrada no diário privado da VPS (AUD-24).
+
+## Não verificado (continua aberto depois da S14e)
+O `down` de cada migração contra dados reais e a forma de rodá-lo contra a rede `internal` (§3.2); restauração do banco de produção com dados reais; o gatilho numérico foi exercitado por **uma falha real** (a acima), mas só a reversão do Swarm foi observada: a reversão do **script** para uma tag diferente continua sem ensaio em produção (existe `scripts/deploy-test.sh canario` no CI).

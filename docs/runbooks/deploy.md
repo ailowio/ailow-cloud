@@ -1,51 +1,88 @@
-# Runbook: deploy de uma versão na VPS
+# Runbook: deploy de uma versão na VPS (stack do Swarm)
 
-- **Serviço:** Ailow Cloud (api + db; web servido pelo proxy HTTPS) · **Dono:** Pedro · **Última revisão:** 2026-11-12 · **Ensaiado em staging/VPS:** nunca **[NÃO VERIFICADO — S14]**
-- Regras: OPS-04 (deploy repetível e serializado), OPS-05 (gatilho de reversão), OPS-11 (banco compatível com 2 versões), AUD-24/27 (mudança rastreável).
+- **Serviço:** Ailow Cloud (`db`, `api`, `web`; HTTPS pelo Traefik do host) · **Dono:** Pedro · **Última revisão:** 2026-11-13 · **Ensaiado na VPS:** 2026-11-12 (`v0.1.0`, 1ª implantação) e 2026-11-13 (`v1.0.0` sobre `v0.1.0`) · **tempo medido:** 1ª implantação ≈ 5 min do `docker stack deploy` ao `/health` 200 (inclui o 1º pull das imagens e a 1ª emissão do certificado); **atualização de versão: 86 s** até `api` e `web` convergirem, com 8 de 61 checagens de `/health` de fora ≠ 200 (a troca `stop-first` da `api` derruba a API por alguns segundos) e 0 erros nos logs
+- Regras: OPS-04 (deploy repetível e serializado), OPS-05 (gatilho de reversão), OPS-11 (banco compatível com 2 versões), AUD-24/27 (mudança rastreável), ENV-12 (nunca apagar volume sem intenção).
 
-## 0. O que existe hoje e o que não
-- **Existe [verificado no CI]:** `compose.yaml` com `db` (Postgres 18.6), `migrate` (roda as migrações e termina) e `api` (só sobe depois do `migrate` terminar com sucesso; usuário não-root, FS somente leitura, `cap_drop: ALL`, healthcheck em `/health`). O job `compose` sobe isso com segredos efêmeros; o job `imagem` constrói e escaneia (Trivy) a imagem da API.
-- **Não existe:** a VPS; o proxy HTTPS e a forma de servir o web (arquivos estáticos do `apps/web/dist` atrás do proxy, com `/acesso`, `/vendas`… repassados à API — mesmo desenho do `vite preview` usado no E2E); registro de imagens; pipeline de deploy; `main` protegida. Tudo isso é decisão/entrega da **S14**.
-- Consequência: hoje o "deploy" é **manual** (SSH + `docker compose`). Alteração manual em produção é **mudança registrada** (AUD-24): anotar no release.
+## 0. O que existe e o que não
+- **Existe e foi exercitado [verificado local/CI]:** `ops/stack/ailow.yaml` (Swarm: `db` com Postgres 18.6, `api` que **migra e depois sobe**, `web` com nginx) e o script `scripts/stack-local.sh` (job `stack` do CI), que sobe a stack num Swarm descartável e confere: `db`/`api`/`web` em 1/1; `/health` 200 e `/metrics` 404 pelo `web`; `db` e `api` inalcançáveis da rede do proxy; **API sem saída para a internet**; `api` e `web` sem root, FS somente leitura, `cap_drop: ALL`, limite de memória; **nenhum segredo em `docker service inspect`** (vão por Swarm secrets); labels do Traefik (Host, certresolver, HSTS 1 ano). Imagens: `publicar.yml` publica `api` e `web` no GHCR em tag `vX.Y.Z`.
+- **Verificado na VPS em 2026-11-12 (S14c, `v0.1.0`):** `publicar.yml` verde em tag real (digests no resumo do run); pull das imagens **sem credencial** (pacotes públicos); stack no Swarm do host com `db`, `api` e `web` em 1/1; `/health` 200 e `/metrics` 404 **pela internet**; HSTS 1 ano, http→https 308, certificado Let's Encrypt emitido na 1ª subida; os 4 fluxos do E2E contra o domínio (venda em 5 toques, limite 8); k6 smoke (1 usuário, 20 s): p95 de busca 209 ms e de venda 170 ms, erro 0 %. Valores reais do host: `CERT_RESOLVER=letsencryptresolver`, `PROXY_NETWORK=CopelNet`, `ENTRYPOINT=websecure` (os do plano, conferidos ao vivo).
+- **Carga de 50 usuários na VPS (2026-11-13, k6 `carga`, ~110 s, do PC do Pedro; RTT ≈ 61 ms):** 5 692 vendas e 5 692 buscas, **erro 0 %**; **RNF-01 (venda) p95 447 ms ≤ 500: passou; RNF-02 (busca) p95 474 ms > 300: REPROVOU.** `api` e `db` ficaram em ~100 % de 1 CPU cada (limite da stack) e a carga do host foi a 5,85 em 4 núcleos, dividido com outros serviços. Local (S13b2) a busca dava 246–268 ms. Dados de teste removidos em seguida. O critério não foi alterado (L-0017).
+- **Re-medição da S14e (2026-11-13, `v1.0.1` com gzip, mesmo k6 `carga`, 50 usuários, ~110 s, do PC do Pedro; ~5 900 vendas e ~5 900 buscas por rodada, erro 0 %):**
+
+  | Rodada | Limite `api`/`db` | Busca p95 (≤ 300) | Venda p95 (≤ 500) | CPU de pico `api` / `db` | Carga do host (4 núcleos) |
+  |---|---|---|---|---|---|
+  | `v1.0.0` (sem gzip) | 1,0 / 1,0 | 474 ms ❌ | 447 ms ✅ | ~100 % / ~100 % | 5,85 |
+  | `v1.0.1` rodada 1 | 1,0 / 1,0 | **427 ms ❌** | 352 ms ✅ | ~108 % / ~118 % | 4,8 |
+  | `v1.0.1` rodada 2 (medição pontual autorizada pelo Pedro) | 1,5 / 1,5 | **529 ms ❌** | 366 ms ✅ | ~104 % / ~131 % | 5,29 |
+
+  **RNF-01 passou; RNF-02 reprovou nas três rodadas.** A hipótese do teto de CPU foi **refutada**: com 1,5 CPU nenhum dos dois passou de ~1,3 CPU e a busca não melhorou (a diferença 427 → 529 ms é ruído). Os limites voltaram a 1,0 CPU (a carga do host passou do gatilho combinado de 4). Pela leitura do código e um `EXPLAIN ANALYZE` (só leitura, 12 produtos / 864 SKUs): a consulta SQL da busca ampla executa em **0,23 ms**, então o custo de 120–530 ms está fora do SQL. **Decisão do Pedro (2026-11-13): otimizar a busca em sessão própria**; a re-medição final fica para o ambiente novo (`migrar-vps.md`). **Medido depois (k6 com a tag `tipo`, local, 1 rodada):** busca por modelo p95 535 ms e ampla 507 ms, então a hipótese "a busca ampla de 864 SKUs puxa o p95" foi **refutada**; dentro da API o `GET /produtos` levou ~250 ms em média (`/metrics`) com event loop folgado (lag p99 21 ms), o que indica **espera**. Hipótese a medir antes de mudar código ou contrato: fila no pool de 10 conexões do Postgres (`DB_POOL_MAX`, nunca ajustado na VPS; ADR 009).
+- **Exceção EX-02 do deploy manual (PROTOCOLO §7) — ENCERRADA em 2026-11-13:** o deploy manual divergia de OPS-04, AUD-24 e PROTOCOLO §4 fase 9. O pipeline ([ADR 012](../adr/012-pipeline-de-deploy.md)) fez o **1º deploy de produção** (workflow `Deploy`, run 43344269690, `v1.0.1`, aprovado pelo Pedro, servidor `deploy ok segundos=106`, job 1 min 55 s). O caminho manual (§2b) fica só para emergência (AUD-25). Atenção ao nome: a "EX-02" do PRD (`prd/PRD-ailow-cloud-v1.md`) é outra exceção, a do **backup adiado** (AUD-43).
+- **Mesma tag (só configuração), S14e:** reimplantar a tag que já está no ar (ex.: mudar um limite no `ailow.env`) não convergia no `deploy.sh`; **corrigido com teste** (ver `rollback.md`, "Pipeline em produção"), ainda não exercitado em produção. Continua valendo: mudança de limite ou imagem do `db` **não** vai no mesmo deploy da `api` (corrida de DNS).
+- **Não verificado:** renovação automática do certificado; atualização de versão **com migração nova** e com dados reais (a `v1.0.1` não trouxe migração); `main` protegida pelo ruleset (feito no GitHub pelo Pedro).
+- **O host não tem `node`** (nem `rclone` até a S14c): gere segredos com `openssl rand` (§1.6). Docker do host: 28.1.1.
+- O Swarm **ignora `security_opt: no-new-privileges`** (conferido no Docker 29.9.3); a defesa aqui é não-root + `cap_drop: ALL` + FS somente leitura.
+- Consequência: o deploy é feito pelo **pipeline** (§2, ADR 012); o manual (§2b) fica só para emergência. Alteração manual em produção é **mudança registrada** (AUD-24): anotar no release.
 
 ## 1. Antes (pré-condições — todas verdadeiras, senão não começa)
-1. O PR da versão está mergeado em `main` com **todos** os checks verdes (`verify`, `contrato`, `e2e`, `carga-smoke`, `alertas`, `seguranca-*`, `imagem`, `compose`) e aprovação humana ≠ autor. Evidência: link do PR.
-2. `CHANGELOG.md` com a seção da versão; tag `vX.Y.Z` (SemVer) criada **no commit mergeado**.
-3. Há **backup recente e restaurável** do banco (ver [`migrar-vps.md` §3](migrar-vps.md)): feito agora, antes do deploy, **se a versão tiver migração** **[NÃO VERIFICADO — S14: ainda não existe rotina de backup]**.
-4. A migração da versão é compatível com a versão **anterior** da API rodando (expand → migrate → contract, OPS-11). Se não for, a versão não é "voltável" sem restaurar backup: tratar como **janela combinada** com o Dono da loja e dizer no release.
+1. O PR da versão está mergeado em `main` com **todos** os checks verdes (`verify`, `contrato`, `e2e`, `carga-smoke`, `alertas`, `seguranca-*`, `imagem`, `stack`, `compose`) e aprovação humana ≠ autor. Evidência: link do PR.
+2. `CHANGELOG.md` com a seção da versão; tag `vX.Y.Z` criada **no commit mergeado**; o workflow `Publicar imagens` terminou verde (digests no resumo do run).
+3. Há **backup recente e restaurável** (`backup.md`): rode `backup.sh` agora, antes do deploy, **se a versão tiver migração**.
+4. A migração da versão é compatível com a versão **anterior** da API rodando (expand → migrate → contract, OPS-11). Se não for, a versão não é "voltável" sem restaurar backup: tratar como **janela combinada** com o Dono da loja.
 5. Janela fora do horário de venda da loja (a combinar com o Marcos). Um deploy por vez.
+6. **Primeira implantação apenas:** segredos criados no Swarm (uma vez), sem imprimir valores:
+   ```bash
+   node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))"  | docker secret create ailow_postgres_password -
+   node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))"  | docker secret create ailow_auth_pepper -
+   node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))" | docker secret create ailow_totp_chave -
+   ```
+   Guarde `AUTH_PEPPER` e `TOTP_CHAVE` no gerenciador de senhas **antes** de seguir (perdê-las tem custo: `migrar-vps.md §0`). Se a VPS não tiver Node (**é o caso da VPS atual**), gere em outra máquina e passe por `docker secret create` via stdin (foi assim na S14c: pepper e TOTP gerados no PC do Pedro e enviados por `ssh ... docker secret create nome -`; a senha do Postgres, com `openssl rand -hex 24` na própria VPS); nunca por argumento de linha de comando. Apague qualquer arquivo temporário com os valores (`shred -u`) depois que o Pedro guardar a cópia.
+7. **Primeira implantação apenas:** crie o **Admin da plataforma** (o banco nasce vazio; `npm run dev:seed` recusa produção de propósito). A imagem não tem npm: rode dentro do contêiner da API, passando `ADMIN_EMAIL` e `ADMIN_SENHA` por ambiente (nunca por argumento) e lendo os segredos de `/run/secrets` como o `command` do serviço faz; `node dist/admin/criar-admin-cli.js`. A senha e a URI do TOTP vão para um arquivo `0600` na VPS que o Pedro copia para o gerenciador de senhas e que é apagado em seguida (nada disso passa por chat). A empresa e o Dono saem pela rota `POST /admin/empresas` (login do Admin com senha + TOTP).
 
-## 2. Deploy (na VPS, no diretório do compose)
+## 2. Deploy pelo pipeline (caminho normal)
+1. Tag `vX.Y.Z` criada **no commit mergeado** e o workflow `Publicar imagens` verde (digests no resumo do run).
+2. GitHub → Actions → **Deploy** → *Run workflow* (branch `main`) → informar a tag. O job `validar a tag` confere formato, existência, commit na `main` e as duas imagens no GHCR.
+3. O job `implantar em producao` **fica esperando a aprovação** no Environment `producao` (revisor: Pedro). Aprovar só na janela combinada com a loja.
+4. No servidor, `ops/deploy/deploy.sh`: backup → grava a tag → `docker stack deploy` → espera `api` e `web` convergirem + 3 `/health` = 200 seguidos → se falhar, **volta sozinho** para a tag anterior.
+5. O run termina com a verificação de fora (`/health` 200, `/metrics` 404, HSTS) e o resumo com os **digests em uso**. Registrar no release (versão, digests, aprovador, resultado, tempo).
+Códigos de saída do servidor: `0` ok · `2..5` comando/tag recusados (stack intacta) · `10` backup falhou (stack intacta) · `20` falhou e **a reversão funcionou** · `21` falhou e a reversão **não** se confirmou (parar; seguir `rollback.md`).
+**Rollback pelo pipeline:** rodar o mesmo workflow com a tag anterior. **Testes do pipeline sem VPS:** `bash scripts/deploy-test.sh` e `bash scripts/deploy-test.sh canario` (rodam no job `stack` do CI).
+O que foi instalado à mão na VPS (mudança registrada): `/opt/ailow/bin/ssh-entrada.sh`, o clone `/opt/ailow/repo` e uma linha de `authorized_keys` com comando forçado. Alterar o `ssh-entrada.sh` é mudança manual e exige o registro e o ADR.
+
+## 2b. Deploy manual (emergência: AUD-25, só com registro e revisão em até 2 dias úteis)
 ```bash
-# 1. Código na tag exata (nunca "main solta")
-git fetch --tags && git checkout vX.Y.Z
+# 1. Variáveis da stack (nomes e valores NÃO secretos). Copie de ops/stack/ailow.env.example para ailow.env (gitignored).
+#    Confira só que as 4 obrigatórias existem e não estão vazias: TAG, DOMINIO, CERT_RESOLVER, PROXY_NETWORK.
+set -a; . ./ailow.env; set +a
 
-# 2. Conferir o arquivo de ambiente SEM imprimir valores: só nomes presentes e não vazios
-#    (POSTGRES_PASSWORD, AUTH_PEPPER; METRICS_TOKEN se /metrics for usado). Chave duplicada vazia sobrescreve a boa (L-0013).
+# 2. O Compose/Swarm falha citando o nome se faltar alguma obrigatória. Confira a renderização:
+docker stack config -c ops/stack/ailow.yaml > /dev/null && echo "stack ok"
 
-# 3. Construir e subir. O serviço `migrate` roda antes da `api`; se ele falhar, a api NÃO sobe.
-docker compose up -d --build
+# 3. Implantar a tag exata (nunca "latest"). A API migra o banco antes de subir; se a migração falhar, a API não sobe
+#    e o Swarm reverte o serviço (failure_action: rollback).
+docker stack deploy -c ops/stack/ailow.yaml --with-registry-auth ailow
 
 # 4. Esperar e conferir
-docker compose ps                      # db healthy, migrate Exited (0), api healthy
-curl -fsS http://127.0.0.1:3000/health  # 200 {"status":"ok",...}
-docker compose logs --since 5m api | grep -c '"level":50'   # erros (nível 50) — esperado 0
+docker service ls                                   # db, api e web em 1/1
+docker service ps ailow_api --no-trunc              # sem tarefas em Failed novas
+docker service logs --since 5m ailow_api | grep -c '"level":50'   # erros (nível 50): esperado 0
+curl -fsS https://DOMINIO/health                    # 200 {"status":"ok",...} (só depois do DNS/certificado)
 ```
-`up -d --build` recria só o que mudou. O Postgres e o volume `dbdata` **não** são tocados (nunca `down -v`, ENV-12).
+Nota: na primeira subida a `api` pode falhar uma vez (o DNS interno do `db` ainda não existe) e o Swarm a reinicia sozinho; foi o que se viu na validação local. Isso **não** é motivo de rollback; falha repetida (≥ 3 tarefas `Failed` seguidas) é.
+O volume `ailow_dbdata` **não** é tocado por um deploy (nunca `docker volume rm`, ENV-12).
 
 ## 3. Verificar (smoke manual — 5 min, celular da loja ou 360×640)
 Entrar → Vendas: vender 1 peça de teste e **cancelar** a venda (estoque volta) → Pessoas: ver o botão de ponto → Compras abre. Mesmos 4 fluxos do E2E (`scripts/e2e.sh`), agora contra produção, **com dados de teste identificáveis** que o Dono apaga/cancela. Dados de cliente real não entram no smoke.
-Olhar `/metrics` (rede interna) ou os logs: sem 5xx novos, p95 da venda dentro do RNF-01.
+Conferir pelo lado de fora: `curl -sI https://DOMINIO/` (HSTS presente) e `curl -s -o /dev/null -w '%{http_code}' https://DOMINIO/metrics` = **404**. Olhar os logs: sem 5xx novos, p95 da venda dentro do RNF-01.
 
 ## 4. Gatilho de reversão (OPS-05)
 Qualquer um dos itens do README (health, 5xx > 1 %, fluxo do smoke falhando) ⇒ **[`rollback.md`](rollback.md)**, sem debate. Investigar depois.
 
 ## 5. Depois
-- Registrar no release: versão, data/hora, quem executou, resultado do smoke, tempo total (**tempo medido: __ min**).
+- Registrar no release: versão, digests, data/hora, quem executou, resultado do smoke, tempo total (**tempo medido: __ min**).
 - Se algo falhou ou quase: lição (`node harness/scripts/licoes.mjs nova`) e atualizar este runbook.
 
 ## 6. Quando escalar
-Banco não sobe, `migrate` falha de forma que o rollback não resolve, ou suspeita de perda/exposição de dados ⇒ parar, não improvisar no banco, acionar o Pedro (contato a registrar na S14) e seguir `harness/checklists/incidente.md`.
+Banco não sobe, a migração falha de forma que o rollback não resolve, ou suspeita de perda/exposição de dados ⇒ parar, não improvisar no banco, acionar o Pedro (contato a registrar na S14c) e seguir `harness/checklists/incidente.md`.
 
-## Não verificado (depende da S14)
-VPS, proxy HTTPS, forma de servir o web, rotina e restauração de backup, janela com o cliente, tempos medidos, contato de escalonamento, valores finais do gatilho numérico.
+## Não verificado (continua aberto depois da S14c)
+Janela de deploy com o cliente (Marcos), contato de escalonamento do Pedro, valores finais do gatilho numérico (health 3×, 5xx > 1 %), carga de 50 usuários na VPS, segunda versão e atualização sobre dados reais, renovação do certificado.

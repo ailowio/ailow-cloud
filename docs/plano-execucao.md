@@ -65,7 +65,7 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
 ## Diário
 
 - **Ativo:** `docs/diario/ATUAL.md` (as 3 últimas entradas; ler só a última por padrão).
-- **Arquivo:** `docs/diario/ARQUIVO-S00-S06.md` (S00 a S06b e Prep ambiente Windows) e `docs/diario/ARQUIVO-S07-S09.md` (S07 em diante); intactos, ler só sob demanda com Grep.
+- **Arquivo:** `docs/diario/ARQUIVO-S00-S06.md` (S00 a S06b e Prep ambiente Windows) e `docs/diario/ARQUIVO-S07-S09.md` (S07 em diante) e `ARQUIVO-S10-S12.md`, `-S13a.md`, `-S13b2.md`, `-S13c.md`, `-S14a.md`; intactos, ler só sob demanda com Grep.
 
 ## Pendências transversais (fora de sessão)
 - [x] Arquivo de ambiente real na pasta do app (2026-11-12). Não ler/colar conteúdo (SEC-01).
@@ -74,19 +74,17 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
 - [ ] **Impressão física das etiquetas (S08, Pedro):** comprar a bobina 33 × 22 mm de 3 colunas, informar o modelo da impressora, imprimir o PDF em tamanho real (100%), calibrar espaço entre colunas/margem (`GEOMETRIA_PADRAO`, ADR 003) e fotografar a leitura pela câmera do celular. É o "pronto quando" da S08; não bloqueia a S09.
 - [ ] **Domínio `cloud.ailow.com.br` (Pedro, 2026-11-12): domínio em transição.** Fazer **por último** na S14: registro A `cloud` → IP da VPS (TTL baixo, sem AAAA), conferir com `nslookup`, só então deploy na VPS, certificado e smoke em produção. Até lá a S14 avança só com o que não depende dele.
 - [ ] **Fechamento conjunto (Pedro, 2026-11-12: resolver todas juntas no fim da implementação, depois da S14):**
-  - CI verde do job `e2e` no GitHub (nunca rodou lá) e então marcar ✅ o item 2 de `docs/prd-checklist-10.md`.
-  - Ensaiar e medir os runbooks (`docs/runbooks/`): deploy, rollback, migração/restore; preencher "tempo medido"; confirmar o gatilho numérico de reversão (health 3×, 5xx > 1 %, 15 min).
+  - [x] CI verde do job `e2e` no GitHub e item 2 de `docs/prd-checklist-10.md` ✅ (PR #25).
+  - Runbooks medidos na VPS: deploy 86 s (manual) e 106 s (pipeline), rollback 73 s; gatilho de reversão exercitado por falha real em 2026-11-13 (só o Swarm; ver `rollback.md`). Falta migração/restore com dados reais.
   - Backup: restaurado ao menos uma vez com evidência; retenção e local; onde ficam os arquivos enviados (logo); `ailow_app` no restore.
-  - Checks obrigatórios da `main` (`contrato`, `e2e`, `carga-smoke`, `alertas`?), rate limit e cifra do TOTP, `/metrics` fora da internet, RNF-01/02 na VPS.
+  - Checks obrigatórios da `main` (`contrato`, `e2e`, `carga-smoke`, `alertas`?), rate limit e cifra do TOTP, `/metrics` fora da internet ✅; RNF-01/02 na VPS medidos (RNF-02 reprovado, ver Estado de retomada).
   - Impressão física das etiquetas (S08), acima.
   - Menores: `npm run dev:parar` quebrado na `main`; Zod/chunk 763 kB no bundle web; edição/desativação de produto; reescrita do histórico (acervo); ADR 003 e 006 propostos; perguntas Q1–Q5 para o Marcos.
 
 
-### Estado de retomada — 2026-11-12 (pós-S14a; sobrescrever a cada sessão)
-- **Git:** `main` em `a0f03f4` (S13c mergeada, PR #25, 10 jobs verdes). Branch `feature/s14-deploy` com a S14a em **1 commit local, sem push** (push/PR só com pedido do Pedro).
-- **Ambiente:** porta 3000 ocupada por node PID 36724 (não é meu; não encerrei); 5173 e 54329 livres. Testes: API 781, web 250, shared 237; OpenAPI 0.14.0. `.dev-data/pg` ainda WIN1252 (L-0018). Admins de dev antigos: recriar com `npm run admin:criar`.
-- **S14a feita:** ADR 010 aceito (opção C: VPS existente, portável), rate limit por IP e cifra do TOTP (threat model #3 e #5), `TRUST_PROXY` por IP/CIDR, `TOTP_CHAVE` obrigatória. **Nada foi alterado na VPS** (só SSH de leitura).
-- **Próxima: S14b (local, sem VPS):** `ops/stack/ailow.yaml` (Swarm parametrizado por `DOMINIO`, `TAG`, `CERT_RESOLVER`, `PROXY_NETWORK`, limites), `ops/traefik/`, contêiner web estático (nginx, proxy da API, `/metrics` bloqueado), imagens no GHCR pelo pipeline, backup/restore (pg_dump + arquivos, rclone crypt → Drive; checar na doc oficial a expiração de token OAuth em modo teste), retenção (proposta 7 diários + 4 semanais), onde ficam os arquivos enviados (logo), inventários de auditoria (acessos incl. chave SSH de deploy e token do Drive, rotinas, interfaces), `main` protegida e checks obrigatórios, roteiro do vídeo, pacote do curso.
-- **S14c (por último, toca a VPS):** Pedro cria o A de `cloud.ailow.com.br` → `nslookup` → chave SSH de deploy → deploy pelo pipeline → certificado → smoke (`/health` 200, `/metrics` inacessível da internet) → rollback e restore ensaiados com tempos nos runbooks → RNF-01/02 na VPS → tag `v1.0.0`. Autorizações dadas por Pedro ("OK, autorizado": deploy, chave SSH, tag); tag só depois do smoke.
-- **Fatos da VPS (leitura, 2026-11-12):** Ubuntu 20.04, 15,6 GB RAM (≈11,7 GB livres), sem swap, `ufw` inativo, Swarm com Traefik v2.11 (`letsencryptresolver`, rede `CopelNet`). Detalhes e credenciais ficam fora do repositório público.
-- **Em aberto (não bloqueiam):** `npm run dev:parar` quebrado na `main`; chunk web 763 kB; edição/desativação de produto; reescrita do histórico (acervo); impressão física das etiquetas (S08); perguntas Q1–Q5 ao Marcos; Marcant aceitar dividir servidor é palavra do Pedro, sem registro escrito.
+### Estado de retomada — 2026-11-13 (S14 fechada; sobrescrever a cada sessão)
+- **Git:** `main` em `4a0fe2e` + a PR final de docs da S14e (branch `docs/s14e-fechamento`, worktree `D:\apps\_wt-s14f`; merge é do Pedro). Tags `v0.1.0`, `v1.0.0`, **`v1.0.1`** (implantada pelo pipeline, run 43344269690). O checkout principal (`feature/s14b-deploy-portavel`) tem ~34 arquivos `M` que são só ruído de CRLF: não commitar.
+- **Produção:** `https://cloud.ailow.com.br` na **v1.0.1** (`db`, `api`, `web` em 1/1; limites 1,0/1,0/0,5 CPU), 0 empresas, 1 Admin, 14 migrações. EX-02 do deploy manual **encerrada**. Detalhe comando a comando no diário privado do Pedro.
+- **RNF em produção (50 usuários):** RNF-01 venda p95 352–366 ms ✅; **RNF-02 busca p95 427–529 ms ❌** (CPU refutada como causa; SQL 0,23 ms). Decisão do Pedro: **otimizar a busca em sessão própria**. Critério intacto. **Achado posterior (k6 com `tipo`, local, 1 rodada):** busca por modelo p95 535 ms ≈ ampla 507 ms, então a busca ampla **não** é a causa; dentro da API o `GET /produtos` leva ~250 ms com SQL de 0,23 ms e event loop folgado (lag p99 21 ms) = espera. Hipótese a medir: fila no pool de 10 conexões (`DB_POOL_MAX`, nunca ajustado na VPS; ADR 009). Próximo passo: métrica de espera do pool e teste de `DB_POOL_MAX` só na `api`.
+- **Pendência do Pedro:** o tenant de teste foi **apagado** por engano de ordem; **recriar** (`criar-tenant-teste.ps1`, já corrigido) para a fase de UX/UI e **só apagar quando ele terminar os aprimoramentos de UX/UI** (apagar = `limpar-tudo.sql` em 1 transação + `shred` das credenciais).
+- **Em aberto (não bloqueiam):** `deploy.sh` corrigido para a mesma tag (testes sem VPS; falta exercitar em produção); otimizar a busca (ver acima); alertas de app/banco: Prometheus + Alertmanager na VPS nova (ADR 011, `migrar-vps.md`); `down` de migração e rollback com migração nova; renovação do certificado e do token do Drive; restore com dados reais; `npm run dev:parar` quebrado; chunk web 763 kB; edição/desativação de produto; reescrita do histórico (acervo); impressão física das etiquetas (S08); perguntas Q1–Q5 ao Marcos; Marcant dividir servidor é palavra do Pedro, sem registro escrito. Fora do repositório (Pedro, outro harness): vídeo, pacote do curso.

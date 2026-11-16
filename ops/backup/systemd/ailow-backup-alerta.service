@@ -1,0 +1,7 @@
+# Disparado pelo OnFailure do ailow-backup.service: registra no journal e avisa o canal configurado (alerta.sh).
+[Unit]
+Description=Alerta de falha do backup do Ailow Cloud
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/ailow/ops/backup/alerta.sh falha

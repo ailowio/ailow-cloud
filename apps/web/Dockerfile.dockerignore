@@ -1,0 +1,16 @@
+# Específico do Dockerfile do web (BuildKit lê <Dockerfile>.dockerignore antes do .dockerignore da raiz).
+# O .dockerignore da raiz exclui apps/web/src e public (a imagem da API não os usa); aqui eles são necessários.
+.git
+.github
+.env
+.env.*
+!.env.example
+**/node_modules
+**/dist
+**/coverage
+.playwright-mcp
+acervo
+docs
+apps/web/test-results
+apps/web/e2e
+**/*.md

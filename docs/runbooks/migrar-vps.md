@@ -13,12 +13,17 @@
 | `METRICS_TOKEN` | arquivo de ambiente | Pode ser novo; atualizar o scraper. Acesso novo ⇒ matriz de acessos |
 | Código | repositório (tag) | `git checkout vX.Y.Z` |
 | Proxy HTTPS / DNS / certificado | VPS | **[NÃO VERIFICADO — S14]** ainda não existe |
-| Arquivos enviados (logo da empresa) | confirmar onde ficam (banco ou disco) | **[NÃO VERIFICADO]** — conferir em `apps/api` antes do ensaio; se estiver em disco, copiar também |
+| Arquivos enviados (logo da empresa) | **no banco** (`empresas.logo_bytes`, `bytea`; migração `20261112200000_empresa-logo`; conferido em 2026-11-12) | já viaja no `pg_dump`; não há arquivo em disco a copiar |
+| Segredos da stack | **Swarm secrets** `ailow_postgres_password`, `ailow_auth_pepper`, `ailow_totp_chave` (S14b) | recriar no host novo com `docker secret create` (`deploy.md §1.6`); `AUTH_PEPPER` e `TOTP_CHAVE` **os mesmos**, vindos do gerenciador de senhas |
+| Proxy do host novo | `ops/traefik/traefik.yaml` (S14b) | flags aceitas pelo Traefik v2.11.20; ACME e provider Swarm **não testados** (precisam de host real) |
+| Chave do `crypt` do backup | gerenciador de senhas (nunca na VPS de código) | necessária para ler o backup do Drive no host novo (`backup.md §2`) |
 
 ## 1. Antes
 1. VPS nova provisionada, Docker/Compose instalados, firewall só com 80/443 (e SSH restrito); acessos criados e registrados em `docs/auditoria/matriz-acessos.md` (nominais, MFA onde houver).
 2. Mesma versão (tag) que a de produção. Não migrar e atualizar na mesma janela.
 3. Combinar janela com o Dono da loja (o sistema fica fora durante a cópia). Reduzir o TTL do DNS com antecedência **[NÃO VERIFICADO]**.
+4. **Requisito de observabilidade (decisão do Pedro em 2026-11-13, [ADR 011](../adr/011-alertas-prometheus-na-vps-nova.md)): a VPS nova sobe com Prometheus + Alertmanager, junto com a stack.** Antes da janela real: (a) dimensionar RAM/CPU para app **mais** observabilidade; (b) `METRICS_TOKEN` configurado e o scrape de `/metrics` funcionando (token novo ⇒ matriz de acessos); (c) as regras de `ops/prometheus/alertas.yml` carregadas e estendidas para disponibilidade, saturação (CPU/memória do host e dos contêineres) e banco (exporter de Postgres: confirmar a ferramenta e a versão na documentação oficial antes de adotar); (d) canal do Alertmanager definido pelo Pedro e **testado com um alerta forçado**; (e) um monitor externo de disponibilidade (cobre "a VPS ou o Prometheus caíram"); (f) o alerta do backup (healthchecks.io) continua. Atualizar os inventários de acessos, rotinas e interfaces.
+5. **Requisito de desempenho:** a VPS atual **não** cumpre o RNF-02 (medido em 2026-11-13: busca p95 474 ms, limite 300; venda p95 447 ms, limite 500; `api` e `db` saturaram 1 CPU cada). Na VPS nova, dimensionar CPU para o limite da `api` e do `db` acima de 1 CPU e **re-medir** com o k6 `carga` (50 usuários) contra um tenant de teste, que depois é removido.
 
 ## 2. Ensaio obrigatório (tier B) — antes da janela real
 Na VPS nova, restaurar um backup **real recente** em um banco de teste e rodar o smoke (4 fluxos do `deploy.md §3`). Medir o tempo de dump + cópia + restore e anotar acima. Sem ensaio, não há migração.
