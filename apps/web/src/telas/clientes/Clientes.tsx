@@ -1,16 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, SegmentedControl, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconPlus, IconSearch } from '@tabler/icons-react';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import type { Cliente, Perfil } from '@ailow/shared';
+import { useSairDoAssistente, useVoltar } from '../../componentes/navegacao';
 import { mascararCelular } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio } from '../../componentes';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { ITENS_POR_PAGINA, camposDoCliente } from '../../lib/campos-busca-listas';
+import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
 import { FichaCliente } from './FichaCliente';
 import { NovoCliente } from './NovoCliente';
 
-type Vista = 'lista' | 'novo';
+const SEM_CLIENTES: Cliente[] = [];
+
 type Situacao = 'ativos' | 'inativos';
 
 /**
@@ -18,21 +25,28 @@ type Situacao = 'ativos' | 'inativos';
  * só o Dono vê os inativos, inativa, reativa e exclui.
  */
 export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void }) {
-  const [vista, setVista] = useState<Vista>('lista');
+  const navigate = useNavigate();
+  // Cada tela é uma subrota de /clientes (/clientes/novo): o Voltar recua uma tela por vez.
+  const sub = useLocation().pathname.replace(/^\/clientes\/?/, '').replace(/\/$/, '');
+  const voltarUm = useVoltar('/clientes');
+  const sair = useSairDoAssistente('/clientes');
   const [abertoId, setAbertoId] = useState<string | null>(null);
   // Muda quando algo muda na ficha: a lista busca de novo.
   const [rodada, setRodada] = useState(0);
   const dono = props.perfil === 'dono';
 
-  if (vista === 'novo') {
+  if (sub !== '' && sub !== 'novo') return <Navigate to="/clientes" replace />;
+  if (sub === 'novo') {
     return (
-      <Moldura titulo="Novo cliente" voltar={{ rotulo: 'Clientes', aoVoltar: () => setVista('lista') }}>
+      <Moldura titulo="Novo cliente" voltar={{ rotulo: 'Clientes', aoVoltar: voltarUm }}>
         <NovoCliente
           api={props.api}
-          aoCriar={(id) => {
+          aoCancelar={() => sair()}
+          // S13: o assistente devolve as entradas do histórico ao sair e isso fecharia uma ficha aberta no mesmo
+          // instante; por isso volta à lista (com o aviso "Cliente cadastrado") em vez de abrir a ficha.
+          aoCriar={() => {
             setRodada((r) => r + 1);
-            setAbertoId(id);
-            setVista('lista');
+            sair();
           }}
         />
       </Moldura>
@@ -41,7 +55,7 @@ export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
   return (
     <Moldura titulo="Clientes" voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
-      <Lista key={rodada} api={props.api} dono={dono} aoNovo={() => setVista('novo')} aoAbrir={setAbertoId} />
+      <Lista key={rodada} api={props.api} dono={dono} aoNovo={() => navigate('/clientes/novo')} aoAbrir={setAbertoId} />
       {abertoId && (
         <FichaCliente
           api={props.api}
@@ -57,14 +71,9 @@ export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
 function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (id: string) => void }) {
   const [texto, setTexto] = useState('');
-  const [busca, setBusca] = useState('');
   const [situacao, setSituacao] = useState<Situacao>('ativos');
-
-  // Espera a pessoa parar de digitar para não chamar a API a cada letra.
-  useEffect(() => {
-    const t = setTimeout(() => setBusca(texto.trim()), 300);
-    return () => clearTimeout(t);
-  }, [texto]);
+  // Espera a pessoa parar de digitar para não filtrar/chamar a API a cada letra.
+  const busca = useTextoComEspera(texto);
 
   return (
     <Stack gap="md">
@@ -95,7 +104,7 @@ function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (i
         onChange={(e) => setTexto(e.currentTarget.value)}
       />
       <ListaClientes
-        key={`${busca}|${situacao}`}
+        key={situacao}
         api={props.api}
         busca={busca}
         situacao={situacao}
@@ -107,10 +116,29 @@ function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (i
 }
 
 function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoNovo: () => void; aoAbrir: (id: string) => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.clientes(props.busca, props.situacao));
+  // Lista carregada uma vez (o servidor corta em 200); busca ampla e paginação no cliente. Cortada: a busca
+  // também pergunta ao servidor (?q=) e une.
+  const { carga, tentarDeNovo } = useCarregar(() => props.api.clientes(undefined, props.situacao));
+  const todos = carga.fase === 'pronto' ? carga.dados.clientes : SEM_CLIENTES;
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  const servidor = useBuscaNoServidor(
+    cortada,
+    props.busca,
+    async (q) => {
+      const r = await props.api.clientes(q, props.situacao);
+      return { itens: r.clientes, truncado: r.truncado };
+    },
+    carga,
+  );
+  const filtrados = useMemo(
+    () => (props.busca === '' ? todos : mesclarBusca(todos, servidor.itens, props.busca, camposDoCliente, (c) => c.id)),
+    [todos, servidor.itens, props.busca],
+  );
+  const pag = usePaginacao(filtrados, ITENS_POR_PAGINA);
   if (carga.fase === 'carregando') return <Carregando />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  const { clientes, truncado } = carga.dados;
+  const clientes = pag.itens;
+  const truncado = avisoDeCorte(cortada, props.busca, servidor.truncado);
 
   if (clientes.length === 0) {
     if (props.situacao === 'inativos') {
@@ -147,10 +175,11 @@ function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoN
         <CartaoCliente key={c.id} cliente={c} aoAbrir={props.aoAbrir} />
       ))}
       {truncado && (
-        <Text size="sm" c="dimmed">
-          Mostrando os primeiros 200. Digite mais letras do nome ou mais números do celular para achar o resto.
+        <Text size="sm" c="dimmed" data-aviso-corte>
+          {AVISO_CORTE}
         </Text>
       )}
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );
 }

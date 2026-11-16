@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActionIcon, Alert, Box, Button, Group, NumberInput, Stack, Text, TextInput } from '@mantine/core';
 import { IconMinus, IconPlus, IconPrinter, IconSearch } from '@tabler/icons-react';
 import { MAX_ETIQUETAS_POR_PDF } from '@ailow/shared/puro';
@@ -6,8 +6,13 @@ import type { Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { ErroApi } from '../../api/cliente';
 import { EstadoVazio, Valor } from '../../componentes';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
+import { useBuscaNoServidor } from '../../lib/useBuscaNoServidor';
+import { avisarErro } from '../../lib/avisos';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { ETIQUETAS_POR_PAGINA, camposDoProduto } from './busca-produto';
 import {
   type Quantidades,
   mensagemEtiquetas,
@@ -17,18 +22,40 @@ import {
   textoDoResumo,
 } from './selecao-etiquetas';
 
-type Envio = { fase: 'parado' } | { fase: 'gerando' } | { fase: 'pronto'; arquivo: string } | { fase: 'erro'; mensagem: string };
+type Envio = { fase: 'parado' } | { fase: 'gerando' } | { fase: 'pronto'; arquivo: string };
+
+const SEM_PRODUTOS: Produto[] = [];
 
 /**
  * Etiquetas (S08, RF-PRO-06, só Dono): escolher SKUs e quantidades e baixar UM PDF. Feito para o computador ligado
  * à térmica, mas funciona no celular. A seleção sobrevive à busca: dá para juntar peças de vários produtos.
  */
+
 export function Etiquetas(props: { api: Api }) {
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
   const [quantidades, setQuantidades] = useState<Quantidades>({});
   const [envio, setEnvio] = useState<Envio>({ fase: 'parado' });
   const resumo = resumoDasEtiquetas(quantidades);
+  // Lista inteira carregada uma vez; a busca ampla e a paginação acontecem no cliente (o servidor limita em 200).
+  const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos());
+  const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
+  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  // Lista cortada em 200: a busca também pergunta ao servidor (?q=) e une com o que já está carregado.
+  const servidor = useBuscaNoServidor(
+    cortada,
+    busca,
+    async (q) => {
+      const r = await props.api.produtos(q);
+      return { itens: r.produtos, truncado: r.truncado };
+    },
+    carga,
+  );
+  const filtrados = useMemo(
+    () => (busca === '' ? todos : mesclarBusca(todos, servidor.itens, busca, camposDoProduto, (p) => p.id)),
+    [todos, servidor.itens, busca],
+  );
+  const pag = usePaginacao(filtrados, ETIQUETAS_POR_PAGINA);
 
   useEffect(() => {
     const t = setTimeout(() => setBusca(texto.trim()), 300);
@@ -48,7 +75,9 @@ export function Etiquetas(props: { api: Api }) {
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setEnvio({ fase: 'pronto', arquivo });
     } catch (e) {
-      setEnvio({ fase: 'erro', mensagem: e instanceof ErroApi ? mensagemEtiquetas(e) : 'Algo deu errado. Tente de novo.' });
+      // UXM-04: o erro de uma ação é toast; o bloco inline movia os botões da barra fixa.
+      avisarErro(e instanceof ErroApi ? mensagemEtiquetas(e) : 'Algo deu errado. Tente de novo.');
+      setEnvio({ fase: 'parado' });
     }
   }
 
@@ -73,7 +102,17 @@ export function Etiquetas(props: { api: Api }) {
         value={texto}
         onChange={(e) => setTexto(e.currentTarget.value)}
       />
-      <ListaParaEtiquetas key={busca} api={props.api} busca={busca} quantidades={quantidades} aoMudar={mudar} />
+      {carga.fase === 'carregando' && <Carregando />}
+      {carga.fase === 'erro' && <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />}
+      {carga.fase === 'pronto' && (
+        <ListaParaEtiquetas
+          produtos={pag.itens}
+          semNenhum={todos.length === 0}
+          truncado={avisoDeCorte(cortada, busca, servidor.truncado)}
+          quantidades={quantidades}
+          aoMudar={mudar}
+        />
+      )}
 
       {/* Barra fixa: o resumo e o botão ficam à vista enquanto a lista rola. */}
       <Box
@@ -83,6 +122,7 @@ export function Etiquetas(props: { api: Api }) {
         style={{ background: 'var(--mantine-color-body)', borderTop: '1px solid var(--ailow-borda)', zIndex: 2 }}
       >
         <Stack gap="xs">
+          <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
           <Text fw={650} aria-live="polite">
             {textoDoResumo(resumo)}
           </Text>
@@ -90,11 +130,6 @@ export function Etiquetas(props: { api: Api }) {
             <Text size="sm" c="red" role="alert">
               No máximo {MAX_ETIQUETAS_POR_PDF} etiquetas por PDF. Diminua as quantidades ou gere em duas vezes.
             </Text>
-          )}
-          {envio.fase === 'erro' && (
-            <Alert color="red" role="alert">
-              {envio.mensagem}
-            </Alert>
           )}
           {envio.fase === 'pronto' && (
             <Alert color="green">
@@ -123,13 +158,15 @@ export function Etiquetas(props: { api: Api }) {
   );
 }
 
-function ListaParaEtiquetas(props: { api: Api; busca: string; quantidades: Quantidades; aoMudar: (q: Quantidades) => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos(props.busca));
-  if (carga.fase === 'carregando') return <Carregando />;
-  if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  const { produtos, truncado } = carga.dados;
-  if (produtos.length === 0) {
-    return props.busca === '' ? (
+function ListaParaEtiquetas(props: {
+  produtos: Produto[];
+  semNenhum: boolean;
+  truncado: boolean;
+  quantidades: Quantidades;
+  aoMudar: (q: Quantidades) => void;
+}) {
+  if (props.produtos.length === 0) {
+    return props.semNenhum ? (
       <EstadoVazio titulo="Nenhum produto ainda" texto="Cadastre um produto em Produtos para imprimir as etiquetas dele." />
     ) : (
       <EstadoVazio titulo="Nada encontrado" texto="Tente outro pedaço do nome, o código da peça ou o preço (ex.: 89,90)." />
@@ -137,10 +174,10 @@ function ListaParaEtiquetas(props: { api: Api; busca: string; quantidades: Quant
   }
   return (
     <Stack gap="sm">
-      {produtos.map((p) => (
+      {props.produtos.map((p) => (
         <CartaoEtiquetas key={p.id} produto={p} quantidades={props.quantidades} aoMudar={props.aoMudar} />
       ))}
-      {truncado && <Text size="sm" c="dimmed">Mostrando os primeiros 200. Busque pelo nome, código ou preço para achar o resto.</Text>}
+      {props.truncado && <Text size="sm" c="dimmed" data-aviso-corte>{AVISO_CORTE}</Text>}
     </Stack>
   );
 }

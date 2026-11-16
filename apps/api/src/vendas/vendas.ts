@@ -4,6 +4,7 @@ import {
   type RelatorioVendas,
   type Venda,
   type VendaFinalizar,
+  type VendaResumo,
   calcularFechamento,
   celularSuspeito,
 } from '@ailow/shared';
@@ -330,6 +331,44 @@ function limites(periodo: 'dia' | 'mes', ref: string): { de: string; ate: string
   const ultimo = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
   const prefixo = ref.slice(0, 8);
   return { de: `${prefixo}01`, ate: `${prefixo}${String(ultimo).padStart(2, '0')}` };
+}
+
+/** Lista de vendas do período (S08), da mais recente à mais antiga, com canceladas. O Vendedor só vê as próprias. */
+export async function listaVendas(
+  c: pg.PoolClient,
+  ctx: Ctx,
+  periodo: 'dia' | 'mes',
+  data: string,
+): Promise<VendaResumo[]> {
+  const { de, ate } = limites(periodo, data);
+  const vendedorId = ctx.perfil === 'vendedor' ? ctx.autorId : null;
+  const r = await c.query(
+    `SELECT v.id, v.numero, v.status, v.total_centavos, v.cliente_id, u.nome AS vendedor_nome, v.criado_em,
+            COALESCE((SELECT array_agg(DISTINCT p.forma ORDER BY p.forma) FROM pagamentos_venda p WHERE p.venda_id = v.id), '{}') AS formas
+       FROM vendas v
+       JOIN usuarios u ON u.empresa_id = v.empresa_id AND u.id = v.vendedor_id
+      WHERE v.criado_em >= ($1::date)::timestamp AT TIME ZONE $3::text
+        AND v.criado_em < (($2::date + 1)::timestamp) AT TIME ZONE $3::text
+        AND ($4::uuid IS NULL OR v.vendedor_id = $4)
+      ORDER BY v.numero DESC
+      LIMIT 1000`,
+    [de, ate, FUSO, vendedorId],
+  );
+  const clienteIds = [...new Set(r.rows.map((x) => x.cliente_id as string | null).filter((id): id is string => id !== null))];
+  const clientes = await resumoDosClientes(c, clienteIds);
+  return r.rows.map((x) => {
+    const cli = x.cliente_id ? clientes.get(x.cliente_id as string) : undefined;
+    return {
+      id: x.id,
+      numero: x.numero,
+      status: x.status,
+      total_centavos: x.total_centavos,
+      cliente: cli ? { nome: cli.nome, celular: cli.celular } : null,
+      vendedor_nome: x.vendedor_nome,
+      formas: x.formas as VendaResumo['formas'],
+      criado_em: (x.criado_em as Date).toISOString(),
+    };
+  });
 }
 
 /** RF-VEN-09. O Vendedor só vê as próprias vendas, e só do dia. */

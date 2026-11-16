@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import type { Perfil } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
+import { useVoltar } from '../../componentes/navegacao';
 import { Moldura } from '../Moldura';
 import type { ItemVenda } from './carrinho';
 import { Comprovante } from './Comprovante';
@@ -10,29 +12,37 @@ import { RelatorioVendas } from './RelatorioVendas';
 
 type Passo = 'montar' | 'fechar' | 'comprovante' | 'relatorio';
 
+/** Cada passo é uma rota (/vendas, /vendas/fechar, /vendas/comprovante, /vendas/relatorio): o Voltar do sistema anda entre eles. */
+function passoDaRota(caminho: string): Passo {
+  const sub = caminho.replace(/^\/vendas\/?/, '');
+  return sub === 'fechar' || sub === 'comprovante' || sub === 'relatorio' ? sub : 'montar';
+}
+
 /** RF-VEN-01: a venda é o primeiro módulo da home. Cada passo é uma tela. */
 export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }) {
-  const [passo, setPasso] = useState<Passo>('montar');
+  const navigate = useNavigate();
+  const passo = passoDaRota(useLocation().pathname);
+  const voltarUmPasso = useVoltar('/vendas');
   const [itens, setItens] = useState<ItemVenda[]>([]);
   const [vendaId, setVendaId] = useState<string | null>(null);
 
   if (passo === 'relatorio') {
     return (
-      <Moldura titulo="Relatório" voltar={{ rotulo: 'Venda', aoVoltar: () => setPasso('montar') }}>
+      <Moldura titulo="Relatório" voltar={{ rotulo: 'Venda', aoVoltar: voltarUmPasso }}>
         <RelatorioVendas api={props.api} perfil={props.perfil} />
       </Moldura>
     );
   }
   if (passo === 'comprovante' && vendaId) {
     return (
-      <Moldura titulo="Comprovante" voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
+      <Moldura titulo="Comprovante" voltar={{ rotulo: 'Venda', aoVoltar: voltarUmPasso }}>
         <Comprovante
           api={props.api}
           id={vendaId}
           aoNova={() => {
             setItens([]);
             setVendaId(null);
-            setPasso('montar');
+            navigate('/vendas', { replace: true });
           }}
         />
       </Moldura>
@@ -40,14 +50,17 @@ export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }
   }
   if (passo === 'fechar') {
     return (
-      <Moldura titulo="Fechar venda" voltar={{ rotulo: 'Carrinho', aoVoltar: () => setPasso('montar') }}>
+      <Moldura titulo="Fechar venda" voltar={{ rotulo: 'Carrinho', aoVoltar: voltarUmPasso }}>
         <Fechamento
           api={props.api}
           itens={itens}
-          aoVoltar={() => setPasso('montar')}
+          aoVoltar={voltarUmPasso}
           aoFinalizar={(id) => {
+            // A venda já foi gravada: o carrinho esvazia e o comprovante substitui o fechamento no histórico,
+            // para o Voltar não reabrir uma venda fechada.
             setVendaId(id);
-            setPasso('comprovante');
+            setItens([]);
+            navigate('/vendas/comprovante', { replace: true });
           }}
         />
       </Moldura>
@@ -55,7 +68,13 @@ export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }
   }
   return (
     <Moldura titulo="Nova venda" subtitulo="Escaneie a etiqueta ou busque a peça." voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
-      <MontarVenda api={props.api} itens={itens} aoMudar={setItens} aoFechar={() => setPasso('fechar')} aoRelatorio={() => setPasso('relatorio')} />
+      <MontarVenda
+        api={props.api}
+        itens={itens}
+        aoMudar={setItens}
+        aoFechar={() => navigate('/vendas/fechar')}
+        aoRelatorio={() => navigate('/vendas/relatorio')}
+      />
     </Moldura>
   );
 }

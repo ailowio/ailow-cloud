@@ -24,6 +24,7 @@ import type {
   PontoBatido,
   PontoEstado,
   Produto,
+  ProdutoEditar,
   ProdutoNovo,
   Relatorio,
   RelatorioCompras,
@@ -34,6 +35,7 @@ import type {
   UsuarioPublico,
   Venda,
   VendaFinalizar,
+  VendaResumo,
 } from '@ailow/shared';
 import type { Cliente } from './cliente';
 
@@ -98,6 +100,8 @@ export function criarApi(c: Cliente) {
     },
     criarProduto: (n: ProdutoNovo) =>
       p<{ id: string; numero: number; skus: { id: string; codigo: string }[] }>('POST', '/produtos', n),
+    editarProduto: (id: string, e: ProdutoEditar) => p<{ id: string }>('PUT', `/produtos/${id}`, e),
+    arquivarProduto: (id: string) => p<{ id: string }>('POST', `/produtos/${id}/arquivar`),
     ajustarEstoque: (skuId: string, a: AjusteEstoque) => p<{ estoque: number }>('POST', `/skus/${skuId}/estoque`, a),
     movimentos: (skuId: string) => p<{ movimentos: Movimento[] }>('GET', `/skus/${skuId}/movimentos`),
     alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),
@@ -123,6 +127,8 @@ export function criarApi(c: Cliente) {
     cancelarVenda: (id: string, motivo: string) => p<Venda>('POST', `/vendas/${id}/cancelar`, { motivo }),
     relatorioVendas: (periodo: 'dia' | 'mes', data: string) =>
       p<RelatorioVendas>('GET', `/vendas/relatorio?periodo=${periodo}&data=${data}`),
+    listaVendas: (periodo: 'dia' | 'mes', data: string) =>
+      p<{ vendas: VendaResumo[] }>('GET', `/vendas/lista?periodo=${periodo}&data=${data}`),
     comprasDoCliente: (id: string) =>
       p<{ compras: { id: string; numero: number; total_centavos: number; status: Venda['status']; criado_em: string }[] }>(
         'GET',

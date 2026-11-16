@@ -2,32 +2,73 @@
  * Camadas de superfície (o modo claro não pode ser "um fundo só").
  * Mantine marca o <html> com data-mantine-color-scheme = light | dark.
  */
+/* UXM-08: UMA paleta. A marca é a cor do "A" da logo (public/logo.svg); o azul #2448FF é só secundário.
+   Razões de contraste (WCAG) conferidas por src/tema/paleta.test.ts e e2e/paleta.e2e.ts. */
+:root {
+  --ailow-marca: #07bdd5;                 /* cor do A da logo, idêntica nos dois temas (logo, ícones no escuro) */
+  --ailow-secundario: #2448ff;            /* apoio: avisos informativos, links secundários */
+}
+
 :root[data-mantine-color-scheme='light'] {
-  --mantine-color-body: #eef0f7;          /* fundo da página: slate frio bem claro */
+  --mantine-color-body: #eff1f2;          /* fundo da página: cinza frio bem claro */
+  --mantine-color-text: var(--ailow-texto);
+  --mantine-color-dimmed: var(--ailow-apagado);
+  --ailow-texto: #16181a;
+  --ailow-apagado: #565c62;
   --ailow-superficie: #ffffff;            /* cartões e blocos */
-  --ailow-superficie-2: #f6f7fb;          /* campos, áreas internas */
-  --ailow-borda: #dde1ee;
-  --ailow-sombra: 0 1px 2px rgb(17 24 50 / 6%), 0 4px 14px rgb(17 24 50 / 6%);
-  --ailow-brilho: 0 6px 20px rgb(36 72 255 / 30%);
-  --ailow-primario-texto: #1b37d6;        /* azul.7 sobre branco = 8,19:1 */
-  --ailow-laranja-texto: #bf431e;         /* coral.7 sobre branco = 5,20:1 */
+  --ailow-superficie-2: #f6f7f8;          /* campos, áreas internas */
+  --ailow-borda: #dcdfe2;
+  --ailow-sombra: 0 1px 2px rgb(20 22 24 / 6%), 0 4px 14px rgb(20 22 24 / 6%);
+  --ailow-brilho: 0 6px 20px rgb(4 126 144 / 30%);
+  --ailow-acao: #047e90;                  /* marca.7: botões, seleção, barra (a marca crua dá só 2,1:1 sobre branco) */
+  --ailow-sobre-acao: #ffffff;
+  --ailow-marca-texto: #036171;           /* marca.8: texto e ícones na cor da marca */
+  --ailow-secundario-texto: #1b37d6;
   --ailow-topo: #ffffff;
 }
 
 :root[data-mantine-color-scheme='dark'] {
-  --mantine-color-body: #0b1126;          /* navy profundo */
-  --ailow-superficie: #151c36;            /* slate escuro */
-  --ailow-superficie-2: #1b2340;
-  --ailow-borda: #2b3454;
+  --mantine-color-body: #1b1c1e;          /* cinza chumbo, não preto */
+  --mantine-color-text: var(--ailow-texto);
+  --mantine-color-dimmed: var(--ailow-apagado);
+  --ailow-texto: #ececed;
+  --ailow-apagado: #a3a7ad;
+  --ailow-superficie: #26282b;
+  --ailow-superficie-2: #2f3236;
+  --ailow-borda: #44474c;
   --ailow-sombra: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
-  --ailow-brilho: 0 0 0 1px rgb(36 72 255 / 60%), 0 8px 28px rgb(36 72 255 / 40%);
-  --ailow-primario-texto: #6984ff;        /* azul.3 sobre navy = 5,65:1 (superfície 5,07:1) */
-  --ailow-laranja-texto: #ff7043;         /* coral.5 sobre navy = 6,82:1 (superfície 6,11:1) */
-  --ailow-topo: #111832;
+  --ailow-brilho: 0 0 0 1px rgb(7 189 213 / 60%), 0 8px 28px rgb(7 189 213 / 30%);
+  --ailow-acao: #07bdd5;                  /* a própria cor da marca */
+  --ailow-sobre-acao: #06161a;
+  --ailow-marca-texto: #07bdd5;
+  --ailow-secundario-texto: #8aa0ff;
+  --ailow-topo: #222325;
 }
 
 body {
   font-variant-numeric: tabular-nums;
+}
+
+/* UXM-01/02: sem rolagem de página nem puxar-para-atualizar. A rolagem existe só dentro dos componentes
+   (corpo da tela, listas, tabelas, modais) e também não "vaza" para a página (overscroll-behavior). */
+html,
+body,
+#root {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.ailow-rolagem {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+
+.mantine-Modal-content,
+.mantine-Modal-body {
+  overscroll-behavior: none;
 }
 
 h1, h2, h3, h4 {
@@ -43,6 +84,18 @@ h1, h2, h3, h4 {
   box-shadow: var(--ailow-sombra);
 }
 
+/* Rodapé do assistente de novo produto (S10): fica à vista enquanto o corpo do passo rola (a página não rola). */
+.ailow-rodape-assistente {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 0 -16px -16px;
+  padding: 12px 16px 16px;
+  background: var(--ailow-superficie);
+  border-top: 1px solid var(--ailow-borda);
+  border-radius: 0 0 var(--mantine-radius-md) var(--mantine-radius-md);
+}
+
 /* Bloco da tela inicial */
 .ailow-bloco {
   background: var(--ailow-superficie);
@@ -51,13 +104,124 @@ h1, h2, h3, h4 {
   box-shadow: var(--ailow-sombra);
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
-.ailow-bloco:hover { border-color: var(--mantine-color-azul-4); }
+.ailow-bloco:hover { border-color: var(--ailow-acao); }
 .ailow-bloco:active { transform: scale(0.97); }
 .ailow-bloco[data-destaque='true'] {
-  background: var(--mantine-color-azul-6);
-  border-color: var(--mantine-color-azul-6);
-  color: #fff;
+  background: var(--ailow-acao);
+  border-color: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
   box-shadow: var(--ailow-brilho);
+}
+
+/* GradeAcoes (UXM-10): item = tile arredondado de 72 px + rótulo embaixo, como a home do iPhone. */
+.ailow-acao-grade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 2px;
+  border-radius: var(--mantine-radius-lg);
+  color: var(--mantine-color-text);
+}
+.ailow-acao-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: var(--ailow-superficie);
+  border: 1px solid var(--ailow-borda);
+  box-shadow: var(--ailow-sombra);
+  color: var(--ailow-marca-texto);
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.ailow-acao-grade:hover .ailow-acao-tile { border-color: var(--ailow-acao); }
+.ailow-acao-grade:active .ailow-acao-tile { transform: scale(0.95); }
+.ailow-acao-grade[data-desabilitado='true'] { opacity: 0.45; cursor: not-allowed; }
+.ailow-acao-grade[data-desabilitado='true'] .ailow-acao-tile { box-shadow: none; transform: none; }
+
+/* Pop-up de celular (Modal de componentes/navegacao.tsx): centralizado, cantos grandes, corpo com rolagem própria
+   (UXM-01: a página nunca rola) e no máximo 85dvh. */
+.ailow-popup .mantine-Modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: 85dvh;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--ailow-borda);
+  box-shadow: var(--ailow-sombra);
+}
+.ailow-popup .mantine-Modal-header { flex: none; }
+.ailow-popup .mantine-Modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+
+/* Lista de vendas (S08): cada venda é uma linha separada por divisor; fundo alternado; só a lista rola. */
+.ailow-lista-vendas {
+  max-height: 45dvh;
+  min-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  border: 1px solid var(--ailow-borda);
+  border-radius: var(--mantine-radius-md);
+  background: var(--ailow-superficie);
+}
+.ailow-venda {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  color: var(--mantine-color-text);
+  background: var(--ailow-superficie);
+  border-bottom: 1px solid var(--ailow-borda);
+}
+.ailow-venda:nth-child(even) { background: var(--ailow-superficie-2); }
+.ailow-venda:last-child { border-bottom: 0; }
+.ailow-venda:active { border-color: var(--ailow-acao); }
+.ailow-venda[data-cancelada='true'] { opacity: 0.7; }
+
+/* CampoData (UXM-10, S06): calendário no tema do app. Fundo = superfície; dia selecionado = ação (marca); hoje com
+   anel da marca; dia de 44 px (7 colunas = 308 px cabem no pop-up de 344 px de largura em 360). */
+.ailow-popup-data .mantine-Modal-content { background: var(--ailow-superficie); }
+.ailow-popup-data .mantine-Modal-body { padding: 8px 8px 12px; }
+.ailow-popup-data .mantine-Modal-header { background: transparent; }
+.ailow-data {
+  --dch-control-size: 44px;
+  display: flex;
+  justify-content: center;
+}
+.ailow-data .mantine-DatePicker-calendarHeader { max-width: none; }
+.ailow-data .mantine-DatePicker-calendarHeaderLevel,
+.ailow-data .mantine-DatePicker-calendarHeaderControl {
+  color: var(--ailow-texto);
+  border-radius: var(--mantine-radius-md);
+}
+.ailow-data .mantine-DatePicker-calendarHeaderLevel { font-weight: 650; font-size: 16px; }
+.ailow-data .mantine-DatePicker-weekday { color: var(--ailow-apagado); font-weight: 600; text-transform: lowercase; }
+.ailow-data .mantine-DatePicker-day {
+  --day-size-xl: 44px;
+  color: var(--ailow-texto);
+  border-radius: var(--mantine-radius-md);
+  font-size: 16px;
+}
+.ailow-data .mantine-DatePicker-day:hover:not([data-selected]):not([data-disabled]) { background: var(--ailow-superficie-2); }
+.ailow-data .mantine-DatePicker-day[data-outside] { color: var(--ailow-apagado); opacity: 0.55; }
+.ailow-data .mantine-DatePicker-day[data-disabled] { color: var(--ailow-apagado); opacity: 0.35; }
+.ailow-data .mantine-DatePicker-day[data-today]:not([data-selected]) {
+  color: var(--ailow-marca-texto);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--ailow-acao);
+}
+.ailow-data .mantine-DatePicker-day[data-selected],
+.ailow-data .mantine-DatePicker-day[data-selected]:hover {
+  background: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
+  font-weight: 700;
 }
 
 /* Tabela só no computador; no celular a lista vira cartões (princípio 6). */
@@ -69,6 +233,8 @@ h1, h2, h3, h4 {
 @media (prefers-reduced-motion: reduce) {
   .ailow-bloco { transition: none; }
   .ailow-bloco:active { transform: none; }
+  .ailow-acao-tile { transition: none; }
+  .ailow-acao-grade:active .ailow-acao-tile { transform: none; }
 }
 
 /* Bloco que ainda não existe nesta versão: visível (a grade mantém o formato), mas apagado e sem ação. */
@@ -90,8 +256,8 @@ h1, h2, h3, h4 {
   top: -64px;
   z-index: 1000;
   padding: 12px 16px;
-  background: var(--mantine-color-azul-6);
-  color: #fff;
+  background: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
   border-radius: var(--mantine-radius-md);
 }
 .ailow-pular:focus { top: 8px; }
@@ -112,6 +278,16 @@ h1, h2, h3, h4 {
 }
 
 @media print {
+  /* A página fixa em 100dvh cortaria a impressão: no papel, tudo flui. */
+  html,
+  body,
+  #root,
+  .ailow-tela,
+  .ailow-rolagem {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   .ailow-topo,
   .nao-imprimir {
     display: none !important;

@@ -1,19 +1,34 @@
-import { useState } from 'react';
-import { Button, Group, Stack, Text } from '@mantine/core';
-import { IconAlertTriangle } from '@tabler/icons-react';
+import { useMemo, useState } from 'react';
+import { Button, Group, Stack, Text, TextInput } from '@mantine/core';
+import { IconAlertTriangle, IconSearch } from '@tabler/icons-react';
 import type { ContaAPagar } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
+import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
+import { filtrarPorBusca } from '../../lib/busca';
+import { ITENS_POR_PAGINA, camposDaConta } from '../../lib/campos-busca-listas';
+import { useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { formatarData } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { EstornarModal, PagarModal } from './Modais';
 import { SITUACOES, rotuloSituacao } from './rotulos';
+
+const SEM_CONTAS: ContaAPagar[] = [];
 
 /** RF-FIN-03: contas a pagar por vencimento (vencidas em destaque, hoje, próximos 7 dias) e "marcar como pago". */
 export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: () => void }) {
   const { carga, recarregar, tentarDeNovo } = useCarregar(() => api.contasAPagar());
   const [pagando, setPagando] = useState<ContaAPagar | null>(null);
   const [cancelando, setCancelando] = useState<ContaAPagar | null>(null);
+  const [texto, setTexto] = useState('');
+  const busca = useTextoComEspera(texto);
+  // A API entrega todas as contas em aberto (sem corte): busca ampla e paginação no cliente.
+  const todas = carga.fase === 'pronto' ? carga.dados.contas : SEM_CONTAS;
+  const filtradas = useMemo(
+    () => filtrarPorBusca(todas, busca, (c) => camposDaConta(c, rotuloSituacao(c.situacao))),
+    [todas, busca],
+  );
+  const pag = usePaginacao(filtradas, ITENS_POR_PAGINA);
 
   // Fecha o modal e busca de novo: se a conta mudou por outro lado (409), a lista já reflete.
   const fechar = () => {
@@ -49,8 +64,22 @@ export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: 
         </Text>
       </Stack>
 
+      <TextInput
+        size="lg"
+        aria-label="Buscar conta"
+        placeholder="Descrição, categoria, vencimento ou valor"
+        leftSection={<IconSearch aria-hidden />}
+        autoComplete="off"
+        maxLength={80}
+        value={texto}
+        onChange={(e) => setTexto(e.currentTarget.value)}
+      />
+      {filtradas.length === 0 && (
+        <EstadoVazio titulo="Nenhuma conta encontrada" texto="Tente outro pedaço da descrição, a data (ex.: 05/12) ou o valor (ex.: 250,00)." />
+      )}
+
       {SITUACOES.map((situacao) => {
-        const doGrupo = contas.filter((c) => c.situacao === situacao);
+        const doGrupo = pag.itens.filter((c) => c.situacao === situacao);
         if (doGrupo.length === 0) return null;
         return (
           <Stack key={situacao} gap="sm" component="section" aria-label={rotuloSituacao(situacao)}>
@@ -82,6 +111,8 @@ export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: 
           </Stack>
         );
       })}
+
+      <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
 
       {pagando && <PagarModal api={api} conta={pagando} aoFechar={fechar} aoPago={fechar} />}
       {cancelando && (

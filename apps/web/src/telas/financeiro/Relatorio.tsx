@@ -131,7 +131,7 @@ function Totais({ r }: { r: DadosRelatorio }) {
         <Text fw={700} fz="lg">
           Saldo
         </Text>
-        <Text fz={26} fw={700} c="var(--ailow-laranja-texto)" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <Text fz={26} fw={700} c="var(--ailow-marca-texto)" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {formatarReais(r.saldo_centavos)}
         </Text>
       </Group>

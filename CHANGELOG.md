@@ -4,6 +4,14 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### UX mobile, rodada 1 (S01–S16; API aditiva: `GET /vendas/lista`, `PUT /produtos/{id}`, `POST /produtos/{id}/arquivar`)
+- Paleta única derivada da logo, contraste WCAG medido em código nos 2 temas (UXM-08); componentes novos listados em `docs/design-system/README.md` §3.
+- Cadastros com 3+ campos viraram **assistente em passos** (novo cliente, fornecedor, novo pedido, dados da empresa): "Passo X de N", Voltar do sistema recua um passo, erro de passo em toast sem mover o botão.
+- Ações em **grade** (`GradeAcoes`), **pop-up** ligado ao histórico (`Modal`), `CampoData` e `CampoDinheiro`; erros de formulário e de rede em toast (`avisarErro`).
+- Listas com **paginação** no cliente e **busca ampla** (nome, código, preço, caracteres soltos); quando a API corta em 200 a tela também consulta `?q=` e avisa "Mostrando os primeiros 200; refine a busca." (S14c; paginação no servidor: ADR 016).
+- Novo pedido (S15): o passo "De quem vai comprar?" ganhou busca de fornecedor (local + `?q=`); antes, com mais de 200 fornecedores, o recém-criado podia não aparecer.
+- Verificação: E2E em 360×640 nos 2 temas (toques, rolagem lateral, tamanho de alvo, Voltar), conferindo o efeito pela API (L-0017).
+
 ### Corrigido
 - Pipeline de deploy (L-0023; sem mudança de API): `ops/deploy/deploy.sh` agora converge ao **reaplicar a mesma tag** (serviço sem `UpdateStatus`, como o `web`, conta como convergido; a imagem na tag continua obrigatória), **espera o Swarm terminar a reversão** (`rollback_started` não é mais falha imediata) e, com a mesma tag, decide pelo estado real: exit 20 se a stack voltou a responder (antes dizia "reversão NÃO confirmada", exit 21, com tudo de pé). 3 cenários novos em `scripts/deploy-test.sh` (vermelhos antes, verdes depois; canário continua ok). Não exercitado em produção.
 

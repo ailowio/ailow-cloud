@@ -76,6 +76,19 @@ export const produtoNovoSchema = z
   });
 export type ProdutoNovo = z.infer<typeof produtoNovoSchema>;
 
+// S09: edição do produto (modelo). A grade (tamanho × cor), o número e o código dos SKUs não mudam; o estoque só
+// muda por movimento. Mesmos limites e regras do cadastro.
+export const produtoEditarSchema = z.object({
+  nome: produtoNovoSchema.shape.nome,
+  categoria_id: z.uuid(),
+  porte: porteSchema,
+  atributos: produtoNovoSchema.shape.atributos,
+  fornecedor: produtoNovoSchema.shape.fornecedor,
+  custo_centavos: produtoNovoSchema.shape.custo_centavos,
+  preco_centavos: produtoNovoSchema.shape.preco_centavos,
+});
+export type ProdutoEditar = z.infer<typeof produtoEditarSchema>;
+
 // ------------------------------------------------------------------ entrada / ajuste de estoque (RF-PRO-04)
 export const ajusteEstoqueSchema = z
   .object({
@@ -168,7 +181,9 @@ export const produtoCriadoSchema = z.object({
   skus: z.array(z.object({ id: z.uuid(), codigo: z.string() })),
 });
 
-export const produtoIdParamsSchema = z.object({ id: z.uuid() });
+export const produtoEditadoSchema = z.object({ id: z.uuid() });
+
+export const produtoIdParamsSchema =z.object({ id: z.uuid() });
 export const skuIdParamsSchema = z.object({ id: z.uuid() });
 
 export const estoqueResponseSchema = z.object({ estoque: z.number().int().min(0) });

@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Alert, Button, Modal, NativeSelect, SegmentedControl, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Stack, Text, TextInput } from '@mantine/core';
+import { CampoData } from '../../componentes/CampoData';
+import { Modal } from '../../componentes/navegacao';
 import type { Marca } from '@ailow/shared';
 import { MOTIVO_AJUSTE_MAX, diaDoPonto } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { ErroApi } from '../../api/cliente';
 import { formatarData, hojeEmSaoPaulo, horaEmSaoPaulo } from '../../lib/datas';
 import { fecharModal, useAcao } from '../config/comum';
-import { Carregando, ErroCarregar, useCarregar } from '../estados';
 
 const ROTULO_TIPO = { entrada: 'Entrada', saida: 'Saída' } as const;
 
@@ -27,86 +28,6 @@ export function mensagemAjuste(e: ErroApi): string {
   }
 }
 
-/** Adicionar ponto esquecido (RF-PES-03): escolhe a pessoa, o tipo, o dia, a hora e o motivo. */
-export function AdicionarPonto(props: { api: Api; aoFechar: () => void; aoMudou: () => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.usuarios());
-  return (
-    <Modal opened onClose={props.aoFechar} title="Adicionar ponto" fullScreen closeButtonProps={fecharModal}>
-      {carga.fase === 'carregando' && <Carregando linhas={3} />}
-      {carga.fase === 'erro' && <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />}
-      {carga.fase === 'pronto' && (
-        <FormNovo
-          api={props.api}
-          pessoas={carga.dados.usuarios.filter((u) => u.ativo).map((u) => ({ id: u.id, nome: u.nome }))}
-          aoFechar={props.aoFechar}
-          aoMudou={props.aoMudou}
-        />
-      )}
-    </Modal>
-  );
-}
-
-function FormNovo(props: {
-  api: Api;
-  pessoas: { id: string; nome: string }[];
-  aoFechar: () => void;
-  aoMudou: () => void;
-}) {
-  const hoje = hojeEmSaoPaulo();
-  const [pessoa, setPessoa] = useState(props.pessoas[0]?.id ?? '');
-  const [tipo, setTipo] = useState<'entrada' | 'saida'>('entrada');
-  const [data, setData] = useState(hoje);
-  const [hora, setHora] = useState('');
-  const [motivo, setMotivo] = useState('');
-  const { pendente, erro, rodar } = useAcao(mensagemAjuste);
-  const pronto = pessoa !== '' && data !== '' && hora !== '' && motivo.trim() !== '';
-
-  async function salvar() {
-    const ok = await rodar(
-      () => props.api.adicionarPonto({ usuario_id: pessoa, tipo, data, hora, motivo: motivo.trim() }),
-      'Ponto adicionado.',
-    );
-    if (ok) {
-      props.aoMudou();
-      props.aoFechar();
-    }
-  }
-
-  return (
-    <Stack gap="md">
-      <NativeSelect
-        label="Pessoa"
-        size="lg"
-        data={props.pessoas.map((p) => ({ value: p.id, label: p.nome }))}
-        value={pessoa}
-        onChange={(e) => setPessoa(e.currentTarget.value)}
-      />
-      <SegmentedControl
-        fullWidth
-        size="lg"
-        data={[
-          { value: 'entrada', label: 'Entrada' },
-          { value: 'saida', label: 'Saída' },
-        ]}
-        value={tipo}
-        onChange={(v) => setTipo(v as 'entrada' | 'saida')}
-      />
-      <Campos data={data} hora={hora} motivo={motivo} hoje={hoje} aoData={setData} aoHora={setHora} aoMotivo={setMotivo} />
-      {erro && (
-        <Alert color="red" role="alert">
-          {erro}
-        </Alert>
-      )}
-      <Button h={48} loading={pendente} disabled={!pronto} onClick={() => void salvar()}>
-        Salvar
-      </Button>
-      <Button h={48} variant="default" onClick={props.aoFechar}>
-        Cancelar
-      </Button>
-    </Stack>
-  );
-}
-
 function Campos(props: {
   data: string;
   hora: string;
@@ -118,7 +39,7 @@ function Campos(props: {
 }) {
   return (
     <>
-      <TextInput label="Dia" type="date" size="lg" max={props.hoje} value={props.data} onChange={(e) => props.aoData(e.currentTarget.value)} />
+      <CampoData label="Dia" max={props.hoje} value={props.data} onChange={props.aoData} />
       <TextInput label="Hora (de São Paulo)" type="time" size="lg" value={props.hora} onChange={(e) => props.aoHora(e.currentTarget.value)} />
       <TextInput
         label="Motivo (fica guardado no histórico)"
@@ -139,7 +60,7 @@ export function AjustarMarca(props: { api: Api; marca: Marca; nome: string; aoFe
   const [hora, setHora] = useState(horaEmSaoPaulo(marca.registrado_em));
   const [motivo, setMotivo] = useState('');
   const [confirmando, setConfirmando] = useState(false);
-  const { pendente, erro, rodar } = useAcao(mensagemAjuste);
+  const { pendente, rodar } = useAcao(mensagemAjuste);
   const pronto = data !== '' && hora !== '' && motivo.trim() !== '';
 
   async function aplicar(acao: () => Promise<unknown>, sucesso: string) {
@@ -157,11 +78,6 @@ export function AjustarMarca(props: { api: Api; marca: Marca; nome: string; aoFe
           {props.nome} · {ROTULO_TIPO[marca.tipo]} de {formatarData(diaDoPonto(marca.registrado_em))}, {horaEmSaoPaulo(marca.registrado_em)}
         </Text>
         <Campos data={data} hora={hora} motivo={motivo} hoje={hoje} aoData={setData} aoHora={setHora} aoMotivo={setMotivo} />
-        {erro && (
-          <Alert color="red" role="alert">
-            {erro}
-          </Alert>
-        )}
         {!confirmando && (
           <>
             <Button

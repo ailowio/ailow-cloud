@@ -60,7 +60,6 @@ export function Inicio(props: {
   usuario: UsuarioPublico;
   api?: Api;
   aoAbrir: (m: Modulo['id']) => void;
-  aoTrocar: () => void;
 }) {
   const modulos = modulosPara(props.usuario.perfil);
   const alertas = useAlertasDeEstoque(props.api, props.usuario.perfil === 'dono');
@@ -71,7 +70,6 @@ export function Inicio(props: {
     <Moldura
       titulo={`Olá, ${props.usuario.nome}`}
       subtitulo="O que vamos fazer?"
-      acaoTopo={{ rotulo: 'Trocar', aoClicar: props.aoTrocar }}
       logoEmpresa
     >
       <Stack gap="md">

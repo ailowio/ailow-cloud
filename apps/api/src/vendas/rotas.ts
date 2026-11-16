@@ -2,6 +2,7 @@ import {
   comprasDoClienteSchema,
   erroSchema,
   estornarEntradaSchema,
+  listaVendasSchema,
   relatorioVendasQuerySchema,
   relatorioVendasSchema,
   vendaFinalizarSchema,
@@ -14,7 +15,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { type Deps, naoEncontrado, semPermissao } from '../acesso/comum.js';
 import { type Guardas, sessaoDe } from '../acesso/guardas.js';
 import { withEmpresa } from '../db.js';
-import { ErroVenda, buscarVenda, cancelarVenda, comprasDoCliente, finalizarVenda, relatorioVendas } from './vendas.js';
+import { ErroVenda, buscarVenda, cancelarVenda, comprasDoCliente, finalizarVenda, listaVendas, relatorioVendas } from './vendas.js';
 
 const sessaoCookie = [{ sessao: [] }];
 
@@ -83,6 +84,28 @@ export async function registrarRotasVendas(app: FastifyInstance, deps: Deps, g: 
       return withEmpresa(pool, s.empresaId, (c) =>
         relatorioVendas(c, { empresaId: s.empresaId, autorId: s.usuarioId, perfil: s.perfil, agora: agora() }, request.query.periodo, request.query.data),
       );
+    },
+  );
+
+  rotas.get(
+    '/vendas/lista',
+    {
+      preValidation: logado,
+      schema: {
+        tags: ['vendas'],
+        summary: 'Lista as vendas do dia ou do mês (com canceladas); o Vendedor só vê as próprias do dia',
+        security: sessaoCookie,
+        querystring: relatorioVendasQuerySchema,
+        response: { 200: listaVendasSchema, 400: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      if (s.perfil === 'vendedor' && request.query.periodo === 'mes') return semPermissao(reply);
+      const vendas = await withEmpresa(pool, s.empresaId, (c) =>
+        listaVendas(c, { empresaId: s.empresaId, autorId: s.usuarioId, perfil: s.perfil, agora: agora() }, request.query.periodo, request.query.data),
+      );
+      return { vendas };
     },
   );
 

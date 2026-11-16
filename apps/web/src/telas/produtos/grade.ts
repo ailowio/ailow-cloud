@@ -22,6 +22,22 @@ export const GRADES = [
 // Sugestões para tocar em vez de digitar; a lista cresce com o uso na loja (P1 §3, regra 4).
 export const CORES_SUGERIDAS = ['Preto', 'Nude', 'Branco', 'Vermelho', 'Chocolate', 'Vinho', 'Rosa', 'Azul'];
 
+// Amostra de cor dos chips (S10). Só as sugeridas têm tom; cor digitada à mão fica sem amostra (null).
+const AMOSTRAS_DE_COR: Record<string, string> = {
+  preto: '#111111',
+  nude: '#e3bc9a',
+  branco: '#ffffff',
+  vermelho: '#d32f2f',
+  chocolate: '#5d3a1a',
+  vinho: '#722f37',
+  rosa: '#f48fb1',
+  azul: '#1e64c8',
+};
+
+export function amostraDaCor(cor: string): string | null {
+  return AMOSTRAS_DE_COR[chaveCor(cor)] ?? null;
+}
+
 const TAMANHO_VALIDO = /^[A-Z0-9]{1,3}$/;
 
 /** Liga/desliga um tamanho; a lista fica na ordem de grade (P, M, G, GG… 40, 42…). */

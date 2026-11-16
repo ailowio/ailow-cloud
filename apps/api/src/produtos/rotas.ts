@@ -6,6 +6,9 @@ import {
   etiquetasPedidoSchema,
   movimentosResponseSchema,
   produtoCriadoSchema,
+  produtoEditadoSchema,
+  produtoEditarSchema,
+  produtoIdParamsSchema,
   produtoNovoSchema,
   produtosQuerySchema,
   produtosResponseSchema,
@@ -24,9 +27,11 @@ import { type DadosEtiqueta, gerarPdfEtiquetas } from './etiquetas.js';
 import {
   ErroProduto,
   alertasDeEstoque,
+  arquivarProduto,
   buscarSkuPorCodigo,
   criarProduto,
   dadosDasEtiquetas,
+  editarProduto,
   listarProdutos,
   movimentosDoSku,
 } from './produtos.js';
@@ -124,6 +129,80 @@ export async function registrarRotasProdutos(app: FastifyInstance, deps: Deps, g
       } catch (err) {
         return responderErro(reply, err);
       }
+    },
+  );
+
+  rotas.put(
+    '/produtos/:id',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['produtos'],
+        summary: 'Edita nome, categoria, porte, atributos, fornecedor, custo e preço do produto; a grade e os códigos não mudam (Dono)',
+        security: sessaoCookie,
+        params: produtoIdParamsSchema,
+        body: produtoEditarSchema,
+        response: { 200: produtoEditadoSchema, 400: erroSchema, 404: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const quando = agora();
+      try {
+        const achou = await withEmpresa(pool, s.empresaId, async (c) => {
+          const ok = await editarProduto(c, request.params.id, request.body);
+          if (ok) {
+            await registrarEvento(c, {
+              empresaId: s.empresaId,
+              atorTipo: 'usuario',
+              atorId: s.usuarioId,
+              alvoId: request.params.id,
+              tipo: 'produto_editado',
+              em: quando,
+            });
+          }
+          return ok;
+        });
+        if (!achou) return naoEncontrado(reply);
+        return reply.code(200).send({ id: request.params.id });
+      } catch (err) {
+        return responderErro(reply, err);
+      }
+    },
+  );
+
+  rotas.post(
+    '/produtos/:id/arquivar',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['produtos'],
+        summary: 'Arquiva o produto: some da lista, da venda e das etiquetas; SKUs, saldo e movimentos ficam (Dono)',
+        security: sessaoCookie,
+        params: produtoIdParamsSchema,
+        response: { 200: produtoEditadoSchema, 404: erroSchema, 409: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const quando = agora();
+      const resultado = await withEmpresa(pool, s.empresaId, async (c) => {
+        const r = await arquivarProduto(c, request.params.id);
+        if (r === 'arquivado') {
+          await registrarEvento(c, {
+            empresaId: s.empresaId,
+            atorTipo: 'usuario',
+            atorId: s.usuarioId,
+            alvoId: request.params.id,
+            tipo: 'produto_arquivado',
+            em: quando,
+          });
+        }
+        return r;
+      });
+      if (resultado === 'nao_encontrado') return naoEncontrado(reply);
+      if (resultado === 'ja_arquivado') return reply.code(409).send({ erro: 'ja_arquivado' });
+      return reply.code(200).send({ id: request.params.id });
     },
   );
 

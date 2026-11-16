@@ -16,7 +16,7 @@ export function QuemUsa(props: {
   return (
     <Moldura titulo="Quem está usando?" subtitulo="Toque no seu nome e digite o PIN.">
       <Stack gap="sm">
-        {props.aviso && <Alert color="blue" icon={<IconInfoCircle />} role="status">{props.aviso}</Alert>}
+        {props.aviso && <Alert color="azul" icon={<IconInfoCircle />} role="status">{props.aviso}</Alert>}
         {props.usuarios.length === 0 && (
           <EstadoVazio
             titulo="Ninguém com PIN ainda"
