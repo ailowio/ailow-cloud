@@ -109,9 +109,12 @@ describe('Paginação por cursor e busca por trigramas (ADR 016)', () => {
       expect(paginas[1]?.proximo).toBeNull();
       expect(paginas[1]?.truncado).toBe(false);
       expect(new Set(todos.map((p) => p.id)).size).toBe(QTD);
-      // Ordem da lista: nome sem diferenciar caixa e o número do produto no empate.
-      const nomes = todos.map((p) => p.nome.toLowerCase());
-      expect(nomes).toEqual([...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR')));
+      // A sequência das páginas é a MESMA de uma leitura única ordenada pelo banco (a collation é a do Postgres, não a
+      // do JavaScript: comparar com localeCompare falhava no Linux do CI com "Peça" x "PECA").
+      const unica = await withEmpresa(pool, e.empresaId, (c) =>
+        c.query('SELECT id FROM produtos WHERE ativo ORDER BY lower(nome), numero'),
+      );
+      expect(todos.map((p) => p.id)).toEqual(unica.rows.map((r) => r.id));
     });
 
     it('com busca sem acento nem caixa ("PECA pag") também pagina: 205 resultados em 2 páginas', async () => {

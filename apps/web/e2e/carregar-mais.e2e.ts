@@ -44,7 +44,14 @@ test('Clientes com mais de 200: "Carregar mais" traz o resto, o aviso de corte s
   await expect(page.getByText(`Página 1 de ${Math.ceil(200 / POR_PAGINA_NA_TELA)}`, { exact: true })).toBeVisible();
 
   const mais = page.getByRole('button', { name: 'Carregar mais' });
-  for (let i = 0; i < 20 && (await mais.count()) > 0; i++) await mais.click();
+  // Um clique por página, esperando o carregamento terminar (o botão fica desabilitado e, na última página, some).
+  for (let i = 0; i < 20 && (await mais.count()) > 0; i++) {
+    const antes = await mais.getAttribute('aria-description');
+    await mais.click();
+    await expect
+      .poll(async () => ((await mais.count()) === 0 ? 'sumiu' : await mais.getAttribute('aria-description')), { timeout: 15_000 })
+      .not.toBe(antes);
+  }
   await expect(mais).toHaveCount(0);
   await expect(page.locator('[data-aviso-corte]')).toHaveCount(0);
   const paginas = Math.ceil(total / POR_PAGINA_NA_TELA);
