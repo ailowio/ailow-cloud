@@ -18,6 +18,7 @@ const ORIGENS: Record<OrigemLancamento, string> = {
   venda: 'Venda',
   compra: 'Compra',
   despesa: 'Despesa',
+  receita: 'Receita',
   estorno: 'Estorno',
 };
 /** O que a pessoa lê na lista: a descrição, ou de onde veio o lançamento. */

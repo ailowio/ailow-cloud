@@ -8,6 +8,7 @@ import type {
   Cliente as ClienteFicha,
   ContaAPagar,
   DespesaEntrada,
+  ReceitaEntrada,
   Empresa,
   Espelho,
   EtiquetasPedido,
@@ -88,6 +89,9 @@ export function criarApi(c: Cliente) {
     // --- financeiro (S06, só Dono)
     novaDespesa: (d: DespesaEntrada) => p<{ id: string }>('POST', '/financeiro/despesas', d),
     contasAPagar: () => p<{ hoje: string; contas: ContaAPagar[] }>('GET', '/financeiro/contas-a-pagar'),
+    // ADR 015: receita manual (entrada) e as contas a receber; a baixa usa `pagar`.
+    novaReceita: (d: ReceitaEntrada) => p<{ id: string }>('POST', '/financeiro/receitas', d),
+    contasAReceber: () => p<{ hoje: string; contas: ContaAPagar[] }>('GET', '/financeiro/contas-a-receber'),
     pagar: (id: string, forma: FormaPagamento) =>
       p('POST', `/financeiro/lancamentos/${id}/pagar`, { forma_pagamento: forma }),
     estornar: (id: string, motivo: string) => p<{ id: string }>('POST', `/financeiro/lancamentos/${id}/estornar`, { motivo }),

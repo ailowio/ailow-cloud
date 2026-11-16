@@ -1,7 +1,7 @@
-# ADR 013: Receita manual e contas a receber no Financeiro
+# ADR 015: Receita manual e contas a receber no Financeiro
 
-- **Status:** proposto (decisão do Pedro pendente)
-- **Data:** 2026-11-13
+- **Status:** **aceito, opção 1**, em 2026-11-16 pelo Pedro ("vamos liberar nova receita e contas a receber"). Proposto em 2026-11-13 como ADR 013; renumerado (a `main` já usava 011 e 012).
+- **Data:** 2026-11-13 (proposta) · 2026-11-16 (decisão e implementação)
 - **Decisores:** Pedro (dono do produto); proposta redigida com apoio de IA
 - **Tier do app:** B
 - **Regras do harness relacionadas:** ARQ (decisão estrutural), SEC-03, AUD-10; produto: RF-FIN-01…06, RN-06
@@ -28,6 +28,21 @@ Criar a receita manual exige **migração** (ampliar o CHECK, e o CHECK `(origem
 - Receita manual entra como categoria financeira existente ou precisa de tipo de categoria "receita" (outra mudança de schema)?
 - Contas a receber (com vencimento e baixa) é necessária já, ou basta registrar a receita no dia em que o dinheiro entra (opção 2)?
 
-## Consequências (se a opção 1 ou 2 for escolhida)
+## Decisão (2026-11-16)
 
-Migração nova (expand), teste de isolamento entre empresas e dos CHECKs, OpenAPI regenerado, e o wizard de despesa da S11 vira base do wizard de receita (`componentes/Assistente.tsx`).
+Opção 1, com contas a receber. Respostas às perguntas acima (recomendação aplicada; o Pedro pode mudar na revisão):
+
+- **Categoria:** a receita usa as **categorias financeiras existentes** (mesma lista da despesa). Separar "categoria de receita" de "categoria de despesa" exigiria outra mudança de schema em `categorias`; fica para quando a lista misturada incomodar (contraponto: "Aluguel" aparece como opção de receita).
+- **Contas a receber:** sim, com vencimento e baixa. A baixa reaproveita `POST /financeiro/lancamentos/{id}/pagar` (a função já dava baixa em qualquer conta em aberto); só o texto da tela muda ("Marcar como recebido").
+
+## O que foi feito
+
+- Migração `20261119140000_financeiro-receita.sql` (expand; Down falha de propósito se houver receita gravada): origem `receita`; CHECKs nomeados `lancamentos_sem_origem_id_check` (substitui `lancamentos_check2`), `lancamentos_receita_entrada_check`, `lancamentos_receita_descricao_check`; índice parcial `lancamentos_a_receber_idx`. RLS, FORCE e GRANTs não mudaram (UPDATE segue só nas colunas da baixa).
+- API (OpenAPI 0.15.0): `POST /financeiro/receitas` e `GET /financeiro/contas-a-receber`, só Dono; evento `receita_criada` na trilha.
+- Web: "Nova receita" (o assistente da despesa com `sentido="receita"`) e "Contas a receber" (a tela de contas com `lado="receber"`).
+- Evidência: `apps/api/test/financeiro-receita.test.ts` (23 testes: 2 empresas × 2 perfis, CHECKs no banco, baixa, estorno, relatório; mutação sem a CHECK de entrada reprova) e `apps/web/e2e/financeiro-receita.e2e.ts` (efeito conferido pela API).
+
+## Consequências
+
+- O relatório e o extrato passam a ter entradas sem venda (aparecem pela descrição e pela categoria).
+- Recebível de cartão/boleto continua fora do v1 (ADR 005 item 8): conta a receber é só a receita manual em aberto.

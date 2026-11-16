@@ -69,3 +69,25 @@ describe('passos da nova despesa', () => {
     expect(despesaParaApi({ ...base, valor: 0 })).toBeNull();
   });
 });
+
+// ADR 015: o mesmo assistente lança RECEITA; as regras são iguais e as mensagens falam de receita e de receber.
+describe('passos da nova receita', () => {
+  it('as mensagens falam de receita, não de despesa', () => {
+    expect(validarPasso('categoria', { ...base, categoria: '' }, 'receita')).toMatch(/tipo da receita/i);
+    expect(validarPasso('valor', { ...base, valor: null }, 'receita')).toMatch(/valor da receita/i);
+    expect(validarPasso('valor', { ...base, descricao: ' ' }, 'receita')).toMatch(/o que é a receita/i);
+    expect(validarPasso('quando', { ...base, vencimento: '' }, 'receita')).toMatch(/dia em que recebe/i);
+  });
+
+  it('já recebida exige a forma: "como foi recebido"', () => {
+    expect(validarPasso('quando', { ...base, paga: true, forma: null }, 'receita')).toMatch(/como foi recebido/i);
+    expect(validarPasso('quando', { ...base, paga: true, forma: 'dinheiro' }, 'receita')).toBeNull();
+  });
+
+  it('os mesmos limites de valor e de data da despesa', () => {
+    expect(validarPasso('valor', { ...base, valor: 0 }, 'receita')).toMatch(/maior que zero/i);
+    expect(validarPasso('valor', { ...base, valor: 2_000_000_001 }, 'receita')).toMatch(/20 milhões/);
+    expect(validarPasso('quando', { ...base, vencimento: '2026-02-29' }, 'receita')).not.toBeNull();
+    expect(validarPasso('confirmar', base, 'receita')).toBeNull();
+  });
+});

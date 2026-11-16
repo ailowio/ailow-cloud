@@ -44,21 +44,26 @@ export function EscolhaForma(props: {
 export function PagarModal(props: {
   api: Api;
   conta: { id: string; descricao: string | null; valor_centavos: number; forma_pagamento: FormaPagamento | null };
+  /** ADR 015: baixa de conta a RECEBER (mesma rota da API, textos de recebimento). */
+  recebimento?: boolean;
   aoFechar: () => void;
   aoPago: () => void;
 }) {
   const { conta } = props;
+  const t = props.recebimento
+    ? { titulo: 'Marcar como recebido?', como: 'Como foi recebido?', confirmar: 'Confirmar recebimento', ok: 'Conta recebida' }
+    : { titulo: 'Marcar como pago?', como: 'Como foi pago?', confirmar: 'Confirmar pagamento', ok: 'Conta paga' };
   // Se a conta já tinha forma prevista, ela vem marcada; senão a pessoa precisa escolher (o registro tem de ser verdadeiro).
   const [forma, setForma] = useState<FormaPagamento | null>(conta.forma_pagamento);
   const { pendente, rodar } = useAcao(mensagemFinanceiro);
 
   async function confirmar() {
     if (!forma) return;
-    if (await rodar(() => props.api.pagar(conta.id, forma), 'Conta paga')) props.aoPago();
+    if (await rodar(() => props.api.pagar(conta.id, forma), t.ok)) props.aoPago();
   }
 
   return (
-    <Modal opened onClose={props.aoFechar} title="Marcar como pago?" centered closeButtonProps={fecharModal}>
+    <Modal opened onClose={props.aoFechar} title={t.titulo} centered closeButtonProps={fecharModal}>
       <Stack gap="md">
         <Stack gap={2}>
           <Text fw={650} fz="lg" style={{ overflowWrap: 'anywhere' }}>
@@ -68,9 +73,9 @@ export function PagarModal(props: {
             <Valor centavos={conta.valor_centavos} destaque />
           </Text>
         </Stack>
-        <EscolhaForma rotulo="Como foi pago?" valor={forma} aoMudar={setForma} />
+        <EscolhaForma rotulo={t.como} valor={forma} aoMudar={setForma} />
         <Button h={48} onClick={() => void confirmar()} loading={pendente} disabled={!forma}>
-          Confirmar pagamento
+          {t.confirmar}
         </Button>
         <Button h={48} variant="default" onClick={props.aoFechar} disabled={pendente}>
           Voltar

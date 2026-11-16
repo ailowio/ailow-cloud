@@ -4,7 +4,7 @@ import { abrirInicio, entrarComoDono, sufixoUnico } from './apoio';
 
 // S11, celular da loja (360×640): Financeiro em menu de ícones, "Contas a pagar" abre sem erro e "Nova despesa"
 // em passos curtos (botões principal x secundário, Passo X de N, Voltar recua um passo, erro em toast).
-// Evidência do navegador real e da API (L-0017). Nova receita e Contas a receber NÃO existem: ver ADR 013.
+// Evidência do navegador real e da API (L-0017). Nova receita e Contas a receber: financeiro-receita.e2e.ts (ADR 015).
 test.use({ hasTouch: true });
 
 const continuar = (page: Page) => page.locator('[data-botao="principal"]').click();
@@ -90,12 +90,12 @@ for (const tema of ['dark', 'light'] as const) {
     expect((await api.post('/categorias', { data: { nome: nomeCat, atributos: [], tipo: 'financeira' } })).status()).toBe(201);
     await abrirFinanceiro(page, tema);
 
-    // Menu: grade de ícones; só o que o backend permite (sem receita manual nem contas a receber: ADR 013).
+    // Menu: grade de ícones. Nova receita e Contas a receber entraram com o ADR 015 (decisão do Pedro, 2026-11-16;
+    // antes este teste exigia que NÃO existissem).
     await expect(page.locator('[data-grade-acoes]')).toBeVisible();
-    for (const r of ['Nova despesa', 'Contas a pagar', 'Relatório']) {
+    for (const r of ['Nova despesa', 'Nova receita', 'Contas a pagar', 'Contas a receber', 'Relatório']) {
       await expect(page.locator('[data-grade-acoes]').getByRole('button', { name: r })).toBeVisible();
     }
-    await expect(page.getByRole('button', { name: /Nova receita|Contas a receber/ })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), 'menu sem rolagem lateral').toBe(false);
 
     await page.getByRole('button', { name: 'Nova despesa' }).click();

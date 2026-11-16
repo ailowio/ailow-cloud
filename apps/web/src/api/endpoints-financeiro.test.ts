@@ -29,6 +29,18 @@ describe('endpoints do Financeiro', () => {
     expect(chamadas).toEqual([{ url: '/financeiro/despesas', metodo: 'POST', corpo: despesa }]);
   });
 
+  it('nova receita (ADR 015): POST /financeiro/receitas com o mesmo corpo da despesa', async () => {
+    const { api, chamadas } = apiComEspiao({ status: 201, corpo: { id: 'x' } });
+    await api.novaReceita({ ...despesa, descricao: 'Sinal' });
+    expect(chamadas).toEqual([{ url: '/financeiro/receitas', metodo: 'POST', corpo: { ...despesa, descricao: 'Sinal' } }]);
+  });
+
+  it('contas a receber: GET', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { hoje: '2026-11-11', contas: [] } });
+    expect(await api.contasAReceber()).toEqual({ hoje: '2026-11-11', contas: [] });
+    expect(chamadas).toEqual([{ url: '/financeiro/contas-a-receber', metodo: 'GET', corpo: undefined }]);
+  });
+
   it('contas a pagar: GET', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { hoje: '2026-11-11', contas: [] } });
     expect(await api.contasAPagar()).toEqual({ hoje: '2026-11-11', contas: [] });

@@ -12,21 +12,76 @@ import { formatarData, hojeEmSaoPaulo } from '../../lib/datas';
 import { formatarReais } from '../../lib/dinheiro';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { CampoDinheiro } from '../produtos/CampoDinheiro';
-import { PASSOS_DESPESA, type PassoDespesa, type RascunhoDespesa, despesaParaApi, validarPasso } from './despesa-passos';
+import {
+  PASSOS_DESPESA,
+  type PassoDespesa,
+  type RascunhoDespesa,
+  type Sentido,
+  despesaParaApi,
+  validarPasso,
+} from './despesa-passos';
 import { EscolhaForma } from './Modais';
 import { mensagemFinanceiro, rotuloForma } from './rotulos';
 
-const TITULOS: Record<PassoDespesa, string> = {
-  categoria: 'Que tipo de despesa é?',
-  valor: 'Quanto é?',
-  quando: 'Quando vence?',
-  confirmar: 'Confira e salve',
+// ADR 015: o mesmo assistente lança despesa (saída) ou receita (entrada). Só os textos e o endpoint mudam.
+const TEXTOS: Record<
+  Sentido,
+  {
+    titulos: Record<PassoDespesa, string>;
+    grupo: string;
+    exemplo: string;
+    data: string;
+    jaFoi: string;
+    jaFoiDescricao: string;
+    como: string;
+    resumoJa: string;
+    resumoAberto: string;
+    salvar: string;
+    salvaJa: string;
+    salvaAberto: string;
+    semCategoria: string;
+  }
+> = {
+  despesa: {
+    titulos: { categoria: 'Que tipo de despesa é?', valor: 'Quanto é?', quando: 'Quando vence?', confirmar: 'Confira e salve' },
+    grupo: 'Tipo de despesa',
+    exemplo: 'Ex.: Condomínio de novembro',
+    data: 'Vence em',
+    jaFoi: 'Já foi paga',
+    jaFoiDescricao: 'Se ligar, o dinheiro sai hoje e a conta não vai para “A pagar”.',
+    como: 'Como foi pago?',
+    resumoJa: 'Já paga',
+    resumoAberto: 'Fica em contas a pagar',
+    salvar: 'Salvar despesa',
+    salvaJa: 'Despesa salva e paga',
+    salvaAberto: 'Despesa salva em contas a pagar',
+    semCategoria: 'Para lançar uma despesa, cadastre antes uma categoria em Configurações › Categorias › Financeiras.',
+  },
+  receita: {
+    titulos: { categoria: 'Que tipo de receita é?', valor: 'Quanto é?', quando: 'Quando recebe?', confirmar: 'Confira e salve' },
+    grupo: 'Tipo de receita',
+    exemplo: 'Ex.: Sinal da encomenda da Ana',
+    data: 'Recebe em',
+    jaFoiDescricao: 'Se ligar, o dinheiro entra hoje e não vai para “A receber”.',
+    jaFoi: 'Já foi recebida',
+    como: 'Como foi recebido?',
+    resumoJa: 'Já recebida',
+    resumoAberto: 'Fica em contas a receber',
+    salvar: 'Salvar receita',
+    salvaJa: 'Receita salva e recebida',
+    salvaAberto: 'Receita salva em contas a receber',
+    semCategoria: 'Para lançar uma receita, cadastre antes uma categoria em Configurações › Categorias › Financeiras.',
+  },
 };
 
 const avisoErro = (message: string) => notifications.show({ message, color: 'red', autoClose: 4500, withCloseButton: false });
 
-/** RF-FIN-02: nova despesa em passos curtos (tipo → valor → vencimento → confirmar); pode já nascer paga. */
-export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void; aoCancelar: () => void }) {
+/**
+ * RF-FIN-02: nova despesa (ou receita, ADR 015) em passos curtos (tipo → valor → data → confirmar); pode já nascer
+ * paga/recebida.
+ */
+export function NovaDespesa(props: { api: Api; sentido?: Sentido; aoSalvar: (paga: boolean) => void; aoCancelar: () => void }) {
+  const sentido = props.sentido ?? 'despesa';
   // A categoria é uma das categorias FINANCEIRAS ativas da empresa (Configurações › Categorias).
   const { carga, tentarDeNovo } = useCarregar(() =>
     props.api.categorias('financeira').then((r) => r.categorias.filter((c) => c.ativa).map((c) => c.nome)),
@@ -35,16 +90,28 @@ export function NovaDespesa(props: { api: Api; aoSalvar: (paga: boolean) => void
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
   if (carga.dados.length === 0) {
     return (
-      <EstadoVazio
-        titulo="Nenhuma categoria financeira"
-        texto="Para lançar uma despesa, cadastre antes uma categoria em Configurações › Categorias › Financeiras."
-      />
+      <EstadoVazio titulo="Nenhuma categoria financeira" texto={TEXTOS[sentido].semCategoria} />
     );
   }
-  return <Assistente api={props.api} categorias={carga.dados} aoSalvar={props.aoSalvar} aoCancelar={props.aoCancelar} />;
+  return (
+    <Assistente
+      api={props.api}
+      sentido={sentido}
+      categorias={carga.dados}
+      aoSalvar={props.aoSalvar}
+      aoCancelar={props.aoCancelar}
+    />
+  );
 }
 
-function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: boolean) => void; aoCancelar: () => void }) {
+function Assistente(props: {
+  api: Api;
+  sentido: Sentido;
+  categorias: string[];
+  aoSalvar: (paga: boolean) => void;
+  aoCancelar: () => void;
+}) {
+  const t = TEXTOS[props.sentido];
   const [r, setR] = useState<RascunhoDespesa>(() => ({
     categoria: '',
     descricao: '',
@@ -62,9 +129,9 @@ function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: bo
     if (!corpo) return;
     setPendente(true);
     try {
-      await props.api.novaDespesa(corpo);
+      await (props.sentido === 'receita' ? props.api.novaReceita(corpo) : props.api.novaDespesa(corpo));
       notifications.show({
-        message: r.paga ? 'Despesa salva e paga' : 'Despesa salva em contas a pagar',
+        message: r.paga ? t.salvaJa : t.salvaAberto,
         color: 'teal',
         autoClose: 3500,
         withCloseButton: false,
@@ -78,7 +145,7 @@ function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: bo
 
   // O botão principal nunca fica desabilitado: o que falta vira toast (não mexe no layout) e a pessoa fica no passo.
   function principal() {
-    const problema = validarPasso(atual, r);
+    const problema = validarPasso(atual, r, props.sentido);
     if (problema) {
       avisoErro(problema);
       return;
@@ -90,12 +157,12 @@ function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: bo
   return (
     <Stack gap="md" className="ailow-cartao" p="md" data-assistente={atual}>
       <Title order={2} fz="lg" style={{ overflowWrap: 'anywhere' }}>
-        {TITULOS[atual]}
+        {t.titulos[atual]}
       </Title>
       <ProgressoDoPasso indice={indice} total={PASSOS_DESPESA.length} />
 
       {atual === 'categoria' && (
-        <Stack gap="xs" role="group" aria-label="Tipo de despesa">
+        <Stack gap="xs" role="group" aria-label={t.grupo}>
           {props.categorias.map((nome) => {
             const marcada = r.categoria === nome;
             return (
@@ -129,7 +196,7 @@ function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: bo
             required
             size="lg"
             maxLength={120}
-            placeholder="Ex.: Condomínio de novembro"
+            placeholder={t.exemplo}
             value={r.descricao}
             onChange={(e) => mudar({ descricao: e.currentTarget.value })}
           />
@@ -138,15 +205,15 @@ function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: bo
 
       {atual === 'quando' && (
         <Stack gap="lg">
-          <CampoData label="Vence em" required value={r.vencimento} onChange={(vencimento) => mudar({ vencimento })} />
+          <CampoData label={t.data} required value={r.vencimento} onChange={(vencimento) => mudar({ vencimento })} />
           <Switch
             size="lg"
-            label="Já foi paga"
-            description="Se ligar, o dinheiro sai hoje e a conta não vai para “A pagar”."
+            label={t.jaFoi}
+            description={t.jaFoiDescricao}
             checked={r.paga}
             onChange={(e) => mudar({ paga: e.currentTarget.checked, forma: e.currentTarget.checked ? r.forma : null })}
           />
-          {r.paga && <EscolhaForma rotulo="Como foi pago?" valor={r.forma} aoMudar={(forma: FormaPagamento) => mudar({ forma })} />}
+          {r.paga && <EscolhaForma rotulo={t.como} valor={r.forma} aoMudar={(forma: FormaPagamento) => mudar({ forma })} />}
         </Stack>
       )}
 
@@ -161,14 +228,16 @@ function Assistente(props: { api: Api; categorias: string[]; aoSalvar: (paga: bo
           <Text fz={28} fw={700}>
             {formatarReais(r.valor ?? 0)}
           </Text>
-          <Text>Vence em {formatarData(r.vencimento)}</Text>
-          <Text>{r.paga && r.forma ? `Já paga (${rotuloForma(r.forma)})` : 'Fica em contas a pagar'}</Text>
+          <Text>
+            {t.data} {formatarData(r.vencimento)}
+          </Text>
+          <Text>{r.paga && r.forma ? `${t.resumoJa} (${rotuloForma(r.forma)})` : t.resumoAberto}</Text>
         </Stack>
       )}
 
       <RodapeDoAssistente
         rotuloSecundario={indice === 0 ? 'Cancelar' : 'Voltar'}
-        rotuloPrincipal={ultimo ? 'Salvar despesa' : 'Continuar'}
+        rotuloPrincipal={ultimo ? t.salvar : 'Continuar'}
         aoSecundario={indice === 0 ? props.aoCancelar : recuar}
         aoPrincipal={principal}
         ocupado={pendente}
