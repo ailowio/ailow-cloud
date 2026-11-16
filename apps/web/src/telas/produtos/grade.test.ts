@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { CORES_PADRAO } from '@ailow/shared/puro';
 import {
   CORES_SUGERIDAS,
   GRADES,
+  gruposDeTamanho,
   adicionarCor,
   adicionarTamanho,
   alternarCor,
@@ -150,5 +152,29 @@ describe('custo, preço e sugestão (RN-05)', () => {
 
   it('sugestão acima do teto de R$ 20 milhões não é oferecida', () => {
     expect(precosDoFormulario('15000000', '', 100_000).sugerido).toBeNull();
+  });
+});
+
+// ADR 017: os tamanhos vêm da configuração da empresa; os grupos (Letras, Sutiã, Único) só organizam a tela.
+describe('grupos de tamanho a partir da configuração', () => {
+  it('cada grupo mostra só os tamanhos ATIVOS dele, na ordem de grade; grupo sem nenhum some', () => {
+    const g = gruposDeTamanho(['GG', 'P', '42', '40'], []);
+    expect(g).toEqual([
+      { id: 'letras', tamanhos: ['P', 'GG'] },
+      { id: 'sutia', tamanhos: ['40', '42'] },
+    ]);
+  });
+
+  it('o que não é de nenhum grupo (configurado ou digitado agora) vai para "outros", sem repetir', () => {
+    const g = gruposDeTamanho(['P', 'XG', 'G1'], ['G2', 'XG']);
+    expect(g.at(-1)).toEqual({ id: 'outros', tamanhos: ['XG', 'G1', 'G2'] });
+  });
+
+  it('sem nenhum tamanho configurado nem digitado: nenhum grupo', () => {
+    expect(gruposDeTamanho([], [])).toEqual([]);
+  });
+
+  it('as cores sugeridas são as cores padrão da empresa nova (mesma lista da API)', () => {
+    expect(CORES_SUGERIDAS).toEqual(CORES_PADRAO.map((c) => c.nome));
   });
 });

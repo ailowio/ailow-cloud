@@ -56,6 +56,20 @@ describe('endpoints de Produtos', () => {
     expect(chamadas).toEqual([{ url: '/produtos/abc', metodo: 'PUT', corpo: edicao }]);
   });
 
+  it('opções da grade (ADR 017): GET, POST com tipo e PUT com nome, amostra e ativa', async () => {
+    const lido = apiComEspiao({ corpo: { tamanhos: [], cores: [] } });
+    expect(await lido.api.opcoesGrade()).toEqual({ tamanhos: [], cores: [] });
+    expect(lido.chamadas).toEqual([{ url: '/opcoes-grade', metodo: 'GET', corpo: undefined }]);
+
+    const criado = apiComEspiao({ status: 201, corpo: { id: 'n' } });
+    await criado.api.criarOpcaoGrade({ tipo: 'cor', nome: 'Lilás', amostra: '#c8a2c8' });
+    expect(criado.chamadas).toEqual([{ url: '/opcoes-grade', metodo: 'POST', corpo: { tipo: 'cor', nome: 'Lilás', amostra: '#c8a2c8' } }]);
+
+    const alterado = apiComEspiao({ status: 204 });
+    await alterado.api.alterarOpcaoGrade('o1', { nome: 'XG', amostra: null, ativa: false });
+    expect(alterado.chamadas).toEqual([{ url: '/opcoes-grade/o1', metodo: 'PUT', corpo: { nome: 'XG', amostra: null, ativa: false } }]);
+  });
+
   it('arquivar produto: POST /produtos/{id}/arquivar (S09)', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { id: 'abc' } });
     await api.arquivarProduto('abc');

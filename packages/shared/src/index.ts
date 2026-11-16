@@ -8,3 +8,4 @@ export * from './clientes.js';
 export * from './vendas.js';
 export * from './compras.js';
 export * from './pessoas.js';
+export * from './opcoes-grade.js';

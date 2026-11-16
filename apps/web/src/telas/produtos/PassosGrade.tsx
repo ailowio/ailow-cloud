@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { Alert, Box, Button, Group, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
-import { MAX_CORES_POR_PRODUTO, MAX_SKUS_POR_PRODUTO, compararTamanhos } from '@ailow/shared/puro';
-import { CORES_SUGERIDAS, type Combinacao, GRADES, amostraDaCor } from './grade';
+import { MAX_CORES_POR_PRODUTO, MAX_SKUS_POR_PRODUTO, chaveCor } from '@ailow/shared/puro';
+import { type Combinacao, amostraDaCor, gruposDeTamanho } from './grade';
 
 // S10: a antiga etapa "Tamanhos e cores" virou três passos curtos: Tamanhos, Cores e a grade resultante.
 // Os chips são botões de alternância (aria-pressed): marcado = tinta da marca, borda forte e check.
+// ADR 017: os tamanhos e as cores oferecidos vêm da configuração da empresa (só os ativos), mais os digitados agora.
 
-const TITULOS_DE_GRUPO: Record<string, string> = { letras: 'Letras', sutia: 'Numeração (sutiã)', unico: 'Tamanho único' };
+const TITULOS_DE_GRUPO: Record<string, string> = {
+  letras: 'Letras',
+  sutia: 'Numeração (sutiã)',
+  unico: 'Tamanho único',
+  outros: 'Outros',
+};
+const ROTULO_DO_GRUPO: Record<string, string> = { outros: 'Outros tamanhos' };
 
 /** Chip selecionável de 48 px; marcado não depende só da cor (check + borda mais grossa). */
 function Chip(props: { rotulo: string; marcado: boolean; aoTocar: () => void; amostra?: string | null; comAmostra?: boolean }) {
@@ -46,6 +53,8 @@ function Chip(props: { rotulo: string; marcado: boolean; aoTocar: () => void; am
 }
 
 export function PassoTamanhos(props: {
+  /** Tamanhos ATIVOS da configuração da empresa (ADR 017). */
+  disponiveis: string[];
   tamanhos: string[];
   extras: string[];
   aoAlternar: (t: string) => void;
@@ -57,9 +66,9 @@ export function PassoTamanhos(props: {
       <Text size="sm" c="dimmed">
         Toque em todos os tamanhos que esta peça tem.
       </Text>
-      {GRADES.map((g) => (
-        <Stack key={g.id} gap="xs" role="group" aria-label={TITULOS_DE_GRUPO[g.id] ?? g.rotulo}>
-          <Text fw={600}>{TITULOS_DE_GRUPO[g.id] ?? g.rotulo}</Text>
+      {gruposDeTamanho(props.disponiveis, props.extras).map((g) => (
+        <Stack key={g.id} gap="xs" role="group" aria-label={ROTULO_DO_GRUPO[g.id] ?? TITULOS_DE_GRUPO[g.id] ?? g.id}>
+          <Text fw={600}>{TITULOS_DE_GRUPO[g.id] ?? g.id}</Text>
           <SimpleGrid cols={4} spacing="xs">
             {g.tamanhos.map((t) => (
               <Chip key={t} rotulo={t} marcado={props.tamanhos.includes(t)} aoTocar={() => props.aoAlternar(t)} />
@@ -67,16 +76,6 @@ export function PassoTamanhos(props: {
           </SimpleGrid>
         </Stack>
       ))}
-      {props.extras.length > 0 && (
-        <Stack gap="xs" role="group" aria-label="Outros tamanhos">
-          <Text fw={600}>Outros</Text>
-          <SimpleGrid cols={4} spacing="xs">
-            {[...props.extras].sort(compararTamanhos).map((t) => (
-              <Chip key={t} rotulo={t} marcado={props.tamanhos.includes(t)} aoTocar={() => props.aoAlternar(t)} />
-            ))}
-          </SimpleGrid>
-        </Stack>
-      )}
       <Group wrap="nowrap" align="flex-end" gap="xs">
         <TextInput
           label="Outro tamanho"
@@ -109,13 +108,17 @@ export function PassoTamanhos(props: {
 }
 
 export function PassoCores(props: {
+  /** Cores ATIVAS da configuração da empresa, com a amostra (ADR 017). */
+  disponiveis: { nome: string; amostra: string | null }[];
   cores: string[];
   extras: string[];
   aoAlternar: (c: string) => void;
   aoAdicionar: (c: string) => void;
 }) {
   const [outra, setOutra] = useState('');
-  const todas = [...CORES_SUGERIDAS, ...props.extras];
+  const amostras = new Map(props.disponiveis.map((c) => [chaveCor(c.nome), c.amostra]));
+  const conhecidas = new Set(amostras.keys());
+  const todas = [...props.disponiveis.map((c) => c.nome), ...props.extras.filter((e) => !conhecidas.has(chaveCor(e)))];
   return (
     <Stack gap="lg" data-passo="cores">
       <Text size="sm" c="dimmed">
@@ -127,7 +130,7 @@ export function PassoCores(props: {
             key={c}
             rotulo={c}
             comAmostra
-            amostra={amostraDaCor(c)}
+            amostra={amostras.get(chaveCor(c)) ?? amostraDaCor(c)}
             marcado={props.cores.some((x) => x.toLowerCase() === c.toLowerCase())}
             aoTocar={() => props.aoAlternar(c)}
           />

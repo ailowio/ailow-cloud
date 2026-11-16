@@ -11,8 +11,6 @@ import { useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { BotaoConfigCategorias } from './ConfigCategorias';
 import {
-  CORES_SUGERIDAS,
-  GRADES,
   type LinhaEstoque,
   adicionarCor,
   adicionarTamanho,
@@ -45,8 +43,18 @@ const TITULOS: Record<Passo, string> = {
 /** RF-PRO-01: novo produto passo a passo, uma decisão por tela. Só chega aqui o Dono (a API também exige). */
 export function NovoProduto(props: { api: Api; aoTerminar: (codigoParaBuscar?: string) => void; aoCancelar: () => void }) {
   const { carga, recarregar, tentarDeNovo } = useCarregar(async () => {
-    const [categorias, empresa] = await Promise.all([props.api.categorias('produto'), props.api.empresa()]);
-    return { categorias: categorias.categorias.filter((c) => c.ativa), markupBps: empresa.markup_bps };
+    const [categorias, empresa, opcoes] = await Promise.all([
+      props.api.categorias('produto'),
+      props.api.empresa(),
+      props.api.opcoesGrade(),
+    ]);
+    return {
+      categorias: categorias.categorias.filter((c) => c.ativa),
+      markupBps: empresa.markup_bps,
+      // ADR 017: só as opções ATIVAS da empresa aparecem para escolher (a configuração fica na engrenagem).
+      tamanhos: opcoes.tamanhos.filter((t) => t.ativa).map((t) => t.nome),
+      cores: opcoes.cores.filter((c) => c.ativa).map((c) => ({ nome: c.nome, amostra: c.amostra })),
+    };
   });
   if (carga.fase === 'carregando') return <Carregando linhas={3} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
@@ -67,6 +75,8 @@ export function NovoProduto(props: { api: Api; aoTerminar: (codigoParaBuscar?: s
     <Assistente
       api={props.api}
       categorias={carga.dados.categorias}
+      tamanhosDisponiveis={carga.dados.tamanhos}
+      coresDisponiveis={carga.dados.cores}
       markupBps={carga.dados.markupBps}
       aoRecarregarCategorias={() => void recarregar()}
       aoTerminar={props.aoTerminar}
@@ -81,7 +91,10 @@ const passoDoHistorico = (): Passo | undefined => (window.history.state as { usr
 function Assistente(props: {
   api: Api;
   categorias: Categoria[];
+  tamanhosDisponiveis: string[];
+  coresDisponiveis: { nome: string; amostra: string | null }[];
   markupBps: number;
+  /** Busca de novo categorias, tamanhos e cores (a engrenagem fechou); o assistente não perde o que foi preenchido. */
   aoRecarregarCategorias: () => void;
   aoTerminar: (codigoParaBuscar?: string) => void;
   aoCancelar: () => void;
@@ -230,6 +243,8 @@ function Assistente(props: {
           {TITULOS[passoAtual]}
         </Title>
         {passoAtual === 'categoria' && <BotaoConfigCategorias api={props.api} aoFechar={props.aoRecarregarCategorias} />}
+        {passoAtual === 'tamanhos' && <BotaoConfigCategorias api={props.api} aba="tamanhos" aoFechar={props.aoRecarregarCategorias} />}
+        {passoAtual === 'cores' && <BotaoConfigCategorias api={props.api} aba="cores" aoFechar={props.aoRecarregarCategorias} />}
       </Group>
       <Stack gap={6}>
         <Text size="sm" c="dimmed" data-progresso>
@@ -334,6 +349,7 @@ function Assistente(props: {
 
       {passoAtual === 'tamanhos' && (
         <PassoTamanhos
+          disponiveis={props.tamanhosDisponiveis}
           tamanhos={tamanhos}
           extras={tamanhosExtras}
           aoAlternar={(t) => setTamanhos(alternarTamanho(tamanhos, t))}
@@ -342,7 +358,7 @@ function Assistente(props: {
             if (novos.length === tamanhos.length) return;
             const t2 = t.trim().toUpperCase();
             setTamanhos(novos);
-            if (!GRADES.some((g) => (g.tamanhos as readonly string[]).includes(t2)) && !tamanhosExtras.includes(t2)) {
+            if (!props.tamanhosDisponiveis.includes(t2) && !tamanhosExtras.includes(t2)) {
               setTamanhosExtras([...tamanhosExtras, t2]);
             }
           }}
@@ -351,12 +367,13 @@ function Assistente(props: {
 
       {passoAtual === 'cores' && (
         <PassoCores
+          disponiveis={props.coresDisponiveis}
           cores={cores}
           extras={coresExtras}
           aoAlternar={(c) => setCores(alternarCor(cores, c))}
           aoAdicionar={(c) => {
             // Cor que já existe na lista (mesmo escrita de outro jeito) só é marcada; não vira um chip repetido.
-            const existente = [...CORES_SUGERIDAS, ...coresExtras].find((x) => chaveCor(x) === chaveCor(c));
+            const existente = [...props.coresDisponiveis.map((x) => x.nome), ...coresExtras].find((x) => chaveCor(x) === chaveCor(c));
             if (existente) {
               setCores(adicionarCor(cores, existente));
               return;

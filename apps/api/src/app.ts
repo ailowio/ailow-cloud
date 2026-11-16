@@ -33,6 +33,7 @@ import { registrarRotasPessoas } from './pessoas/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
 import { registrarRotasProdutos } from './produtos/rotas.js';
+import { registrarRotasOpcoesGrade } from './produtos/opcoes-grade.js';
 import { registrarRotasVendas } from './vendas/rotas.js';
 
 export interface AppDeps {
@@ -242,6 +243,7 @@ export async function buildApp({
   await registrarRotasConfiguracoes(app, deps, guardas);
   await registrarRotasFinanceiro(app, deps, guardas);
   await registrarRotasProdutos(app, deps, guardas);
+  await registrarRotasOpcoesGrade(app, deps, guardas);
   await registrarRotasClientes(app, deps, guardas);
   await registrarRotasVendas(app, deps, guardas);
   await registrarRotasCompras(app, deps, guardas);
