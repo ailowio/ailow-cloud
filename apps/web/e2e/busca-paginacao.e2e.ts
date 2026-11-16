@@ -80,8 +80,8 @@ for (const tela of ['Produtos', 'Etiquetas'] as const) {
     const busca = page.getByLabel('Buscar produto');
 
     // "cmst bra <letras>": caracteres soltos de "Camiseta" + "branca" + o sufixo único.
-    // Espera o debounce (300 ms) e o cartão com o nome único (evita ler a página ainda sem filtro).
     await busca.fill(`cmst bra ${c.letras}`);
+    await expect(busca).toHaveValue(`cmst bra ${c.letras}`);
     await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
 

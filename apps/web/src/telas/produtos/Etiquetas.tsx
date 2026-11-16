@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActionIcon, Alert, Box, Button, Group, NumberInput, Stack, Text, TextInput } from '@mantine/core';
 import { IconMinus, IconPlus, IconPrinter, IconSearch } from '@tabler/icons-react';
 import { MAX_ETIQUETAS_POR_PDF } from '@ailow/shared/puro';
@@ -8,7 +8,7 @@ import { ErroApi } from '../../api/cliente';
 import { EstadoVazio, Valor } from '../../componentes';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
-import { useBuscaNoServidor } from '../../lib/useBuscaNoServidor';
+import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
 import { avisarErro } from '../../lib/avisos';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
@@ -35,7 +35,9 @@ const SEM_PRODUTOS: Produto[] = [];
 
 export function Etiquetas(props: { api: Api }) {
   const [texto, setTexto] = useState('');
-  const [busca, setBusca] = useState('');
+  // Filtro local na hora (o que a pessoa vê); debounce só para o ?q= no servidor (igual Produtos).
+  const buscaLocal = texto.trim();
+  const buscaServidor = useTextoComEspera(texto);
   const [quantidades, setQuantidades] = useState<Quantidades>({});
   const [envio, setEnvio] = useState<Envio>({ fase: 'parado' });
   const resumo = resumoDasEtiquetas(quantidades);
@@ -46,27 +48,22 @@ export function Etiquetas(props: { api: Api }) {
     props.api.produtos(undefined, depois).then((r) => ({ itens: r.produtos, proximo: r.proximo })),
   );
   const todos = carga.fase === 'pronto' ? mais.todos : SEM_PRODUTOS;
-  const cortada = carga.fase === 'pronto' && mais.proximo !== null;
+  const cortada = carga.fase === 'pronto' && (carga.dados.truncado || mais.proximo !== null);
   // Lista cortada em 200: a busca também pergunta ao servidor (?q=) e une com o que já está carregado.
   const servidor = useBuscaNoServidor(
     cortada,
-    busca,
+    buscaServidor,
     async (q) => {
       const r = await props.api.produtos(q);
       return { itens: r.produtos, truncado: r.truncado };
     },
-    carga,
+    carga.fase === 'pronto' ? carga.dados : null,
   );
   const filtrados = useMemo(
-    () => (busca === '' ? todos : mesclarBusca(todos, servidor.itens, busca, camposDoProduto, (p) => p.id)),
-    [todos, servidor.itens, busca],
+    () => (buscaLocal === '' ? todos : mesclarBusca(todos, servidor.itens, buscaLocal, camposDoProduto, (p) => p.id)),
+    [todos, servidor.itens, buscaLocal],
   );
-  const pag = usePaginacao(filtrados, ETIQUETAS_POR_PAGINA, busca);
-
-  useEffect(() => {
-    const t = setTimeout(() => setBusca(texto.trim()), 300);
-    return () => clearTimeout(t);
-  }, [texto]);
+  const pag = usePaginacao(filtrados, ETIQUETAS_POR_PAGINA, buscaLocal);
 
   async function gerar() {
     setEnvio({ fase: 'gerando' });
@@ -114,12 +111,12 @@ export function Etiquetas(props: { api: Api }) {
         <ListaParaEtiquetas
           produtos={pag.itens}
           semNenhum={todos.length === 0}
-          truncado={avisoDeCorte(cortada, busca, servidor.truncado)}
+          truncado={avisoDeCorte(cortada, buscaLocal, servidor.truncado)}
           quantidades={quantidades}
           aoMudar={mudar}
         />
       )}
-      {carga.fase === 'pronto' && busca === '' && (
+      {carga.fase === 'pronto' && buscaLocal === '' && (
         <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />
       )}
 

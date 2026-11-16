@@ -52,8 +52,10 @@ for (const tela of ['Produtos', 'Etiquetas'] as const) {
     await expect(cartoes.filter({ hasText: nome })).toHaveCount(0);
 
     // A busca (debounce de 300 ms) consulta o servidor com ?q= e o produto aparece.
+    const campo = page.getByLabel('Buscar produto');
     const consulta = page.waitForRequest((r) => r.url().includes('/produtos?q=') && r.method() === 'GET');
-    await page.getByLabel('Buscar produto').fill(nome);
+    await campo.fill(nome);
+    await expect(campo).toHaveValue(nome);
     await consulta;
     await expect(cartoes.filter({ hasText: nome })).toHaveCount(1);
     // Busca que o servidor respondeu inteira: o aviso de corte some.
