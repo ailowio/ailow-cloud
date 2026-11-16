@@ -24,7 +24,7 @@ import { Compras } from './telas/compras/Compras';
 import { Pessoas } from './telas/pessoas/Pessoas';
 import { Vendas } from './telas/vendas/Vendas';
 
-// A tela atual é a ROTA (ADR 011): /entrar, /definir-pin, /quem-usa, /pin sem sessão; / e /<módulo> com sessão.
+// A tela atual é a ROTA (ADR 013): /entrar, /definir-pin, /quem-usa, /pin sem sessão; / e /<módulo> com sessão.
 // O estado guarda só os dados que as telas precisam. `sessao` guarda o usuário e o limite de inatividade do servidor.
 type Carga = { fase: 'carregando' } | { fase: 'erro'; mensagem: string } | { fase: 'pronto' };
 interface Sessao {

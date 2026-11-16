@@ -1,6 +1,6 @@
-# ADR 011 — Roteador no front (react-router) para o Voltar do celular
+# ADR 013 — Roteador no front (react-router) para o Voltar do celular
 
-- **Status:** proposto em 2026-11-13 (sessão S01). Aguarda decisão do Pedro.
+- **Status:** **aceito** em 2026-11-16 pelo Pedro ("manter tudo o que for necessário para os aprimoramentos de UX/UI vigorarem"). Proposto em 2026-11-13 (sessão S01) como ADR 011; renumerado para 013 porque a `main` já usava 011 e 012.
 - **Decisor:** Pedro. **Tier:** B (o app); a mudança foi escopada como A. **Regras:** UXM-01, UXM-02, UXM-03 (`harness/practices/ux-mobile.md`), ARQ-*, TEST-*.
 - **Origem:** decisão de produto (UXM-03): o Voltar do Android nunca sai do app, retrocede um passo (modal → tela → módulo → início).
 

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { abrirInicio, entrarComoDono, sufixoUnico } from './apoio';
 
 // S14b / UXM-03: em TODOS os módulos o Voltar do sistema recua exatamente um nível e nunca sai do app (360×640).
-// Cada tela interna é uma rota (ADR 011). A evidência vem do navegador real: URL, histórico e o que está visível.
+// Cada tela interna é uma rota (ADR 013). A evidência vem do navegador real: URL, histórico e o que está visível.
 
 const INICIO = 'O que vamos fazer?';
 const passo = (page: Page) => page.locator('[data-progresso]');
