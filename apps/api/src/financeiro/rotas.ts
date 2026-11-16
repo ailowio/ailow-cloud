@@ -1,7 +1,10 @@
 import {
+  type DespesaEntrada,
   SEM_CATEGORIA,
   contasAPagarResponseSchema,
+  contasAReceberResponseSchema,
   despesaEntradaSchema,
+  receitaEntradaSchema,
   erroSchema,
   estornarEntradaSchema,
   extratoQuerySchema,
@@ -89,6 +92,41 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
   const soDono = [g.exigirSessao, g.exigirPerfil('dono')];
   const erros = { 401: erroSchema, 403: erroSchema };
 
+  // Lançamento manual do Dono: despesa (saída) ou receita (entrada, ADR 015). Mesmas regras; muda o sentido.
+  type Manual = { tipo: 'saida'; origem: 'despesa' } | { tipo: 'entrada'; origem: 'receita' };
+  async function criarManual(s: ReturnType<typeof sessaoDe>, d: DespesaEntrada, m: Manual): Promise<string | null> {
+    const quando = agora();
+    return withEmpresa(pool, s.empresaId, async (c) => {
+      // A categoria tem de ser uma categoria FINANCEIRA ativa da empresa; o lançamento guarda o nome cadastrado.
+      const categoria = await nomeDaCategoriaFinanceira(c, d.categoria);
+      if (categoria === null) return null;
+      const { id: novo } = await registrarLancamento(
+        c,
+        { empresaId: s.empresaId, autorId: s.usuarioId, agora: quando },
+        {
+          tipo: m.tipo,
+          origem_tipo: m.origem,
+          origem_id: null,
+          descricao: d.descricao,
+          categoria,
+          valor_centavos: d.valor_centavos,
+          forma_pagamento: d.forma_pagamento,
+          vencimento: d.vencimento,
+          paga: d.paga,
+        },
+      );
+      await registrarEvento(c, {
+        empresaId: s.empresaId,
+        atorTipo: 'usuario',
+        atorId: s.usuarioId,
+        alvoId: novo,
+        tipo: `${m.origem}_criada`,
+        em: quando,
+      });
+      return novo;
+    });
+  }
+
   rotas.post(
     '/financeiro/despesas',
     {
@@ -102,42 +140,52 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
       },
     },
     async (request, reply) => {
-      const s = sessaoDe(request);
-      const d = request.body;
-      const quando = agora();
-      const id = await withEmpresa(pool, s.empresaId, async (c) => {
-        // A categoria tem de ser uma categoria FINANCEIRA ativa da empresa; o lançamento guarda o nome cadastrado.
-        const categoria = await nomeDaCategoriaFinanceira(c, d.categoria);
-        if (categoria === null) return null;
-        const { id: novo } = await registrarLancamento(
-          c,
-          { empresaId: s.empresaId, autorId: s.usuarioId, agora: quando },
-          {
-            tipo: 'saida',
-            origem_tipo: 'despesa',
-            origem_id: null,
-            descricao: d.descricao,
-            categoria,
-            valor_centavos: d.valor_centavos,
-            forma_pagamento: d.forma_pagamento,
-            vencimento: d.vencimento,
-            paga: d.paga,
-          },
-        );
-        await registrarEvento(c, {
-          empresaId: s.empresaId,
-          atorTipo: 'usuario',
-          atorId: s.usuarioId,
-          alvoId: novo,
-          tipo: 'despesa_criada',
-          em: quando,
-        });
-        return novo;
-      });
+      const id = await criarManual(sessaoDe(request), request.body, { tipo: 'saida', origem: 'despesa' });
       if (id === null) return reply.code(400).send({ erro: 'categoria_invalida' });
       return reply.code(201).send({ id });
     },
   );
+
+  rotas.post(
+    '/financeiro/receitas',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['financeiro'],
+        summary: 'Registra uma receita manual (entrada sem venda), a receber ou já recebida (Dono)',
+        security: sessaoCookie,
+        body: receitaEntradaSchema,
+        response: { 201: idCriadoSchema, 400: erroSchema, ...erros },
+      },
+    },
+    async (request, reply) => {
+      const id = await criarManual(sessaoDe(request), request.body, { tipo: 'entrada', origem: 'receita' });
+      if (id === null) return reply.code(400).send({ erro: 'categoria_invalida' });
+      return reply.code(201).send({ id });
+    },
+  );
+
+  // Contas em aberto de um sentido (saída = a pagar; entrada = a receber), por vencimento, com a situação.
+  async function contasEmAberto(s: ReturnType<typeof sessaoDe>, tipo: 'entrada' | 'saida') {
+    const quando = agora();
+    return withEmpresa(pool, s.empresaId, async (c) => {
+      const hoje = await hojeEm(c, quando);
+      const r = await c.query(
+        `SELECT ${COLUNAS},
+                CASE WHEN lancamentos.vencimento < $1::date THEN 'vencida'
+                     WHEN lancamentos.vencimento = $1::date THEN 'hoje'
+                     WHEN lancamentos.vencimento <= $1::date + 7 THEN 'proximos_7_dias'
+                     ELSE 'depois' END AS situacao
+           FROM lancamentos
+          WHERE status = 'aberto' AND tipo = $2
+          ORDER BY lancamentos.vencimento, criado_em, id
+          LIMIT ${LIMITE_LINHAS}`,
+        [hoje, tipo],
+      );
+      const linhas = r.rows as (LinhaBanco & { situacao: SituacaoConta })[];
+      return { hoje, contas: linhas.map((l) => ({ ...paraLancamento(l), situacao: l.situacao })) };
+    });
+  }
 
   rotas.get(
     '/financeiro/contas-a-pagar',
@@ -150,27 +198,21 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
         response: { 200: contasAPagarResponseSchema, ...erros },
       },
     },
-    async (request) => {
-      const s = sessaoDe(request);
-      const quando = agora();
-      return withEmpresa(pool, s.empresaId, async (c) => {
-        const hoje = await hojeEm(c, quando);
-        const r = await c.query(
-          `SELECT ${COLUNAS},
-                  CASE WHEN lancamentos.vencimento < $1::date THEN 'vencida'
-                       WHEN lancamentos.vencimento = $1::date THEN 'hoje'
-                       WHEN lancamentos.vencimento <= $1::date + 7 THEN 'proximos_7_dias'
-                       ELSE 'depois' END AS situacao
-             FROM lancamentos
-            WHERE status = 'aberto' AND tipo = 'saida'
-            ORDER BY lancamentos.vencimento, criado_em, id
-            LIMIT ${LIMITE_LINHAS}`,
-          [hoje],
-        );
-        const linhas = r.rows as (LinhaBanco & { situacao: SituacaoConta })[];
-        return { hoje, contas: linhas.map((l) => ({ ...paraLancamento(l), situacao: l.situacao })) };
-      });
+    async (request) => contasEmAberto(sessaoDe(request), 'saida'),
+  );
+
+  rotas.get(
+    '/financeiro/contas-a-receber',
+    {
+      preValidation: soDono,
+      schema: {
+        tags: ['financeiro'],
+        summary: 'Contas a receber em aberto (receitas manuais), por vencimento, com a situação (Dono)',
+        security: sessaoCookie,
+        response: { 200: contasAReceberResponseSchema, ...erros },
+      },
     },
+    async (request) => contasEmAberto(sessaoDe(request), 'entrada'),
   );
 
   rotas.post(
@@ -179,7 +221,7 @@ export async function registrarRotasFinanceiro(app: FastifyInstance, deps: Deps,
       preValidation: soDono,
       schema: {
         tags: ['financeiro'],
-        summary: 'Marca uma conta em aberto como paga (Dono)',
+        summary: 'Dá baixa numa conta em aberto: paga (a pagar) ou recebida (a receber) (Dono)',
         security: sessaoCookie,
         params: lancamentoIdParamsSchema,
         body: pagarEntradaSchema,

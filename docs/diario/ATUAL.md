@@ -13,15 +13,6 @@ Pendências para a próxima: ...
 Verificação: 1–3 linhas + link do PR/CI.
 ```
 
-### S14b — Deploy portável, local (sem VPS) — 2026-11-12 — Claude Sonnet 5.5
-Gate: infra/CI/segurança, **tier B**; OPS-*, ENV-*, SEC-01/04/12, AUD-*, L-0001/0005/0006/0019. Branch `feature/s14b-deploy-portavel` (de `main` em db171df, PR #26 mergeado). **Nada tocou a VPS.** Retomada após queda do PC (sessão anterior parou no meio do reinício do Docker).
-Feito: imagem do web (nginx sem root), `ops/stack/ailow.yaml` (Swarm, secrets, rede `internal`), Traefik de host novo, `backup.sh` + `restore-ensaio.sh` (rclone `crypt`), `scripts/stack-local.sh` + job `stack`, `publicar.yml` (GHCR em tag), Trivy no web, runbooks (backup novo; deploy/rollback em Swarm), inventários (rotinas novo; interfaces e acessos), ADR 010 atualizado, teste nginx = Vite.
-Achados: Swarm ignora `tmpfs:` (usar volume `type: tmpfs`) e `security_opt` (removido); `diretorio_login` é exceção deliberada (ADR 004) que o ensaio de restore não conhecia; logo mora no banco; token do Drive em "Testing" expira em 7 dias (doc oficial).
-Números: API 781 -> 783 (testes do nginx), web 250, shared 237. Restore local: 1–2 s, 26 tabelas, 14 migrações (banco de dev, **não é RTO**). Canários: nginx sem `pontos`, rede sem `internal`, GRANT indevido em `diretorio_login`, dump adulterado: todos reprovaram.
-Decisões pendentes (Pedro): proteger `main` e checks obrigatórios (humano, EX-01); roteiro do vídeo e pacote do curso **não feitos**; DNS `cloud.ailow.com.br` ainda sem resposta (8.8.8.8, 2026-11-12).
-Lições: L-0019 rec. 2 (espera por TCP), L-0005 rec. 2 (SHA de action de memória), L-0002 rec. 4 (`node -e` com escapes).
-Verificação: `verify` exit 0; `check-harness` ok; `stack-local.sh` 2x ok.
-
 ### S14c — VPS, DNS e entrega — 2026-11-13 — Claude Sonnet 5.5
 Gate: infra/deploy, **tier B**; OPS-*, ENV-*, SEC-*, AUD-24/90 (pilares 1–4), L-0003/0005/0006/0013/0019. Com o Pedro presente; diário privado fora do repo com cada comando na VPS.
 Feito: DNS ok; 3 Swarm secrets; tag `v0.1.0` → `publicar.yml` verde (1ª vez); stack `ailow` no Swarm do host; Admin + empresa "Teste Smoke"; Drive cifrado, backup real, restore do Drive, timer diário com `OnFailure` + healthchecks.io; PR #28 (docs, inventários, runbooks); tag e release **`v1.0.0`** com digests; deploy da v1.0.0, rollback real por tag e volta.
@@ -39,3 +30,10 @@ Decisões: Pedro escolheu **otimizar a busca ampla em sessão própria** (perfil
 Falhas: 2 runs do `Deploy` falharam ao reimplantar a mesma tag (corrida de DNS do `db` + espera que nunca converge; exit 21 enganoso); o Swarm reverteu a `api` sozinho. Lição registrada; correção do `deploy.sh` com teste fica em PR própria.
 Pendências: (1) **tenant de teste foi apagado** antes de o Pedro pedir para mantê-lo; recriar com `criar-tenant-teste.ps1` (corrigido) e repopular; **só apagar quando o Pedro terminar os aprimoramentos de UX/UI**; produção hoje 0 empresas, 1 Admin, 14 migrações; (2) corrigir `deploy.sh`; (3) otimizar a busca; (4) vídeo, pacote do curso e etiquetas (S08), com o Pedro.
 Verificação: k6 `rodada1/2b` (exit 99, só o limiar da busca); `/health` 200; `check-harness` e checks da PR final: ver PR.
+
+### UX rodada 2 + entrega Moodle — 2026-11-16 — Claude Opus 5.5 / Composer
+Gate: feature/UI + docs de entrega, **tier B**; UXM-*, TEST-01/08/10, DOC-*, ADR 013–017. Branch `feat/ux-mobile-rodada-2` (base `feat/ux-mobile-rodada-1`); PRs #34 e #35.
+Feito: decisões do checklist (Sair desvincula, ficha após cadastro, seta do wizard, receita/receber, grade configurável, paginação cursor+trigramas, refazer venda); `docs/entrega/` (roteiro, texto-guia, checklist Moodle); checklist PRD 4/8/9 atualizado; CHANGELOG da rodada 2; correção RNF-02 (k6 foi do PC). Handoff retomado após limite do Claude Code: S14b arquivada; e2e do #35 (Carregar mais / Etiquetas) corrigido — `Carregar mais` acima da paginação sticky.
+Decisões (Pedro): ADR 013–017 conforme commits da branch; merge #34→#35→deploy só com OK; envio Moodle só com pedido.
+Pendências: CI #35 verde; merge #34 depois #35; deploy/tag; recriar tenant de teste na VPS; gravar vídeo; RNF-02 k6 na VPS; board (opcional).
+Verificação: #34 11/11 ✅; #35 e2e falhou (fix nesta sessão, aguarda CI).

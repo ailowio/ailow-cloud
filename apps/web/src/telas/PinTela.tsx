@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Alert, Stack } from '@mantine/core';
-import { IconLock } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { Stack } from '@mantine/core';
 import type { QuemUsaItem } from '../api/endpoints';
 import { TecladoPin } from '../componentes';
+import { MENSAGEM_BLOQUEADO } from '../acesso/mensagens';
 import { avisarErro } from '../lib/avisos';
 import { Moldura } from './Moldura';
 
@@ -14,6 +14,11 @@ export function PinTela(props: {
 }) {
   const [enviando, setEnviando] = useState(false);
   const bloqueado = props.alvo.bloqueado;
+
+  // Decisão do Pedro (2026-11-16): o bloqueio avisa em toast, como os outros erros do PIN (UXM-04); o teclado fica parado.
+  useEffect(() => {
+    if (bloqueado) avisarErro(MENSAGEM_BLOQUEADO);
+  }, [bloqueado]);
 
   async function completo(pin: string) {
     setEnviando(true);
@@ -33,12 +38,6 @@ export function PinTela(props: {
       voltar={{ rotulo: 'Trocar de pessoa', aoVoltar: props.aoVoltar }}
     >
       <Stack gap="md" align="center">
-        {/* Estado fixo desde a abertura da tela (não é resposta a um erro): não muda de altura depois. */}
-        {bloqueado && (
-          <Alert color="red" icon={<IconLock />} w="100%">
-            Usuário bloqueado por PIN errado. Peça ao Dono para desbloquear.
-          </Alert>
-        )}
         <TecladoPin onCompleto={(pin) => void completo(pin)} desabilitado={enviando || bloqueado} />
       </Stack>
     </Moldura>

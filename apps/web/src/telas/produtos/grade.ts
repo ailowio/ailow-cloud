@@ -1,5 +1,6 @@
 import type { SkuNovo } from '@ailow/shared';
 import {
+  CORES_PADRAO,
   ESTOQUE_MAXIMO,
   MAX_CORES_POR_PRODUTO,
   PRECO_MAXIMO_CENTAVOS,
@@ -19,8 +20,20 @@ export const GRADES = [
   { id: 'unico', rotulo: 'Tamanho único', tamanhos: ['U'] },
 ] as const;
 
-// Sugestões para tocar em vez de digitar; a lista cresce com o uso na loja (P1 §3, regra 4).
-export const CORES_SUGERIDAS = ['Preto', 'Nude', 'Branco', 'Vermelho', 'Chocolate', 'Vinho', 'Rosa', 'Azul'];
+// Cores padrão de toda empresa nova (ADR 017: a lista real vem da configuração da empresa, GET /opcoes-grade).
+export const CORES_SUGERIDAS = CORES_PADRAO.map((c) => c.nome);
+
+/**
+ * ADR 017: grupos de chips do passo "Tamanhos". Os tamanhos vêm da configuração (ativos) mais os digitados agora;
+ * os grupos das GRADES só organizam a tela. Grupo sem nenhum tamanho some; o resto vai para "outros".
+ */
+export function gruposDeTamanho(ativos: readonly string[], digitados: readonly string[]): { id: string; tamanhos: string[] }[] {
+  const todos = [...new Set([...ativos, ...digitados])];
+  const nosGrupos = new Set<string>(GRADES.flatMap((g) => [...g.tamanhos]));
+  const grupos = GRADES.map((g) => ({ id: g.id as string, tamanhos: todos.filter((t) => (g.tamanhos as readonly string[]).includes(t)).sort(compararTamanhos) }));
+  const outros = todos.filter((t) => !nosGrupos.has(t)).sort(compararTamanhos);
+  return [...grupos, { id: 'outros', tamanhos: outros }].filter((g) => g.tamanhos.length > 0);
+}
 
 // Amostra de cor dos chips (S10). Só as sugeridas têm tom; cor digitada à mão fica sem amostra (null).
 const AMOSTRAS_DE_COR: Record<string, string> = {

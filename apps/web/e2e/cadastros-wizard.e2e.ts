@@ -106,10 +106,11 @@ for (const tema of TEMAS) {
     const salvo = page.waitForResponse((x) => x.url().includes('/clientes') && x.request().method() === 'POST');
     await principal(page).click();
     expect((await salvo).status()).toBe(201);
-    // Depois de cadastrar, volta à lista de clientes (com o aviso "Cliente cadastrado").
+    // Depois de cadastrar, volta à lista de clientes (aviso "Cliente cadastrado") com a FICHA do novo cliente aberta
+    // (decisão do Pedro, 2026-11-16; antes a ficha não abria).
     await expect(toast(page, 'Cliente cadastrado')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Clientes', level: 1 })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Novo cliente' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toContainText(nome);
 
     const r = await api.get(`/clientes?q=${encodeURIComponent(nome)}`);
     const { clientes } = (await r.json()) as { clientes: { nome: string; celular: string; aviso_lgpd_em: string | null }[] };

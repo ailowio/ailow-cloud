@@ -15,9 +15,33 @@ import { SITUACOES, rotuloSituacao } from './rotulos';
 
 const SEM_CONTAS: ContaAPagar[] = [];
 
-/** RF-FIN-03: contas a pagar por vencimento (vencidas em destaque, hoje, próximos 7 dias) e "marcar como pago". */
-export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: () => void }) {
-  const { carga, recarregar, tentarDeNovo } = useCarregar(() => api.contasAPagar());
+type Lado = 'pagar' | 'receber';
+const TEXTOS: Record<Lado, { vazio: string; vazioTexto: string; nova: string; total: string; baixar: string; data: string }> = {
+  pagar: {
+    vazio: 'Nenhuma conta a pagar',
+    vazioTexto: 'Quando você lançar uma despesa que ainda não foi paga, ela aparece aqui por ordem de vencimento.',
+    nova: 'Nova despesa',
+    total: 'Total a pagar',
+    baixar: 'Marcar como pago',
+    data: 'vence em',
+  },
+  receber: {
+    vazio: 'Nenhuma conta a receber',
+    vazioTexto: 'Quando você lançar uma receita que ainda não entrou no caixa, ela aparece aqui por ordem de data.',
+    nova: 'Nova receita',
+    total: 'Total a receber',
+    baixar: 'Marcar como recebido',
+    data: 'recebe em',
+  },
+};
+
+/**
+ * RF-FIN-03: contas a pagar por vencimento (vencidas em destaque, hoje, próximos 7 dias) e "marcar como pago".
+ * ADR 015: com `lado="receber"`, a mesma tela lista as contas a receber (receitas em aberto) e dá baixa no recebimento.
+ */
+export function ContasAPagar({ api, aoNovaDespesa, lado = 'pagar' }: { api: Api; aoNovaDespesa: () => void; lado?: Lado }) {
+  const t = TEXTOS[lado];
+  const { carga, recarregar, tentarDeNovo } = useCarregar(() => (lado === 'receber' ? api.contasAReceber() : api.contasAPagar()));
   const [pagando, setPagando] = useState<ContaAPagar | null>(null);
   const [cancelando, setCancelando] = useState<ContaAPagar | null>(null);
   const [texto, setTexto] = useState('');
@@ -43,12 +67,7 @@ export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: 
   const { contas } = carga.dados;
   if (contas.length === 0) {
     return (
-      <EstadoVazio
-        titulo="Nenhuma conta a pagar"
-        texto="Quando você lançar uma despesa que ainda não foi paga, ela aparece aqui por ordem de vencimento."
-        acao="Nova despesa"
-        onAcao={aoNovaDespesa}
-      />
+      <EstadoVazio titulo={t.vazio} texto={t.vazioTexto} acao={t.nova} onAcao={aoNovaDespesa} />
     );
   }
 
@@ -57,7 +76,7 @@ export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: 
     <Stack gap="lg">
       <Stack gap={2} p="md" className="ailow-cartao">
         <Text c="dimmed">
-          Total a pagar ({contas.length} {contas.length === 1 ? 'conta' : 'contas'})
+          {t.total} ({contas.length} {contas.length === 1 ? 'conta' : 'contas'})
         </Text>
         <Text fz={28} fw={700}>
           <Valor centavos={total} destaque />
@@ -95,13 +114,14 @@ export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: 
                   {c.descricao ?? 'Conta'}
                 </Text>
                 <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
-                  {c.categoria ? `${c.categoria} · ` : ''}vence em {formatarData(c.vencimento)}
+                  {c.categoria ? `${c.categoria} · ` : ''}
+                  {t.data} {formatarData(c.vencimento)}
                 </Text>
                 <Text fz="xl">
                   <Valor centavos={c.valor_centavos} destaque />
                 </Text>
                 <Button h={48} onClick={() => setPagando(c)}>
-                  Marcar como pago
+                  {t.baixar}
                 </Button>
                 <Button h={48} variant="default" onClick={() => setCancelando(c)} aria-label={`Cancelar conta ${c.descricao ?? ''}`}>
                   Cancelar conta
@@ -114,7 +134,7 @@ export function ContasAPagar({ api, aoNovaDespesa }: { api: Api; aoNovaDespesa: 
 
       <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
 
-      {pagando && <PagarModal api={api} conta={pagando} aoFechar={fechar} aoPago={fechar} />}
+      {pagando && <PagarModal api={api} conta={pagando} recebimento={lado === 'receber'} aoFechar={fechar} aoPago={fechar} />}
       {cancelando && (
         <EstornarModal
           api={api}

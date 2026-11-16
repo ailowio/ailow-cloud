@@ -11,7 +11,7 @@ const alvo = process.env.API_URL ?? 'http://127.0.0.1:3000';
 // (`Accept: */*`). `bypass` devolve o index.html do app para a navegação, e o resto segue para a API.
 const ROTAS_DO_FRONT = /^\/(vendas|produtos|clientes|compras|financeiro)(\/|\?|$)/;
 const proxy = {
-  '^/(acesso|usuarios|empresa|categorias|financeiro|produtos|skus|estoque|etiquetas|clientes|vendas|fornecedores|compras|pontos|admin|health|openapi\\.json)(/|\\?|$)': {
+  '^/(acesso|usuarios|empresa|categorias|financeiro|produtos|opcoes-grade|skus|estoque|etiquetas|clientes|vendas|fornecedores|compras|pontos|admin|health|openapi\\.json)(/|\\?|$)': {
     target: alvo,
     changeOrigin: false,
     bypass: (req: { url?: string; headers: { accept?: string } }) =>

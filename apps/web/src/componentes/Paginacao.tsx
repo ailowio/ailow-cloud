@@ -7,12 +7,20 @@ import { paginar } from '../lib/paginar';
  * Estado da página. A página volta a 1 sempre que `itens` muda de identidade (ex.: nova busca); quem chama deve
  * passar uma lista memorizada (`useMemo`) para não reiniciar a cada render.
  */
-export function usePaginacao<T>(itens: readonly T[], tamanho: number) {
+/**
+ * Sem `busca`: a lista mudou ⇒ volta à página 1. Com `busca` (listas que o servidor pagina, ADR 016): só a BUSCA nova
+ * volta à página 1; itens que chegam depois (resultado do servidor, "Carregar mais", recarga após editar) mantêm a
+ * página em que a pessoa está (presa ao total). Antes, a resposta atrasada do servidor a jogava de volta à página 1.
+ */
+export function usePaginacao<T>(itens: readonly T[], tamanho: number, busca?: string) {
   const [pagina, setPagina] = useState(1);
   const [lista, setLista] = useState(itens);
-  if (lista !== itens) {
+  const [buscaAnterior, setBuscaAnterior] = useState(busca);
+  if (lista !== itens || buscaAnterior !== busca) {
+    const manter = busca !== undefined && buscaAnterior === busca;
     setLista(itens);
-    setPagina(1);
+    setBuscaAnterior(busca);
+    if (!manter) setPagina(1);
   }
   const p = paginar(itens, pagina, tamanho);
   return { ...p, irPara: setPagina };

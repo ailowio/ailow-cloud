@@ -3,6 +3,7 @@ import { ActionIcon, Box, Button, Container, Group, Stack, Text, Title, useCompu
 import { IconArrowLeft, IconMoon, IconSun } from '@tabler/icons-react';
 import { Logo } from '../componentes/Logo';
 import { MenuUsuario } from '../componentes/sessao';
+import { versaoDoApp } from '../lib/versao';
 
 /** Alterna claro/escuro. Alvo de 48 px; o rótulo diz a ação, não o estado. */
 function AlternarTema() {
@@ -34,6 +35,7 @@ export function Moldura(props: {
   logoEmpresa?: boolean;
   children: ReactNode;
 }) {
+  const versao = versaoDoApp();
   return (
     // UXM-01: a tela tem altura fixa; só o <main> rola (o topo fica parado).
     <Box className="ailow-tela" h="100dvh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -82,6 +84,12 @@ export function Moldura(props: {
             {props.children}
           </Stack>
         </Container>
+      </Box>
+      {/* Versão discreta: não compete com o conteúdo; útil para conferir o que está no ar. */}
+      <Box component="footer" py={6} style={{ flexShrink: 0 }}>
+        <Text size="xs" c="dimmed" ta="center" opacity={0.45} aria-label={`Versão ${versao}`}>
+          {versao}
+        </Text>
       </Box>
     </Box>
   );

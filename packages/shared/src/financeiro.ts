@@ -33,7 +33,8 @@ export const TIPOS_LANCAMENTO = ['entrada', 'saida'] as const;
 export const tipoLancamentoSchema = z.enum(TIPOS_LANCAMENTO);
 export type TipoLancamento = z.infer<typeof tipoLancamentoSchema>;
 
-export const ORIGENS_LANCAMENTO = ['venda', 'compra', 'despesa', 'estorno'] as const;
+// `receita` (ADR 015): entrada manual do Dono, sem venda de origem (sinal, aporte, serviço); pode ficar a receber.
+export const ORIGENS_LANCAMENTO = ['venda', 'compra', 'despesa', 'receita', 'estorno'] as const;
 export const origemLancamentoSchema = z.enum(ORIGENS_LANCAMENTO);
 export const STATUS_LANCAMENTO = ['aberto', 'pago', 'estornado'] as const;
 export const statusLancamentoSchema = z.enum(STATUS_LANCAMENTO);
@@ -47,8 +48,8 @@ const categoriaTextoSchema = z.string().trim().min(1, { error: 'informe a catego
 export const lancamentoNovoSchema = z
   .object({
     tipo: tipoLancamentoSchema,
-    origem_tipo: z.enum(['venda', 'compra', 'despesa']),
-    // Id da venda/compra de origem; despesa não tem.
+    origem_tipo: z.enum(['venda', 'compra', 'despesa', 'receita']),
+    // Id da venda/compra de origem; despesa e receita (lançamentos manuais) não têm.
     origem_id: z.uuid().nullable(),
     descricao: descricaoSchema.nullable(),
     categoria: categoriaTextoSchema.nullable(),
@@ -58,16 +59,16 @@ export const lancamentoNovoSchema = z
     // true = nasce paga (pago_em = agora); false = em aberto (conta a pagar/receber).
     paga: z.boolean(),
   })
-  .refine((l) => (l.origem_tipo === 'venda') === (l.tipo === 'entrada'), {
-    error: 'venda é entrada; compra e despesa são saída',
+  .refine((l) => (l.origem_tipo === 'venda' || l.origem_tipo === 'receita') === (l.tipo === 'entrada'), {
+    error: 'venda e receita são entrada; compra e despesa são saída',
     path: ['tipo'],
   })
-  .refine((l) => (l.origem_tipo === 'despesa') === (l.origem_id === null), {
-    error: 'venda e compra exigem o id de origem; despesa não tem',
+  .refine((l) => (l.origem_tipo === 'despesa' || l.origem_tipo === 'receita') === (l.origem_id === null), {
+    error: 'venda e compra exigem o id de origem; despesa e receita não têm',
     path: ['origem_id'],
   })
-  .refine((l) => l.origem_tipo !== 'despesa' || l.descricao !== null, {
-    error: 'despesa exige descrição',
+  .refine((l) => (l.origem_tipo !== 'despesa' && l.origem_tipo !== 'receita') || l.descricao !== null, {
+    error: 'despesa e receita exigem descrição',
     path: ['descricao'],
   })
   .refine((l) => !l.paga || l.forma_pagamento !== null, {
@@ -92,6 +93,22 @@ export const despesaEntradaSchema = z
     path: ['forma_pagamento'],
   });
 export type DespesaEntrada = z.infer<typeof despesaEntradaSchema>;
+
+// Receita manual (ADR 015): mesmos campos da despesa; `paga` = já recebida (exige a forma), senão fica a receber.
+export const receitaEntradaSchema = z
+  .object({
+    descricao: descricaoSchema,
+    categoria: categoriaTextoSchema,
+    valor_centavos: valorCentavosSchema,
+    vencimento: dataSchema,
+    forma_pagamento: formaPagamentoSchema.nullable(),
+    paga: z.boolean(),
+  })
+  .refine((d) => !d.paga || d.forma_pagamento !== null, {
+    error: 'receita já recebida exige a forma de pagamento',
+    path: ['forma_pagamento'],
+  });
+export type ReceitaEntrada = z.infer<typeof receitaEntradaSchema>;
 
 export const lancamentoSchema = z.object({
   id: z.uuid(),
@@ -134,6 +151,8 @@ export const contasAPagarResponseSchema = z.object({
   hoje: dataSchema,
   contas: z.array(contaAPagarSchema),
 });
+// Contas a receber (ADR 015): mesmo formato, só com as ENTRADAS em aberto.
+export const contasAReceberResponseSchema = contasAPagarResponseSchema;
 
 // Relatório (RF-FIN-05) e extrato do dia.
 export const relatorioQuerySchema = z.object({

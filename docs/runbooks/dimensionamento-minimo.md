@@ -22,7 +22,8 @@ Os limites são **tetos** (`deploy.resources.limits`), sem reserva; variáveis `
 ## 2. Consumo medido
 - **Em repouso (2026-11-12/13):** RAM `api` 44–48 MiB, `db` 53 MiB, `web` 6 MiB (≈ 110 MiB no total); CPU < 1 % por serviço; carga do host 0,3–0,9.
 - **Sob 50 usuários simultâneos (k6, ~110 s, ~5 900 vendas + ~5 900 buscas, erro 0 %):** `api` ≈ 80–108 % e `db` ≈ 105–118 % de **1 CPU** cada (presos no teto de 1,0), `web` ≈ 10–18 %. Somados, **~2,2 CPU** reais. Carga do host (4 núcleos) chegou a **4,8–5,85**, dividida com os outros serviços do host.
-- **Com teto de 1,5 CPU** (medição pontual): `api` ≤ ~104 % e `db` ≤ ~131 %. Ou seja, o consumo **não** subiu até o teto novo: mais CPU não destrava a busca.
+- **Com teto de 1,5 CPU** (medição pontual): `api` ≤ ~104 % e `db` ≤ ~131 %. O consumo **não** subiu até o teto novo.
+- **Correção (2026-11-16, informada pelo Pedro):** o gerador de carga (k6) dessas rodadas rodou **no PC do Pedro, pela internet** (RTT ≈ 61 ms), não na VPS. O p95 medido inclui a rede e o próprio PC pode ter sido o gargalo; por isso "mais CPU não destrava a busca" é **hipótese, não conclusão**. A medição válida para o RNF-02 é com o k6 **na VPS** (ou numa máquina na mesma rede), 3 rodadas seguidas, sem escolher a melhor (L-0017).
 
 ## 3. Desempenho obtido (50 usuários, do PC do Pedro, RTT ≈ 61 ms até a VPS)
 | Requisito | Meta | `v1.0.0` | `v1.0.1` (1,0 CPU) | `v1.0.1` (1,5 CPU) |
@@ -31,7 +32,7 @@ Os limites são **tetos** (`deploy.resources.limits`), sem reserva; variáveis `
 | RNF-02: buscar produto p95 | ≤ 300 ms | 474 ❌ | 427 ❌ | 529 ❌ |
 | Erro | < 1 % | 0 % | 0 % | 0 % |
 
-A venda passa com folga na configuração acima. A busca **não** passa, e o gargalo **não é CPU** nem o SQL (a consulta da busca ampla executa em 0,23 ms): nem o tamanho da resposta (a busca por 1 modelo é tão lenta quanto a ampla). Dentro da API a requisição passa ~250 ms esperando com o event loop folgado; a hipótese é fila no pool de 10 conexões do Postgres (`DB_POOL_MAX`), **ainda não medida**. Próximo passo: medir a espera do pool e testar `DB_POOL_MAX` maior só na `api`. Em ambiente local (S13b2, sem rede e sem host compartilhado) a busca dava 246–268 ms.
+A venda passa com folga na configuração acima. A busca **não** passa nessas medições (feitas do PC; ver a correção acima), e o gargalo **não parece ser** CPU nem o SQL (a consulta da busca ampla executa em 0,23 ms): nem o tamanho da resposta (a busca por 1 modelo é tão lenta quanto a ampla). Dentro da API a requisição passa ~250 ms esperando com o event loop folgado; a hipótese é fila no pool de 10 conexões do Postgres (`DB_POOL_MAX`), **ainda não medida**. Próximo passo: medir a espera do pool e testar `DB_POOL_MAX` maior só na `api`. Em ambiente local (S13b2, sem rede e sem host compartilhado) a busca dava 246–268 ms.
 
 ## 4. Mínimo recomendado para quem for reproduzir
 Como ponto de partida **prático** (derivado do que rodou, não de um teste de mínimo):

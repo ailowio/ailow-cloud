@@ -14,6 +14,7 @@ import {
   NUMERO_MAXIMO_PRODUTO,
 } from '@ailow/shared';
 import type pg from 'pg';
+import { type Cursor, novoCursor } from '../paginacao.js';
 import { type ContextoEstoque, registrarMovimento } from './estoque.js';
 import type { DadosEtiqueta } from './etiquetas.js';
 
@@ -165,29 +166,35 @@ export async function listarProdutos(
   c: pg.PoolClient,
   perfil: Perfil,
   q: string | undefined,
-): Promise<{ produtos: Produto[]; truncado: boolean }> {
+  depois: Cursor | null = null,
+): Promise<{ produtos: Produto[]; truncado: boolean; proximo: string | null }> {
   const dono = perfil === 'dono';
   const busca = q?.trim() ?? '';
   const preco = busca === '' ? null : faixaDePreco(busca);
   const porNome = `%${comoTexto(semAcento(busca).toLowerCase())}%`;
   const porCodigo = `%${comoTexto(busca.toUpperCase())}%`;
 
+  // ADR 016: busca pelo índice de trigramas (ailow_busca) e página por cursor na ordem (lower(nome), numero).
   const produtos = await c.query(
-    `SELECT ${dono ? COLUNAS_PRODUTO_DONO : COLUNAS_PRODUTO_BASE}
+    `SELECT ${dono ? COLUNAS_PRODUTO_DONO : COLUNAS_PRODUTO_BASE}, lower(p.nome) AS chave_ordem
        FROM produtos p
        JOIN categorias c ON c.empresa_id = p.empresa_id AND c.id = p.categoria_id
       WHERE p.ativo
         AND ($1::text = ''
-             OR lower(translate(p.nome, '${COM_ACENTO}', '${SEM_ACENTO}')) LIKE $2 ESCAPE '\\'
+             OR ailow_busca(p.nome) LIKE $2 ESCAPE '\\'
              OR EXISTS (SELECT 1 FROM skus k WHERE k.produto_id = p.id AND k.codigo LIKE $3 ESCAPE '\\')
              OR ($4::int IS NOT NULL AND p.preco_centavos BETWEEN $4::int AND $5::int))
+        AND ($6::text IS NULL OR (lower(p.nome), p.numero) > ($6::text, $7::int))
       ORDER BY lower(p.nome), p.numero
       LIMIT ${LIMITE_PRODUTOS_NA_LISTA + 1}`,
-    [busca, porNome, porCodigo, preco?.min ?? null, preco?.max ?? null],
+    [busca, porNome, porCodigo, preco?.min ?? null, preco?.max ?? null, depois?.[0] ?? null, depois?.[1] ?? null],
   );
   const truncado = produtos.rowCount !== null && produtos.rowCount > LIMITE_PRODUTOS_NA_LISTA;
-  const linhas = produtos.rows.slice(0, LIMITE_PRODUTOS_NA_LISTA);
-  if (linhas.length === 0) return { produtos: [], truncado: false };
+  const pagina = produtos.rows.slice(0, LIMITE_PRODUTOS_NA_LISTA);
+  if (pagina.length === 0) return { produtos: [], truncado: false, proximo: null };
+  const ultima = pagina[pagina.length - 1] as { chave_ordem: string; numero: number };
+  const proximo = truncado ? novoCursor([ultima.chave_ordem, ultima.numero]) : null;
+  const linhas = pagina.map(({ chave_ordem: _chave, ...resto }) => resto);
 
   const skus = await c.query(
     `SELECT ${dono ? COLUNAS_SKU_DONO : COLUNAS_SKU_BASE} FROM skus s WHERE s.produto_id = ANY($1::uuid[])`,
@@ -202,6 +209,7 @@ export async function listarProdutos(
   return {
     produtos: linhas.map((l) => ({ ...(l as Produto), skus: (porProduto.get(l.id) ?? []).sort(ordenar) })),
     truncado,
+    proximo,
   };
 }
 

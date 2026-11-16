@@ -10,6 +10,8 @@ import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servido
 import { camposDoFornecedor } from '../../lib/campos-busca-listas';
 import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
 import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
+import { useMaisPaginas } from '../../lib/useMaisPaginas';
+import { CarregarMais } from '../../componentes/CarregarMais';
 import { useSalvarComToast } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import {
@@ -30,7 +32,7 @@ const TITULOS: Record<PassoPedido, string> = {
 
 /** RF-COM-02 em passos curtos (fornecedor → peças → confirmar, S13): salva como rascunho; o envio é na ficha do pedido. */
 export function NovoPedido(props: { api: Api; aoCancelar: () => void; aoCriar: (id: string) => void }) {
-  const forn = useCarregar(() => props.api.fornecedores());
+  const forn = useCarregar(() => props.api.fornecedores().then((r) => ({ ...r, itens: r.fornecedores })));
   if (forn.carga.fase === 'carregando') return <Carregando linhas={3} />;
   if (forn.carga.fase === 'erro') return <ErroCarregar mensagem={forn.carga.mensagem} aoTentar={forn.tentarDeNovo} />;
   if (forn.carga.dados.fornecedores.length === 0) {
@@ -39,8 +41,7 @@ export function NovoPedido(props: { api: Api; aoCancelar: () => void; aoCriar: (
   return (
     <Assistente
       api={props.api}
-      fornecedores={forn.carga.dados.fornecedores}
-      cortada={forn.carga.dados.truncado}
+      primeiraPagina={forn.carga.dados}
       versao={forn.carga}
       aoCancelar={props.aoCancelar}
       aoCriar={props.aoCriar}
@@ -50,19 +51,24 @@ export function NovoPedido(props: { api: Api; aoCancelar: () => void; aoCriar: (
 
 function Assistente(props: {
   api: Api;
-  fornecedores: Fornecedor[];
-  cortada: boolean;
+  /** 1ª página de fornecedores do servidor; "Carregar mais" traz as próximas (ADR 016). */
+  primeiraPagina: { itens: Fornecedor[]; proximo: string | null };
   versao: unknown;
   aoCancelar: () => void;
   aoCriar: (id: string) => void;
 }) {
+  const mais = useMaisPaginas(props.primeiraPagina, (depois) =>
+    props.api.fornecedores(undefined, depois).then((x) => ({ itens: x.fornecedores, proximo: x.proximo })),
+  );
+  const fornecedores = mais.todos as Fornecedor[];
+  const cortada = mais.proximo !== null;
   const [r, setR] = useState<RascunhoPedido>({ fornecedorId: null, linhas: [] });
   // O escolhido pode ter vindo da busca no servidor (fora dos 200 carregados): guarda o objeto inteiro.
   const [escolhido, setEscolhido] = useState<Fornecedor | null>(null);
   const [textoForn, setTextoForn] = useState('');
   const buscaForn = useTextoComEspera(textoForn);
   const servidorForn = useBuscaNoServidor(
-    props.cortada,
+    cortada,
     buscaForn,
     async (q) => {
       const x = await props.api.fornecedores(q);
@@ -72,10 +78,8 @@ function Assistente(props: {
   );
   const fornecedoresVisiveis = useMemo(
     () =>
-      buscaForn === ''
-        ? props.fornecedores
-        : mesclarBusca(props.fornecedores, servidorForn.itens, buscaForn, camposDoFornecedor, (f) => f.id),
-    [props.fornecedores, servidorForn.itens, buscaForn],
+      buscaForn === '' ? fornecedores : mesclarBusca(fornecedores, servidorForn.itens, buscaForn, camposDoFornecedor, (f) => f.id),
+    [fornecedores, servidorForn.itens, buscaForn],
   );
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
@@ -168,10 +172,13 @@ function Assistente(props: {
               </UnstyledButton>
             );
           })}
-          {avisoDeCorte(props.cortada, buscaForn, servidorForn.truncado) && (
+          {avisoDeCorte(cortada, buscaForn, servidorForn.truncado) && (
             <Text size="sm" c="dimmed" data-aviso-corte>
               {AVISO_CORTE}
             </Text>
+          )}
+          {buscaForn === '' && (
+            <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={fornecedores.length} aoTocar={mais.carregarMais} />
           )}
         </Stack>
       )}

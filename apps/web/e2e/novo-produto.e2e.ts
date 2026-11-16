@@ -209,11 +209,14 @@ test('(d) Voltar do sistema: recua cada passo, e só do primeiro passo sai do as
   await page.locator('[data-botao="secundario"]').click();
   await expect(page.getByLabel('Buscar produto')).toBeVisible();
 
-  // Sair pela seta da tela com passos já dados não deixa passos "fantasma": um Voltar do sistema vai ao Início.
+  // Seta do topo padronizada (decisão do Pedro, 2026-11-16): igual aos outros assistentes e ao Voltar do sistema,
+  // ela recua UM passo (antes saía do assistente inteiro). No 1º passo, cai na lista; sem passos "fantasma".
   await page.getByRole('button', { name: 'Novo produto' }).first().click();
   await page.getByRole('button', { name: nomeCat }).click();
   await continuar(page);
   await expect(page.getByRole('heading', { name: 'Nome e porte' })).toBeVisible();
+  await page.getByRole('button', { name: 'Voltar para Produtos' }).click();
+  await expect(page.getByRole('heading', { name: 'Que tipo de peça é?' })).toBeVisible();
   await page.getByRole('button', { name: 'Voltar para Produtos' }).click();
   await expect(page.getByLabel('Buscar produto')).toBeVisible();
   await page.goBack();

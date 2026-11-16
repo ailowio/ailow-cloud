@@ -77,23 +77,31 @@ export function useVoltar(reserva = '/'): () => void {
 /**
  * Sair de um assistente (cancelar ou concluir) devolve todas as entradas que ele empurrou e cai no pai; com `depois`,
  * segue para outra tela empurrando-a (o Voltar dela volta ao pai, nunca ao assistente). Sem entradas para devolver
- * (link direto), troca a tela atual pelo pai.
+ * (link direto), troca a tela atual pelo pai. `aoChegar` roda quando o histórico já assentou no destino: é onde se
+ * abre um pop-up (ex.: a ficha do cliente recém-cadastrado), que empurra a própria entrada sem ser desfeito.
  */
-export function useSairDoAssistente(pai: string): (depois?: string) => void {
+export function useSairDoAssistente(pai: string): (depois?: string, aoChegar?: () => void) => void {
   const navigate = useNavigate();
   return useCallback(
-    (depois?: string) => {
+    (depois?: string, aoChegar?: () => void) => {
       const { trava, n = 0 } = estadoAtual();
       const devolver = trava ? n : n + 1;
+      const chegar = () => {
+        if (aoChegar) setTimeout(aoChegar, 0);
+      };
       const seguir = () => {
         if (trava) navigate(pai, { replace: true, state: { trava: true } });
         if (depois && window.location.pathname !== depois) navigate(depois);
+        chegar();
       };
       if (devolver === 0) seguir();
       else if (posicao() >= devolver) {
         window.addEventListener('popstate', () => setTimeout(seguir, 0), { once: true });
         navigate(-devolver);
-      } else navigate(depois ?? pai, { replace: true });
+      } else {
+        navigate(depois ?? pai, { replace: true });
+        chegar();
+      }
     },
     [navigate, pai],
   );

@@ -4,8 +4,10 @@ import type { ErroApi } from '../api/cliente';
 const SEM_CONEXAO = 'Sem conexão. Verifique a internet e tente de novo.';
 const ERRO_NOSSO = 'Algo deu errado do nosso lado. Tente de novo.';
 
+export const MENSAGEM_BLOQUEADO = 'Usuário bloqueado por PIN errado. Peça ao Dono para desbloquear.';
+
 export function mensagemPin(e: ErroApi): string {
-  if (e.status === 423) return 'Usuário bloqueado por PIN errado. Peça ao Dono para desbloquear.';
+  if (e.status === 423) return MENSAGEM_BLOQUEADO;
   if (e.codigo === 'pin_invalido') {
     const n = e.tentativasRestantes;
     if (n === 1) return 'PIN errado. Resta 1 tentativa: o próximo erro bloqueia.';

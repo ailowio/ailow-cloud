@@ -13,6 +13,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { type Deps, naoEncontrado, registrarEvento, semConteudo, semPermissao } from '../acesso/comum.js';
 import { type Guardas, sessaoDe } from '../acesso/guardas.js';
 import { withEmpresa } from '../db.js';
+import { lerCursor } from '../paginacao.js';
 import {
   ErroCliente,
   buscarCliente,
@@ -58,9 +59,11 @@ export async function registrarRotasClientes(app: FastifyInstance, deps: Deps, g
     },
     async (request, reply) => {
       const s = sessaoDe(request);
-      const { q, situacao } = request.query;
+      const { q, situacao, depois } = request.query;
       if (situacao === 'inativos' && s.perfil !== 'dono') return semPermissao(reply);
-      return withEmpresa(pool, s.empresaId, (c) => listarClientes(c, q, situacao));
+      const cursor = depois === undefined ? null : lerCursor(depois, 'uuid');
+      if (depois !== undefined && cursor === null) return reply.code(400).send({ erro: 'cursor_invalido' });
+      return withEmpresa(pool, s.empresaId, (c) => listarClientes(c, q, situacao, cursor));
     },
   );
 

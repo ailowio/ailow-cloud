@@ -11,6 +11,8 @@ import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
 import { ITENS_POR_PAGINA, camposDoCliente } from '../../lib/campos-busca-listas';
 import { useBuscaNoServidor, useTextoComEspera } from '../../lib/useBuscaNoServidor';
+import { useMaisPaginas } from '../../lib/useMaisPaginas';
+import { CarregarMais } from '../../componentes/CarregarMais';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { Moldura } from '../Moldura';
 import { FichaCliente } from './FichaCliente';
@@ -42,11 +44,11 @@ export function Clientes(props: { api: Api; perfil: Perfil; aoVoltar: () => void
         <NovoCliente
           api={props.api}
           aoCancelar={() => sair()}
-          // S13: o assistente devolve as entradas do histórico ao sair e isso fecharia uma ficha aberta no mesmo
-          // instante; por isso volta à lista (com o aviso "Cliente cadastrado") em vez de abrir a ficha.
-          aoCriar={() => {
+          // Decisão do Pedro (2026-11-16): depois de cadastrar, a ficha do cliente abre. Ela só abre quando o assistente
+          // já devolveu as entradas dele ao histórico (`aoChegar`); abrir no mesmo instante a fecharia (S13).
+          aoCriar={(id) => {
             setRodada((r) => r + 1);
-            sair();
+            sair(undefined, () => setAbertoId(id));
           }}
         />
       </Moldura>
@@ -118,9 +120,15 @@ function Lista(props: { api: Api; dono: boolean; aoNovo: () => void; aoAbrir: (i
 function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoNovo: () => void; aoAbrir: (id: string) => void }) {
   // Lista carregada uma vez (o servidor corta em 200); busca ampla e paginação no cliente. Cortada: a busca
   // também pergunta ao servidor (?q=) e une.
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.clientes(undefined, props.situacao));
-  const todos = carga.fase === 'pronto' ? carga.dados.clientes : SEM_CLIENTES;
-  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  const { carga, tentarDeNovo } = useCarregar(() =>
+    props.api.clientes(undefined, props.situacao).then((r) => ({ ...r, itens: r.clientes })),
+  );
+  // ADR 016: "Carregar mais" traz as próximas páginas do servidor; com tudo carregado, a lista deixa de estar cortada.
+  const mais = useMaisPaginas(carga.fase === 'pronto' ? carga.dados : null, (depois) =>
+    props.api.clientes(undefined, props.situacao, depois).then((r) => ({ itens: r.clientes, proximo: r.proximo })),
+  );
+  const todos = carga.fase === 'pronto' ? mais.todos : SEM_CLIENTES;
+  const cortada = carga.fase === 'pronto' && mais.proximo !== null;
   const servidor = useBuscaNoServidor(
     cortada,
     props.busca,
@@ -134,7 +142,7 @@ function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoN
     () => (props.busca === '' ? todos : mesclarBusca(todos, servidor.itens, props.busca, camposDoCliente, (c) => c.id)),
     [todos, servidor.itens, props.busca],
   );
-  const pag = usePaginacao(filtrados, ITENS_POR_PAGINA);
+  const pag = usePaginacao(filtrados, ITENS_POR_PAGINA, props.busca);
   if (carga.fase === 'carregando') return <Carregando />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
   const clientes = pag.itens;
@@ -179,6 +187,8 @@ function ListaClientes(props: { api: Api; busca: string; situacao: Situacao; aoN
           {AVISO_CORTE}
         </Text>
       )}
+      {/* "Carregar mais" acima da paginação sticky: se ficar embaixo, o rodapé cobre o botão e o toque não chega. */}
+      {props.busca === '' && <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />}
       <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
     </Stack>
   );

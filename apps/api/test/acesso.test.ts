@@ -394,6 +394,61 @@ describe('Acesso de empresa', () => {
       expect((await c.get('/acesso/usuarios')).statusCode).toBe(200);
     });
 
+    it('desvincular encerra a sessão E o aparelho: o mesmo cookie de aparelho deixa de listar e de aceitar PIN', async () => {
+      const c = await novoAparelho(app, empresa);
+      await c.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
+      const tokenAparelho = c.jar.get('aparelho') as string;
+      const res = await c.post('/acesso/desvincular');
+      expect(res.statusCode).toBe(204);
+      // Os dois cookies são apagados na resposta.
+      const apagados = ([] as string[]).concat(res.headers['set-cookie'] ?? []).join('\n');
+      expect(apagados).toMatch(/aparelho=;/);
+      expect(apagados).toMatch(/sessao=;/);
+      expect((await c.get('/acesso/eu')).statusCode).toBe(401);
+      // Mesmo quem guardou o cookie antigo não usa mais o aparelho (revogação no servidor, não só no navegador).
+      c.jar.set('aparelho', tokenAparelho);
+      expect((await c.get('/acesso/usuarios')).statusCode).toBe(401);
+      expect((await c.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR })).statusCode).toBe(401);
+      // Nada é apagado: o aparelho fica com a data do desvínculo e a trilha registra quem desvinculou.
+      const ap = await owner.query('SELECT desvinculado_em FROM aparelhos WHERE empresa_id = $1 AND desvinculado_em IS NOT NULL', [
+        empresa.empresaId,
+      ]);
+      expect(ap.rows.length).toBeGreaterThanOrEqual(1);
+      expect((await eventos(empresa.empresaId)).map((x) => x.tipo)).toContain('aparelho_desvinculado');
+    });
+
+    it('desvincular derruba também uma sessão antiga do mesmo aparelho e não afeta outros aparelhos', async () => {
+      const c = await novoAparelho(app, empresa);
+      await c.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
+      const sessaoAntiga = c.jar.get('sessao') as string;
+      const outro = await novoAparelho(app, empresa);
+      await outro.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
+      expect((await c.post('/acesso/desvincular')).statusCode).toBe(204);
+      c.jar.set('sessao', sessaoAntiga);
+      expect((await c.get('/acesso/eu')).statusCode).toBe(401);
+      expect((await outro.get('/acesso/eu')).statusCode).toBe(200);
+      expect((await outro.get('/acesso/usuarios')).statusCode).toBe(200);
+    });
+
+    it('depois de desvincular, entrar com e-mail e senha vincula um aparelho NOVO', async () => {
+      const c = await novoAparelho(app, empresa);
+      await c.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
+      const antigo = c.jar.get('aparelho') as string;
+      await c.post('/acesso/desvincular');
+      c.jar.set('aparelho', antigo); // navegador que não apagou o cookie
+      const res = await c.post('/acesso/entrar', { email: empresa.email, senha: empresa.senha });
+      expect(res.statusCode).toBe(200);
+      expect(c.jar.get('aparelho')).not.toBe(antigo);
+      expect((await c.get('/acesso/usuarios')).statusCode).toBe(200);
+    });
+
+    it('desvincular sem sessão: 401', async () => {
+      const c = await novoAparelho(app, empresa);
+      await c.post('/acesso/sair'); // o login por senha abre sessão; sem ela, desvincular não é aceito
+      expect((await c.post('/acesso/desvincular')).statusCode).toBe(401);
+      expect((await c.get('/acesso/usuarios')).statusCode).toBe(200); // e o aparelho segue vinculado
+    });
+
     it('o Dono derruba as sessões do Vendedor; ele pode entrar de novo com o PIN', async () => {
       const v = await novoAparelho(app, empresa);
       await v.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
@@ -471,6 +526,78 @@ describe('Acesso de empresa', () => {
         empresa.empresaId,
       ]);
       expect(row.rows[0].n).toBe(0);
+    });
+  });
+
+  describe('editar nome e reativar pessoa (Dono, rodada 2 de UX)', () => {
+    let dono: Cliente;
+    let vendedor: Cliente;
+    let vendedorId: string;
+    let empresa: EmpresaDeTeste;
+    beforeAll(async () => {
+      ({ dono, vendedorId, empresa } = await novaEmpresa('Loja Pessoas Editar'));
+      vendedor = await novoAparelho(app, empresa); // aparelho próprio: o PIN dele não derruba a sessão do Dono
+      await vendedor.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR });
+    });
+
+    async function linha(id: string) {
+      const r = await dono.get('/usuarios');
+      return (r.json() as { usuarios: { id: string; nome: string; ativo: boolean }[] }).usuarios.find((u) => u.id === id);
+    }
+
+    it('o Dono corrige o nome do Vendedor (sem mexer em PIN, perfil ou sessão) e a trilha registra', async () => {
+      const res = await dono.put(`/usuarios/${vendedorId}`, { nome: '  Joana Prado  ' });
+      expect(res.statusCode).toBe(204);
+      expect(await linha(vendedorId)).toMatchObject({ nome: 'Joana Prado', ativo: true });
+      const ap = dono.somenteAparelho();
+      const quem = (await ap.get('/acesso/usuarios')).json() as { usuarios: { id: string; nome: string }[] };
+      expect(quem.usuarios.find((u) => u.id === vendedorId)?.nome).toBe('Joana Prado');
+      expect((await eventos(empresa.empresaId)).map((x) => x.tipo)).toContain('usuario_editado');
+    });
+
+    it('o Dono também corrige o próprio nome', async () => {
+      const eu = (await dono.get('/acesso/eu')).json() as { usuario: { id: string } };
+      expect((await dono.put(`/usuarios/${eu.usuario.id}`, { nome: 'Dono Renomeado' })).statusCode).toBe(204);
+      expect((await dono.get('/acesso/eu')).json()).toMatchObject({ usuario: { nome: 'Dono Renomeado' } });
+    });
+
+    it('nome vazio ou só espaços: 400 e nada muda', async () => {
+      const antes = await linha(vendedorId);
+      expect((await dono.put(`/usuarios/${vendedorId}`, { nome: '   ' })).statusCode).toBe(400);
+      expect((await dono.put(`/usuarios/${vendedorId}`, {})).statusCode).toBe(400);
+      expect(await linha(vendedorId)).toEqual(antes);
+    });
+
+    it('o Vendedor não edita nem reativa ninguém (403)', async () => {
+      expect((await vendedor.put(`/usuarios/${vendedorId}`, { nome: 'Eu Mesmo' })).statusCode).toBe(403);
+      expect((await vendedor.post(`/usuarios/${vendedorId}/reativar`)).statusCode).toBe(403);
+      expect((await linha(vendedorId))?.nome).toBe('Joana Prado');
+    });
+
+    it('desativado e reativado: volta à lista "Quem está usando?" e entra com o mesmo PIN', async () => {
+      expect((await dono.post(`/usuarios/${vendedorId}/desativar`)).statusCode).toBe(204);
+      expect((await linha(vendedorId))?.ativo).toBe(false);
+      expect((await dono.post(`/usuarios/${vendedorId}/reativar`)).statusCode).toBe(204);
+      expect((await linha(vendedorId))?.ativo).toBe(true);
+      const ap = new Cliente(app);
+      await ap.post('/acesso/entrar', { email: empresa.email, senha: empresa.senha });
+      const quem = (await ap.get('/acesso/usuarios')).json() as { usuarios: { id: string }[] };
+      expect(quem.usuarios.map((u) => u.id)).toContain(vendedorId);
+      expect((await ap.post('/acesso/pin', { usuario_id: vendedorId, pin: PIN_VENDEDOR })).statusCode).toBe(200);
+      expect((await eventos(empresa.empresaId)).map((x) => x.tipo)).toContain('usuario_reativado');
+    });
+
+    it('reativar quem já está ativo: 409, sem evento novo', async () => {
+      const antes = (await eventos(empresa.empresaId)).filter((x) => x.tipo === 'usuario_reativado').length;
+      expect((await dono.post(`/usuarios/${vendedorId}/reativar`)).statusCode).toBe(409);
+      expect((await eventos(empresa.empresaId)).filter((x) => x.tipo === 'usuario_reativado').length).toBe(antes);
+    });
+
+    it('uma empresa não edita nem reativa usuário da outra (404) e o nome não muda', async () => {
+      const outra = await novaEmpresa('Loja Pessoas Outra');
+      expect((await outra.dono.put(`/usuarios/${vendedorId}`, { nome: 'Invasor' })).statusCode).toBe(404);
+      expect((await outra.dono.post(`/usuarios/${vendedorId}/reativar`)).statusCode).toBe(404);
+      expect((await linha(vendedorId))?.nome).toBe('Joana Prado');
     });
   });
 });

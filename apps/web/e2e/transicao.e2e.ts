@@ -92,9 +92,16 @@ test('Entrar com PIN: overlay aparece, some sozinho em até 1,2 s e o Início fi
   await expect(page.getByRole('menuitem', { name: 'Sair' })).toBeVisible();
 });
 
-test('Sair e Trocar de usuário mostram a transição; em Entrar há caminho de volta a Quem está usando?', async ({ page }) => {
+test('Sair e Trocar de usuário mostram a transição; depois de Sair o aparelho fica desvinculado', async ({ page }) => {
   await observar(page);
-  await abrirPin(page);
+  // "Sair" desvincula o aparelho no servidor (decisão do Pedro, 2026-11-16): este teste vincula um aparelho só dele,
+  // para não matar o cookie compartilhado pelos outros testes do arquivo.
+  const api = await entrarComoDono(page);
+  await api.post('/acesso/sair');
+  await page.goto('/');
+  await expect(page.getByText('Quem está usando?')).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(nomeDono) }).click();
+  await expect(page.getByRole('button', { name: '5', exact: true })).toBeVisible();
   await digitarPin(page);
   await esperarCiclo(page, 1);
 
@@ -117,14 +124,12 @@ test('Sair e Trocar de usuário mostram a transição; em Entrar há caminho de 
   expect(saida.semScroll).toBe(true);
   await expect(page).toHaveURL(/\/entrar$/);
 
-  // (d) O beco sem saída da S03: Entrar tem o caminho para /quem-usa, e ele funciona.
-  const voltar = page.getByRole('button', { name: 'Trocar de usuário' });
-  await expect(voltar).toBeVisible();
-  expect((await voltar.boundingBox())?.height).toBeGreaterThanOrEqual(48);
-  await voltar.click();
-  await expect(page).toHaveURL(/\/quem-usa$/);
-  await expect(page.getByText('Quem está usando?')).toBeVisible();
-  await expect(page.getByRole('button', { name: new RegExp(nomeDono) })).toBeVisible();
+  // (d) Antes (S04) o aparelho seguia vinculado e Entrar oferecia "Trocar de usuário". Agora Sair desvincula: não há
+  // caminho de volta sem e-mail e senha, nem depois de recarregar, e o servidor recusa o cookie antigo.
+  await expect(page.getByRole('button', { name: 'Trocar de usuário' })).toHaveCount(0);
+  await page.reload();
+  await expect(page).toHaveURL(/\/entrar$/);
+  expect((await page.context().request.get('/acesso/usuarios')).status(), 'aparelho desvinculado no servidor').toBe(401);
 });
 
 test('Login do Dono (e-mail e senha) também mostra a transição', async ({ page }) => {

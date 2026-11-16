@@ -25,27 +25,49 @@ function diaValido(v: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v);
 }
 
-const PROBLEMAS: Record<Exclude<PassoDespesa, 'confirmar'>, (r: RascunhoDespesa) => string | null> = {
-  categoria: (r) => (r.categoria.trim() === '' ? 'Escolha o tipo da despesa.' : null),
-  valor: (r) => {
-    if (r.valor === null || !Number.isInteger(r.valor)) return 'Digite o valor da despesa.';
+/** ADR 015: o mesmo assistente lança despesa (saída) ou receita (entrada); só os textos mudam. */
+export type Sentido = 'despesa' | 'receita';
+
+const TEXTOS: Record<Sentido, { tipo: string; valor: string; oQue: string; dia: string; forma: string }> = {
+  despesa: {
+    tipo: 'Escolha o tipo da despesa.',
+    valor: 'Digite o valor da despesa.',
+    oQue: 'Diga o que é a despesa.',
+    dia: 'Escolha o dia do vencimento.',
+    forma: 'Escolha como foi pago.',
+  },
+  receita: {
+    tipo: 'Escolha o tipo da receita.',
+    valor: 'Digite o valor da receita.',
+    oQue: 'Diga o que é a receita.',
+    dia: 'Escolha o dia em que recebe.',
+    forma: 'Escolha como foi recebido.',
+  },
+};
+
+type Regra = (r: RascunhoDespesa, t: (typeof TEXTOS)[Sentido]) => string | null;
+const PROBLEMAS: Record<Exclude<PassoDespesa, 'confirmar'>, Regra> = {
+  categoria: (r, t) => (r.categoria.trim() === '' ? t.tipo : null),
+  valor: (r, t) => {
+    if (r.valor === null || !Number.isInteger(r.valor)) return t.valor;
     if (r.valor < 1) return 'O valor precisa ser maior que zero.';
     if (r.valor > VALOR_MAXIMO_DESPESA) return 'O valor máximo é R$ 20 milhões.';
-    if (r.descricao.trim() === '') return 'Diga o que é a despesa.';
+    if (r.descricao.trim() === '') return t.oQue;
     return null;
   },
-  quando: (r) => {
-    if (!diaValido(r.vencimento)) return 'Escolha o dia do vencimento.';
-    if (r.paga && r.forma === null) return 'Escolha como foi pago.';
+  quando: (r, t) => {
+    if (!diaValido(r.vencimento)) return t.dia;
+    if (r.paga && r.forma === null) return t.forma;
     return null;
   },
 };
 
 /** Mensagem do primeiro problema do passo (ou null se pode seguir). No passo de confirmar vale tudo. */
-export function validarPasso(passo: PassoDespesa, r: RascunhoDespesa): string | null {
-  if (passo !== 'confirmar') return PROBLEMAS[passo](r);
+export function validarPasso(passo: PassoDespesa, r: RascunhoDespesa, sentido: Sentido = 'despesa'): string | null {
+  const t = TEXTOS[sentido];
+  if (passo !== 'confirmar') return PROBLEMAS[passo](r, t);
   for (const p of ['categoria', 'valor', 'quando'] as const) {
-    const m = PROBLEMAS[p](r);
+    const m = PROBLEMAS[p](r, t);
     if (m) return m;
   }
   return null;

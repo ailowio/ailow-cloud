@@ -164,12 +164,13 @@ export function App() {
 
   const aoTrocar = useCallback(() => void sairParaQuemUsa(), [sairParaQuemUsa]);
 
-  // UXM-06 "Sair": encerra a sessão no servidor e volta ao login do Dono. Não existe endpoint para desvincular o
-  // aparelho (ADR 004: "não há revogação do aparelho em si"), então o vínculo continua; recarregar abre "Quem está usando?".
+  // UXM-06 "Sair" (decisão do Pedro, 2026-11-16): encerra as sessões e DESVINCULA o aparelho no servidor; recarregar
+  // abre o login do Dono, não "Quem está usando?". Sem rede, o vínculo continua (o próximo "Sair" tenta de novo).
   const aoSair = useCallback(async () => {
-    await api.sair().catch(() => {});
+    await api.desvincular().catch(() => {});
     setSaiu(true);
     setSessao(null);
+    setUsuarios(null);
     setAvisoEntrar('Você saiu. Para entrar de novo, use o e-mail e a senha do Dono.');
     transicao();
     ir('/entrar', { replace: true });

@@ -3,6 +3,7 @@ import { celularSchema } from './clientes.js';
 import { normalizarCnpj } from './compras-calculos.js';
 import { dataSchema, VALOR_MAXIMO_CENTAVOS } from './financeiro.js';
 import { ESTOQUE_MAXIMO } from './produtos-calculos.js';
+import { cursorSchema, paginaSchema } from './produtos.js';
 
 // Contrato de Compras (S11, RF-COM-01…05, RN-11). Sem .transform() nas respostas.
 export * from './compras-calculos.js';
@@ -35,6 +36,7 @@ export type FornecedorEditar = z.infer<typeof fornecedorEditarSchema>;
 
 export const fornecedoresQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
+  depois: cursorSchema.optional(), // ADR 016
 });
 export const fornecedorIdParamsSchema = z.object({ id: z.uuid() });
 
@@ -50,6 +52,7 @@ export type Fornecedor = z.infer<typeof fornecedorSchema>;
 export const fornecedoresResponseSchema = z.object({
   fornecedores: z.array(fornecedorSchema),
   truncado: z.boolean(),
+  ...paginaSchema, // ADR 016
 });
 export const fornecedorCriadoSchema = z.object({ id: z.uuid() });
 

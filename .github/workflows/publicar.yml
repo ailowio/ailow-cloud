@@ -39,7 +39,7 @@ jobs:
       - name: build das imagens
         run: |
           docker build -f apps/api/Dockerfile -t "$REGISTRO/ailow-cloud-api:$VERSAO" .
-          docker build -f apps/web/Dockerfile -t "$REGISTRO/ailow-cloud-web:$VERSAO" .
+          docker build -f apps/web/Dockerfile --build-arg VERSION="$VERSAO" -t "$REGISTRO/ailow-cloud-web:$VERSAO" .
       # SEC-12: nada com CRITICAL/HIGH corrigível sobe para o registro.
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

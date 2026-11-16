@@ -57,6 +57,9 @@ export const definirMeuPinBodySchema = z.object({ senha: z.string().min(1).max(1
 
 export const criarVendedorBodySchema = z.object({ nome: nomeSchema, pin: pinSchema });
 export const definirPinBodySchema = z.object({ pin: pinSchema });
+// PUT /usuarios/{id}: o Dono corrige o nome (de qualquer pessoa da empresa, inclusive o próprio). Perfil e PIN não mudam aqui.
+export const editarUsuarioBodySchema = z.strictObject({ nome: nomeSchema });
+export type EditarUsuarioBody = z.infer<typeof editarUsuarioBodySchema>;
 export const usuarioAdminItemSchema = usuarioPublicoSchema.extend({
   ativo: z.boolean(),
   bloqueado: z.boolean(),

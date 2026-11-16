@@ -172,8 +172,13 @@ export const produtoSchema = z.object({
 });
 export type Produto = z.infer<typeof produtoSchema>;
 
-export const produtosQuerySchema = z.object({ q: z.string().trim().max(80).optional() });
-export const produtosResponseSchema = z.object({ produtos: z.array(produtoSchema), truncado: z.boolean() });
+// ADR 016: paginação por cursor nas listas que cortam em 200. `depois` = o `proximo` da página anterior (opaco,
+// base64url); `proximo` = null na última página. `truncado` continua (= há próxima página) por compatibilidade.
+export const cursorSchema = z.string().regex(/^[A-Za-z0-9_-]{1,500}$/, { error: 'cursor inválido' });
+export const paginaSchema = { proximo: cursorSchema.nullable() };
+
+export const produtosQuerySchema = z.object({ q: z.string().trim().max(80).optional(), depois: cursorSchema.optional() });
+export const produtosResponseSchema = z.object({ produtos: z.array(produtoSchema), truncado: z.boolean(), ...paginaSchema });
 
 export const produtoCriadoSchema = z.object({
   id: z.uuid(),

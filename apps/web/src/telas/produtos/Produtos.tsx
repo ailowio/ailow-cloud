@@ -11,6 +11,8 @@ import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
 import { useBuscaNoServidor } from '../../lib/useBuscaNoServidor';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { useMaisPaginas } from '../../lib/useMaisPaginas';
+import { CarregarMais } from '../../componentes/CarregarMais';
 import { Moldura } from '../Moldura';
 import { PRODUTOS_POR_PAGINA, camposDoProduto } from './busca-produto';
 import { DetalheProduto } from './DetalheProduto';
@@ -55,8 +57,9 @@ export function Produtos(props: { api: Api; perfil: Perfil; aoVoltar: () => void
 
   if (vista === 'novo') {
     return (
-      // A seta diz "Voltar para Produtos": sai do assistente inteiro (devolve os passos), sem deixar passos fantasma.
-      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: () => sair() }}>
+      // Seta padronizada (decisão do Pedro, 2026-11-16): recua UM passo, como o Voltar do sistema e os outros
+      // assistentes; no 1º passo, volta à lista de Produtos.
+      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Produtos', aoVoltar: voltarUm }}>
         <NovoProduto
           api={props.api}
           aoCancelar={() => sair()}
@@ -145,10 +148,14 @@ function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: (
 function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: () => void }) {
   // Lista inteira carregada uma vez (o servidor limita em 200); busca ampla e paginação no cliente.
   // `recarregar` busca de novo sem desmontar a lista, para o pop-up do produto continuar aberto depois de editar.
-  const { carga, recarregar, tentarDeNovo } = useCarregar(() => props.api.produtos());
+  const { carga, recarregar, tentarDeNovo } = useCarregar(() => props.api.produtos().then((r) => ({ ...r, itens: r.produtos })));
   const [abertoId, setAbertoId] = useState<string | null>(null);
-  const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
-  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  // ADR 016: "Carregar mais" traz as próximas páginas do servidor (recarregar volta à 1ª página).
+  const mais = useMaisPaginas(carga.fase === 'pronto' ? carga.dados : null, (depois) =>
+    props.api.produtos(undefined, depois).then((r) => ({ itens: r.produtos, proximo: r.proximo })),
+  );
+  const todos = carga.fase === 'pronto' ? mais.todos : SEM_PRODUTOS;
+  const cortada = carga.fase === 'pronto' && mais.proximo !== null;
   // Lista cortada em 200: a busca também pergunta ao servidor (?q=) e une com o que já está carregado.
   const servidor = useBuscaNoServidor(
     cortada,
@@ -163,7 +170,7 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
     () => (props.busca === '' ? todos : mesclarBusca(todos, servidor.itens, props.busca, camposDoProduto, (p) => p.id)),
     [todos, servidor.itens, props.busca],
   );
-  const pag = usePaginacao(filtrados, PRODUTOS_POR_PAGINA);
+  const pag = usePaginacao(filtrados, PRODUTOS_POR_PAGINA, props.busca);
   if (carga.fase === 'carregando') return <Carregando />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
   const truncado = avisoDeCorte(cortada, props.busca, servidor.truncado);
@@ -207,6 +214,10 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
           <CartaoProduto key={p.id} produto={p} dono={props.dono} aoAbrir={() => setAbertoId(p.id)} />
         ))}
         {truncado && <Text size="sm" c="dimmed" data-aviso-corte>{AVISO_CORTE}</Text>}
+        {/* "Carregar mais" acima da paginação sticky: se ficar embaixo, o rodapé cobre o botão e o toque não chega. */}
+        {props.busca === '' && (
+          <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />
+        )}
         <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
       </Stack>
     );

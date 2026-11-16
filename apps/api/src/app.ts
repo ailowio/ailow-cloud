@@ -33,6 +33,7 @@ import { registrarRotasPessoas } from './pessoas/rotas.js';
 import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
 import { registrarRotasProdutos } from './produtos/rotas.js';
+import { registrarRotasOpcoesGrade } from './produtos/opcoes-grade.js';
 import { registrarRotasVendas } from './vendas/rotas.js';
 
 export interface AppDeps {
@@ -124,7 +125,7 @@ export async function buildApp({
       openapi: '3.1.0',
       info: {
         title: 'Ailow Cloud API',
-        version: '0.14.0',
+        version: '0.15.0',
         description:
           'API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).',
         contact: { name: 'Ailow Cloud', url: 'https://github.com/ailowio/ailow-cloud' },
@@ -242,6 +243,7 @@ export async function buildApp({
   await registrarRotasConfiguracoes(app, deps, guardas);
   await registrarRotasFinanceiro(app, deps, guardas);
   await registrarRotasProdutos(app, deps, guardas);
+  await registrarRotasOpcoesGrade(app, deps, guardas);
   await registrarRotasClientes(app, deps, guardas);
   await registrarRotasVendas(app, deps, guardas);
   await registrarRotasCompras(app, deps, guardas);

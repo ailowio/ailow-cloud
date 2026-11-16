@@ -8,12 +8,12 @@ import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { filtrarPorBusca } from '../../lib/busca';
 import { type Periodo, deslocarPeriodo, formatarData, hojeEmSaoPaulo, horaEmSaoPaulo, rotuloDoPeriodo } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
-import { DetalheVenda } from './DetalheVenda';
+import { DetalheVenda, type Refazer } from './DetalheVenda';
 import { camposBuscaVenda } from './lista-vendas';
 import { ROTULOS_FORMA } from './rotulos';
 
 /** RF-VEN-09: dia ou mês; o Vendedor só vê as próprias vendas, e só do dia. */
-export function RelatorioVendas(props: { api: Api; perfil: Perfil }) {
+export function RelatorioVendas(props: { api: Api; perfil: Perfil; aoRefazer?: (r: Refazer) => void }) {
   const hoje = useMemo(() => hojeEmSaoPaulo(), []);
   const [periodo, setPeriodo] = useState<Periodo>('dia');
   const [data, setData] = useState(hoje);
@@ -44,12 +44,19 @@ export function RelatorioVendas(props: { api: Api; perfil: Perfil }) {
           Próximo
         </Button>
       </Group>
-      <Conteudo key={`${efetivo}-${data}`} api={props.api} periodo={efetivo} data={data} dono={props.perfil === 'dono'} />
+      <Conteudo
+        key={`${efetivo}-${data}`}
+        api={props.api}
+        periodo={efetivo}
+        data={data}
+        dono={props.perfil === 'dono'}
+        aoRefazer={props.aoRefazer}
+      />
     </Stack>
   );
 }
 
-function Conteudo(props: { api: Api; periodo: Periodo; data: string; dono: boolean }) {
+function Conteudo(props: { api: Api; periodo: Periodo; data: string; dono: boolean; aoRefazer?: (r: Refazer) => void }) {
   const { carga, recarregar, tentarDeNovo } = useCarregar(() => props.api.relatorioVendas(props.periodo, props.data));
   const lista = useCarregar(() => props.api.listaVendas(props.periodo, props.data));
   const [aberta, setAberta] = useState<string | null>(null);
@@ -67,6 +74,7 @@ function Conteudo(props: { api: Api; periodo: Periodo; data: string; dono: boole
           void recarregar();
           void lista.recarregar();
         }}
+        aoRefazer={props.aoRefazer}
       />
     </>
   );

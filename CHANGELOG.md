@@ -4,6 +4,16 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### UX/UI rodada 2 (decisões do Pedro de 2026-11-16; OpenAPI 0.15.0, aditivo; 4 migrações expand)
+- **Sair desvincula o aparelho** no servidor (`POST /acesso/desvincular`, migração `aparelhos.desvinculado_em`): o cookie antigo deixa de valer; entrar de novo pede e-mail e senha do Dono.
+- **Pessoas:** o Dono corrige o nome (`PUT /usuarios/{id}`) e reativa um Vendedor desativado (`POST /usuarios/{id}/reativar`). PIN bloqueado avisa em toast.
+- **Financeiro (ADR 015):** Nova receita (entrada manual, a receber ou já recebida) e Contas a receber (`POST /financeiro/receitas`, `GET /financeiro/contas-a-receber`; migração com CHECKs nomeados).
+- **Produtos (ADR 017):** tamanhos e cores configuráveis por empresa na engrenagem do Novo produto (`/opcoes-grade`; migração `opcoes_grade`, RLS forçada, sem DELETE).
+- **Listas (ADR 016):** paginação por cursor (`?depois=`, `proximo`) em produtos, clientes e fornecedores; busca acelerada por índice de trigramas (`pg_trgm`, função `ailow_busca`); "Carregar mais" no app; a página só volta à 1 quando a busca muda.
+- **Vendas (ADR 014, opção 1, a confirmar):** "Refazer venda" no detalhe: cancela com motivo e reabre o carrinho com as peças e o cliente.
+- Ficha do cliente abre depois do cadastro; seta do topo do Novo produto recua um passo como nos outros assistentes.
+- ADRs da rodada de UX renumerados para 013–017 (a `main` já usava 011 e 012). Docs de entrega do curso em `docs/entrega/`.
+
 ### UX mobile, rodada 1 (S01–S16; API aditiva: `GET /vendas/lista`, `PUT /produtos/{id}`, `POST /produtos/{id}/arquivar`)
 - Paleta única derivada da logo, contraste WCAG medido em código nos 2 temas (UXM-08); componentes novos listados em `docs/design-system/README.md` §3.
 - Cadastros com 3+ campos viraram **assistente em passos** (novo cliente, fornecedor, novo pedido, dados da empresa): "Passo X de N", Voltar do sistema recua um passo, erro de passo em toast sem mover o botão.

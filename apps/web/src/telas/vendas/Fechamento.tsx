@@ -15,9 +15,16 @@ type Desconto =
   | { tipo: 'valor'; centavos: number };
 
 /** RF-VEN-05: celular (cria o cliente se faltar), desconto e uma ou mais formas. O Pix do caminho curto leva o total. */
-export function Fechamento(props: { api: Api; itens: ItemVenda[]; aoVoltar: () => void; aoFinalizar: (vendaId: string) => void }) {
+export function Fechamento(props: {
+  api: Api;
+  itens: ItemVenda[];
+  /** "Refazer venda" (ADR 014): o celular do cliente da venda cancelada já vem preenchido. */
+  celularInicial?: string | null;
+  aoVoltar: () => void;
+  aoFinalizar: (vendaId: string) => void;
+}) {
   const { pendente, rodar } = useAcao(mensagemVenda);
-  const [celular, setCelular] = useState('');
+  const [celular, setCelular] = useState(props.celularInicial ?? '');
   const [nome, setNome] = useState('');
   const [nomeAchado, setNomeAchado] = useState<string | null>(null);
   const [buscando, setBuscando] = useState(false);
