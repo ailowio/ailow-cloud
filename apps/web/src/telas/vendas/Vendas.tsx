@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import type { Perfil } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { useVoltar } from '../../componentes/navegacao';
+import { avisarErro } from '../../lib/avisos';
 import { Moldura } from '../Moldura';
 import type { ItemVenda } from './carrinho';
 import { Comprovante } from './Comprovante';
@@ -25,11 +26,23 @@ export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }
   const voltarUmPasso = useVoltar('/vendas');
   const [itens, setItens] = useState<ItemVenda[]>([]);
   const [vendaId, setVendaId] = useState<string | null>(null);
+  // "Refazer venda" (ADR 014): o cliente da venda cancelada já vem preenchido no fechamento da nova.
+  const [celularInicial, setCelularInicial] = useState<string | null>(null);
 
   if (passo === 'relatorio') {
     return (
       <Moldura titulo="Relatório" voltar={{ rotulo: 'Venda', aoVoltar: voltarUmPasso }}>
-        <RelatorioVendas api={props.api} perfil={props.perfil} />
+        <RelatorioVendas
+          api={props.api}
+          perfil={props.perfil}
+          // ADR 014: "Refazer venda" já cancelou a venda; o carrinho novo recebe as peças e a tela volta para a venda.
+          aoRefazer={(r) => {
+            setItens(r.itens);
+            setCelularInicial(r.celular);
+            if (r.faltando.length > 0) avisarErro(`Ficaram de fora (sem estoque ou arquivadas): ${r.faltando.join(', ')}.`);
+            navigate('/vendas', { replace: true });
+          }}
+        />
       </Moldura>
     );
   }
@@ -54,12 +67,14 @@ export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }
         <Fechamento
           api={props.api}
           itens={itens}
+          celularInicial={celularInicial}
           aoVoltar={voltarUmPasso}
           aoFinalizar={(id) => {
             // A venda já foi gravada: o carrinho esvazia e o comprovante substitui o fechamento no histórico,
             // para o Voltar não reabrir uma venda fechada.
             setVendaId(id);
             setItens([]);
+            setCelularInicial(null);
             navigate('/vendas/comprovante', { replace: true });
           }}
         />
