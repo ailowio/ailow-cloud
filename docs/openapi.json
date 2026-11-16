@@ -5977,7 +5977,7 @@
     "/produtos": {
       "get": {
         "operationId": "get_produtos",
-        "summary": "Lista e busca produtos por nome, código ou preço; o Vendedor não recebe custo nem fornecedor",
+        "summary": "Lista e busca produtos por nome, código ou preço, 200 por página (cursor em `depois`); o Vendedor não recebe custo nem fornecedor",
         "tags": [
           "produtos"
         ],
@@ -5989,6 +5989,15 @@
             },
             "in": "query",
             "name": "q",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,500}$"
+            },
+            "in": "query",
+            "name": "depois",
             "required": false
           }
         ],
@@ -6121,11 +6130,23 @@
                     },
                     "truncado": {
                       "type": "boolean"
+                    },
+                    "proximo": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,500}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "produtos",
-                    "truncado"
+                    "truncado",
+                    "proximo"
                   ],
                   "additionalProperties": false
                 }
@@ -8213,6 +8234,15 @@
             "in": "query",
             "name": "situacao",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,500}$"
+            },
+            "in": "query",
+            "name": "depois",
+            "required": false
           }
         ],
         "security": [
@@ -8270,11 +8300,23 @@
                     },
                     "truncado": {
                       "type": "boolean"
+                    },
+                    "proximo": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,500}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "clientes",
-                    "truncado"
+                    "truncado",
+                    "proximo"
                   ],
                   "additionalProperties": false
                 }
@@ -11489,6 +11531,15 @@
             "in": "query",
             "name": "q",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,500}$"
+            },
+            "in": "query",
+            "name": "depois",
+            "required": false
           }
         ],
         "security": [
@@ -11542,11 +11593,23 @@
                     },
                     "truncado": {
                       "type": "boolean"
+                    },
+                    "proximo": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,500}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
                     "fornecedores",
-                    "truncado"
+                    "truncado",
+                    "proximo"
                   ],
                   "additionalProperties": false
                 }

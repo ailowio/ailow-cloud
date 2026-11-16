@@ -28,6 +28,13 @@ describe('endpoints de Clientes', () => {
     expect(chamadas[0]?.url).toBe(`/clientes?q=${encodeURIComponent('João +55 (21) 9')}`);
   });
 
+  it('próxima página (ADR 016): o cursor vai em `depois`, depois da busca e da situação', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { clientes: [], truncado: false, proximo: null } });
+    await api.clientes('ana', 'inativos', 'abc_-1');
+    await api.clientes(undefined, 'ativos', 'abc');
+    expect(chamadas.map((x) => x.url)).toEqual(['/clientes?q=ana&situacao=inativos&depois=abc_-1', '/clientes?depois=abc']);
+  });
+
   it('busca em branco vira a lista inteira', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { clientes: [], truncado: false } });
     await api.clientes('   ');

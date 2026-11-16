@@ -56,6 +56,12 @@ export interface ClienteCorpo {
   aviso_lgpd: boolean;
 }
 
+/** Caminho + query string só com os parâmetros preenchidos, na ordem dada, cada valor codificado. */
+function comConsulta(caminho: string, pares: [string, string | undefined][]): string {
+  const partes = pares.filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`);
+  return partes.length ? `${caminho}?${partes.join('&')}` : caminho;
+}
+
 export function criarApi(c: Cliente) {
   const p = c.pedir;
   return {
@@ -105,10 +111,9 @@ export function criarApi(c: Cliente) {
     relatorio: (periodo: 'dia' | 'mes', data: string) =>
       p<Relatorio>('GET', `/financeiro/relatorio?periodo=${periodo}&data=${data}`),
     // --- produtos e estoque (S07). Listar é do Dono e do Vendedor (sem custo); o resto é só do Dono.
-    produtos: (q?: string) => {
-      const busca = q?.trim() ?? '';
-      return p<{ produtos: Produto[]; truncado: boolean }>('GET', busca === '' ? '/produtos' : `/produtos?q=${encodeURIComponent(busca)}`);
-    },
+    // ADR 016: `depois` = o `proximo` da página anterior (cursor opaco); sem ele, a primeira página.
+    produtos: (q?: string, depois?: string) =>
+      p<{ produtos: Produto[]; truncado: boolean; proximo: string | null }>('GET', comConsulta('/produtos', [['q', q?.trim()], ['depois', depois]])),
     criarProduto: (n: ProdutoNovo) =>
       p<{ id: string; numero: number; skus: { id: string; codigo: string }[] }>('POST', '/produtos', n),
     editarProduto: (id: string, e: ProdutoEditar) => p<{ id: string }>('PUT', `/produtos/${id}`, e),
@@ -123,11 +128,16 @@ export function criarApi(c: Cliente) {
     // --- etiquetas (S08, só Dono): o PDF volta como Blob.
     etiquetasPdf: (itens: EtiquetasPedido['itens']) => c.baixar('/etiquetas', { itens }),
     // --- clientes (S09/S09b). Dono e Vendedor cadastram, editam, buscam e registram o aviso; só o Dono inativa/reativa/exclui.
-    clientes: (q?: string, situacao: 'ativos' | 'inativos' = 'ativos') => {
-      // A API assume "ativos"; só os inativos (aba do Dono) levam a situação na URL.
-      const partes = [q?.trim() ? `q=${encodeURIComponent(q.trim())}` : '', situacao === 'inativos' ? 'situacao=inativos' : ''].filter(Boolean);
-      return p<{ clientes: ClienteFicha[]; truncado: boolean }>('GET', `/clientes${partes.length ? `?${partes.join('&')}` : ''}`);
-    },
+    // A API assume "ativos"; só os inativos (aba do Dono) levam a situação na URL.
+    clientes: (q?: string, situacao: 'ativos' | 'inativos' = 'ativos', depois?: string) =>
+      p<{ clientes: ClienteFicha[]; truncado: boolean; proximo: string | null }>(
+        'GET',
+        comConsulta('/clientes', [
+          ['q', q?.trim()],
+          ['situacao', situacao === 'inativos' ? 'inativos' : undefined],
+          ['depois', depois],
+        ]),
+      ),
     criarCliente: (n: ClienteCorpo) => p<{ id: string }>('POST', '/clientes', n),
     cliente: (id: string) => p<ClienteFicha>('GET', `/clientes/${id}`),
     editarCliente: (id: string, d: Pick<ClienteCorpo, 'nome' | 'celular'>) => p<ClienteFicha>('PUT', `/clientes/${id}`, d),
@@ -150,13 +160,11 @@ export function criarApi(c: Cliente) {
         `/vendas/por-cliente/${id}`,
       ),
     // --- compras (S11, só Dono)
-    fornecedores: (q?: string) => {
-      const busca = q?.trim() ?? '';
-      return p<{ fornecedores: Fornecedor[]; truncado: boolean }>(
+    fornecedores: (q?: string, depois?: string) =>
+      p<{ fornecedores: Fornecedor[]; truncado: boolean; proximo: string | null }>(
         'GET',
-        busca === '' ? '/fornecedores' : `/fornecedores?q=${encodeURIComponent(busca)}`,
-      );
-    },
+        comConsulta('/fornecedores', [['q', q?.trim()], ['depois', depois]]),
+      ),
     criarFornecedor: (n: FornecedorNovo) => p<{ id: string }>('POST', '/fornecedores', n),
     fornecedor: (id: string) => p<Fornecedor>('GET', `/fornecedores/${id}`),
     editarFornecedor: (id: string, n: FornecedorNovo) => p<Fornecedor>('PUT', `/fornecedores/${id}`, n),

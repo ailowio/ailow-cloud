@@ -12,6 +12,8 @@ import { useBuscaNoServidor } from '../../lib/useBuscaNoServidor';
 import { avisarErro } from '../../lib/avisos';
 import { hojeEmSaoPaulo } from '../../lib/datas';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { useMaisPaginas } from '../../lib/useMaisPaginas';
+import { CarregarMais } from '../../componentes/CarregarMais';
 import { ETIQUETAS_POR_PAGINA, camposDoProduto } from './busca-produto';
 import {
   type Quantidades,
@@ -38,9 +40,13 @@ export function Etiquetas(props: { api: Api }) {
   const [envio, setEnvio] = useState<Envio>({ fase: 'parado' });
   const resumo = resumoDasEtiquetas(quantidades);
   // Lista inteira carregada uma vez; a busca ampla e a paginação acontecem no cliente (o servidor limita em 200).
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos());
-  const todos = carga.fase === 'pronto' ? carga.dados.produtos : SEM_PRODUTOS;
-  const cortada = carga.fase === 'pronto' && carga.dados.truncado;
+  const { carga, tentarDeNovo } = useCarregar(() => props.api.produtos().then((r) => ({ ...r, itens: r.produtos })));
+  // ADR 016: "Carregar mais" traz as próximas páginas do servidor.
+  const mais = useMaisPaginas(carga.fase === 'pronto' ? carga.dados : null, (depois) =>
+    props.api.produtos(undefined, depois).then((r) => ({ itens: r.produtos, proximo: r.proximo })),
+  );
+  const todos = carga.fase === 'pronto' ? mais.todos : SEM_PRODUTOS;
+  const cortada = carga.fase === 'pronto' && mais.proximo !== null;
   // Lista cortada em 200: a busca também pergunta ao servidor (?q=) e une com o que já está carregado.
   const servidor = useBuscaNoServidor(
     cortada,
@@ -55,7 +61,7 @@ export function Etiquetas(props: { api: Api }) {
     () => (busca === '' ? todos : mesclarBusca(todos, servidor.itens, busca, camposDoProduto, (p) => p.id)),
     [todos, servidor.itens, busca],
   );
-  const pag = usePaginacao(filtrados, ETIQUETAS_POR_PAGINA);
+  const pag = usePaginacao(filtrados, ETIQUETAS_POR_PAGINA, busca);
 
   useEffect(() => {
     const t = setTimeout(() => setBusca(texto.trim()), 300);
@@ -112,6 +118,9 @@ export function Etiquetas(props: { api: Api }) {
           quantidades={quantidades}
           aoMudar={mudar}
         />
+      )}
+      {carga.fase === 'pronto' && busca === '' && (
+        <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />
       )}
 
       {/* Barra fixa: o resumo e o botão ficam à vista enquanto a lista rola. */}

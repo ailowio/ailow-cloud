@@ -7,6 +7,7 @@ import {
   digitosDaBusca,
 } from '@ailow/shared';
 import type pg from 'pg';
+import { type Cursor, novoCursor } from '../paginacao.js';
 
 // Dados de Clientes (S09/S09b, RF-CLI-01…05; D8; ADR 007). Toda consulta roda dentro de `withEmpresa`: a RLS isola a empresa.
 // Nome e celular são dado pessoal: nunca entram em erro, log nem auditoria (a trilha guarda só o id).
@@ -71,25 +72,32 @@ export async function listarClientes(
   c: pg.PoolClient,
   q: string | undefined,
   situacao: (typeof SITUACOES_CLIENTE)[number],
-): Promise<{ clientes: Cliente[]; truncado: boolean }> {
+  depois: Cursor | null = null,
+): Promise<{ clientes: Cliente[]; truncado: boolean; proximo: string | null }> {
   const busca = q?.trim() ?? '';
   const digitos = digitosDaBusca(busca);
   const porNome = `%${comoTexto(semAcento(busca).toLowerCase())}%`;
   const porCelular = digitos === '' ? null : `%${digitos}%`;
+  // ADR 016: busca pelo índice de trigramas (ailow_busca) e página por cursor na ordem (nome normalizado, id).
   const r = await c.query(
-    `SELECT ${COLUNAS}
+    `SELECT ${COLUNAS}, ailow_busca(nome) AS chave_ordem
        FROM clientes
       WHERE ativo = $4
         AND ($1::text = ''
-             OR lower(translate(nome, '${COM_ACENTO}', '${SEM_ACENTO}')) LIKE $2 ESCAPE '\\'
+             OR ailow_busca(nome) LIKE $2 ESCAPE '\\'
              OR ($3::text IS NOT NULL AND celular LIKE $3))
-      ORDER BY lower(translate(nome, '${COM_ACENTO}', '${SEM_ACENTO}')), id
+        AND ($5::text IS NULL OR (ailow_busca(nome), id) > ($5::text, $6::uuid))
+      ORDER BY ailow_busca(nome), id
       LIMIT ${LIMITE_CLIENTES_NA_LISTA + 1}`,
-    [busca, porNome, porCelular, situacao === 'ativos'],
+    [busca, porNome, porCelular, situacao === 'ativos', depois?.[0] ?? null, depois?.[1] ?? null],
   );
+  const pagina = (r.rows as (Linha & { chave_ordem: string })[]).slice(0, LIMITE_CLIENTES_NA_LISTA);
+  const truncado = r.rows.length > LIMITE_CLIENTES_NA_LISTA;
+  const ultima = pagina[pagina.length - 1];
   return {
-    clientes: (r.rows as Linha[]).slice(0, LIMITE_CLIENTES_NA_LISTA).map(paraCliente),
-    truncado: r.rows.length > LIMITE_CLIENTES_NA_LISTA,
+    clientes: pagina.map(paraCliente),
+    truncado,
+    proximo: truncado && ultima ? novoCursor([ultima.chave_ordem, ultima.id]) : null,
   };
 }
 

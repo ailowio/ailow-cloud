@@ -21,6 +21,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { type Deps, naoEncontrado, registrarEvento } from '../acesso/comum.js';
 import { type Guardas, sessaoDe } from '../acesso/guardas.js';
 import { withEmpresa } from '../db.js';
+import { lerCursor } from '../paginacao.js';
 import { FUSO } from '../financeiro/lancamentos.js';
 import { ErroEstoque, registrarMovimento } from './estoque.js';
 import { type DadosEtiqueta, gerarPdfEtiquetas } from './etiquetas.js';
@@ -85,15 +86,19 @@ export async function registrarRotasProdutos(app: FastifyInstance, deps: Deps, g
       preValidation: logado,
       schema: {
         tags: ['produtos'],
-        summary: 'Lista e busca produtos por nome, código ou preço; o Vendedor não recebe custo nem fornecedor',
+        summary:
+          'Lista e busca produtos por nome, código ou preço, 200 por página (cursor em `depois`); o Vendedor não recebe custo nem fornecedor',
         security: sessaoCookie,
         querystring: produtosQuerySchema,
         response: { 200: produtosResponseSchema, 400: erroSchema, 401: erroSchema },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const s = sessaoDe(request);
-      return withEmpresa(pool, s.empresaId, (c) => listarProdutos(c, s.perfil, request.query.q));
+      const { q, depois } = request.query;
+      const cursor = depois === undefined ? null : lerCursor(depois, 'numero');
+      if (depois !== undefined && cursor === null) return reply.code(400).send({ erro: 'cursor_invalido' });
+      return withEmpresa(pool, s.empresaId, (c) => listarProdutos(c, s.perfil, q, cursor));
     },
   );
 

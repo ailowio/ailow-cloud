@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { normalizarCelular } from './clientes-calculos.js';
+import { cursorSchema, paginaSchema } from './produtos.js';
 
 // Contrato de Clientes (S09, RF-CLI-01…04; D8). ADR 007.
 // Sem .transform() nos schemas de RESPOSTA (o serializador do Zod 4 não codifica transformação de mão única).
@@ -36,6 +37,7 @@ export const SITUACOES_CLIENTE = ['ativos', 'inativos'] as const;
 export const clientesQuerySchema = z.object({
   q: z.string().trim().max(80).optional(),
   situacao: z.enum(SITUACOES_CLIENTE).default('ativos'),
+  depois: cursorSchema.optional(), // ADR 016
 });
 export const clienteIdParamsSchema = z.object({ id: z.uuid() });
 
@@ -51,5 +53,5 @@ export const clienteSchema = z.object({
 });
 export type Cliente = z.infer<typeof clienteSchema>;
 
-export const clientesResponseSchema = z.object({ clientes: z.array(clienteSchema), truncado: z.boolean() });
+export const clientesResponseSchema = z.object({ clientes: z.array(clienteSchema), truncado: z.boolean(), ...paginaSchema });
 export const clienteCriadoSchema = z.object({ id: z.uuid() });

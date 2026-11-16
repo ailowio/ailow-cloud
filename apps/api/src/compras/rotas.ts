@@ -23,6 +23,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { type Deps, naoEncontrado, registrarEvento } from '../acesso/comum.js';
 import { type Guardas, sessaoDe } from '../acesso/guardas.js';
 import { withEmpresa } from '../db.js';
+import { lerCursor } from '../paginacao.js';
 import {
   ErroCompra,
   buscarPedido,
@@ -69,9 +70,12 @@ export async function registrarRotasCompras(app: FastifyInstance, deps: Deps, g:
         response: { 200: fornecedoresResponseSchema, 400: erroSchema, ...erros },
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const s = sessaoDe(request);
-      return withEmpresa(pool, s.empresaId, (c) => listarFornecedores(c, request.query.q));
+      const { q, depois } = request.query;
+      const cursor = depois === undefined ? null : lerCursor(depois, 'uuid');
+      if (depois !== undefined && cursor === null) return reply.code(400).send({ erro: 'cursor_invalido' });
+      return withEmpresa(pool, s.empresaId, (c) => listarFornecedores(c, q, cursor));
     },
   );
 

@@ -488,7 +488,8 @@ describe('Produtos (API)', () => {
     it('busca sem resultado devolve lista vazia (não erro)', async () => {
       const r = await listar(lado.dono, `nada-parecido-${randomUUID()}`);
       expect(r.status).toBe(200);
-      expect(r.json).toEqual({ produtos: [], truncado: false });
+      // ADR 016: a resposta ganhou `proximo` (cursor da próxima página; null = não há).
+      expect(r.json).toEqual({ produtos: [], truncado: false, proximo: null });
     });
 
     it('o Vendedor busca do mesmo jeito', async () => {
