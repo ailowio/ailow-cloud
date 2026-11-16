@@ -98,6 +98,9 @@ describe('endpoints: método, caminho e corpo de cada chamada', () => {
     ['desbloquear', (a) => a.desbloquear(id), 'POST', `/usuarios/${id}/desbloquear`, undefined],
     ['derrubarSessoes', (a) => a.derrubarSessoes(id), 'POST', `/usuarios/${id}/derrubar-sessoes`, undefined],
     ['desativar', (a) => a.desativar(id), 'POST', `/usuarios/${id}/desativar`, undefined],
+    ['reativar', (a) => a.reativar(id), 'POST', `/usuarios/${id}/reativar`, undefined],
+    ['editarUsuario', (a) => a.editarUsuario(id, 'Ana Lima'), 'PUT', `/usuarios/${id}`, { nome: 'Ana Lima' }],
+    ['desvincular', (a) => a.desvincular(), 'POST', '/acesso/desvincular', undefined],
     ['empresa', (a) => a.empresa(), 'GET', '/empresa', undefined],
     [
       'salvarEmpresa',

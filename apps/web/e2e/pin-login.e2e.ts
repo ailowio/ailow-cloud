@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { DONO, entrarComoDono, PIN_DE_TESTE } from './apoio';
+import { DONO, entrarComoDono, PIN_DE_TESTE, sufixoUnico } from './apoio';
 
 // UXM-04/05/06 em navegador real (360×640). Evidência medida no DOM, nunca constante escrita à mão (L-0017).
 // Um único login do Dono (limite de 10/min por IP): ele só serve para vincular o aparelho; cada teste abre a
@@ -20,6 +20,17 @@ test.beforeAll(async ({ browser, baseURL }) => {
 
 async function abrirPin(page: Page) {
   await page.context().addCookies(aparelho);
+  await page.goto('/');
+  await expect(page.getByText('Quem está usando?')).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(nomeDono) }).click();
+  await expect(page.getByRole('button', { name: '5', exact: true })).toBeVisible();
+}
+
+// "Sair" desvincula o aparelho no servidor (decisão do Pedro, 2026-11-16): quem testa o Sair usa um aparelho só dele,
+// senão o cookie compartilhado acima morreria para os testes seguintes.
+async function abrirPinComAparelhoProprio(page: Page) {
+  const api = await entrarComoDono(page);
+  await api.post('/acesso/sair');
   await page.goto('/');
   await expect(page.getByText('Quem está usando?')).toBeVisible();
   await page.getByRole('button', { name: new RegExp(nomeDono) }).click();
@@ -119,8 +130,8 @@ test('UXM-05: sem navigator.vibrate o teclado funciona e nada quebra', async ({ 
   expect(erros).toEqual([]);
 });
 
-test('UXM-06: menu do nome tem Trocar de usuário e Sair; Sair encerra a sessão; sem overflow nos 2 temas', async ({ page }) => {
-  await abrirPin(page);
+test('UXM-06: menu do nome tem Trocar de usuário e Sair; Sair encerra a sessão e desvincula o aparelho; sem overflow nos 2 temas', async ({ page }) => {
+  await abrirPinComAparelhoProprio(page);
   await tocar(page, PIN_DE_TESTE);
   await expect(page.getByText('O que vamos fazer?')).toBeVisible();
 
@@ -144,17 +155,20 @@ test('UXM-06: menu do nome tem Trocar de usuário e Sair; Sair encerra a sessão
     await expect(sair).toBeHidden();
   }
 
-  // Sair: volta ao login do Dono e a sessão fica encerrada no servidor.
+  // Sair: volta ao login do Dono, a sessão fica encerrada e o aparelho DESVINCULADO no servidor (decisão de 2026-11-16;
+  // antes o aparelho seguia vinculado e a rota protegida caía em /quem-usa).
   await page.getByRole('button', { name: new RegExp(`Menu de ${nomeDono}`) }).click();
   await page.getByRole('menuitem', { name: 'Sair' }).click();
   await expect(page).toHaveURL(/\/entrar$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Entrar' })).toBeVisible();
   expect((await page.context().request.get('/acesso/eu')).status(), 'sessão encerrada no servidor').toBe(401);
+  expect((await page.context().request.get('/acesso/usuarios')).status(), 'aparelho desvinculado no servidor').toBe(401);
 
-  // Rota protegida não abre mais.
+  // Rota protegida não abre mais e nem "Quem está usando?" aparece: só o login do Dono.
   await page.goto('/configuracoes');
   await expect(page.getByText('O que vamos fazer?')).toHaveCount(0);
-  await expect(page).toHaveURL(/\/quem-usa$/);
+  await expect(page).toHaveURL(/\/entrar$/);
+  await expect(page.getByRole('button', { name: 'Trocar de usuário' })).toHaveCount(0);
 });
 
 test('UXM-06: Trocar de usuário leva a Quem está usando?', async ({ page }) => {
@@ -165,4 +179,24 @@ test('UXM-06: Trocar de usuário leva a Quem está usando?', async ({ page }) =>
   await page.getByRole('menuitem', { name: 'Trocar de usuário' }).click();
   await expect(page.getByText('Quem está usando?')).toBeVisible();
   expect((await page.context().request.get('/acesso/eu')).status()).toBe(401);
+});
+
+test('Usuário bloqueado: o aviso vem em toast (não inline) e o teclado fica desabilitado', async ({ page }) => {
+  // Vendedor próprio, bloqueado pela API com 5 PINs errados (RN-09); nada de dado acumulado do dev (L-0025).
+  const api = await entrarComoDono(page);
+  const nome = `Bloqueado ${sufixoUnico()}`;
+  const criado = await api.post('/usuarios', { data: { nome, pin: '1357' } });
+  expect(criado.status(), 'Vendedor criado').toBe(201);
+  const { id } = (await criado.json()) as { id: string };
+  for (let i = 0; i < 5; i++) await api.post('/acesso/pin', { data: { usuario_id: id, pin: '0000' } });
+  expect((await api.post('/acesso/pin', { data: { usuario_id: id, pin: '1357' } })).status(), 'bloqueado no servidor').toBe(423);
+  await api.post('/acesso/sair'); // sem sessão: o app abre em "Quem está usando?"
+
+  await page.goto('/');
+  await expect(page.getByText('Quem está usando?')).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(nome) }).click();
+  const aviso = 'Usuário bloqueado por PIN errado. Peça ao Dono para desbloquear.';
+  await expect(page.locator('.mantine-Notifications-root').getByText(aviso)).toBeVisible();
+  await expect(page.getByText(aviso)).toHaveCount(1); // só o toast: nada inline empurrando o teclado
+  await expect(page.getByRole('button', { name: '5', exact: true })).toBeDisabled();
 });

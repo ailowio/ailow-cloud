@@ -124,7 +124,7 @@ export async function buildApp({
       openapi: '3.1.0',
       info: {
         title: 'Ailow Cloud API',
-        version: '0.14.0',
+        version: '0.15.0',
         description:
           'API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).',
         contact: { name: 'Ailow Cloud', url: 'https://github.com/ailowio/ailow-cloud' },

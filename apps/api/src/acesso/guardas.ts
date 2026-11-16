@@ -41,12 +41,13 @@ export function criarGuardas({ pool, agora }: Deps) {
     const sessao = await withEmpresa(pool, lido.empresaId, async (c) => {
       const r = await c.query(
         `UPDATE sessoes s SET ultimo_uso_em = $2::timestamptz
-           FROM usuarios u, empresas e
+           FROM usuarios u, empresas e, aparelhos a
           WHERE s.token_hash = $1
             AND s.revogada_em IS NULL
             AND s.expira_em > $2::timestamptz
             AND u.empresa_id = s.empresa_id AND u.id = s.usuario_id AND u.ativo
             AND e.id = s.empresa_id
+            AND a.empresa_id = s.empresa_id AND a.id = s.aparelho_id AND a.desvinculado_em IS NULL
             AND s.ultimo_uso_em + make_interval(mins => e.inatividade_minutos) > $2::timestamptz
         RETURNING s.id, s.empresa_id, s.usuario_id, s.aparelho_id, u.perfil, u.nome, e.inatividade_minutos`,
         [lido.hash, now],
@@ -88,7 +89,8 @@ export function criarGuardas({ pool, agora }: Deps) {
     if (!lido?.empresaId) return naoAutenticado(reply);
     const ap = await withEmpresa(pool, lido.empresaId, async (c) => {
       const r = await c.query(
-        'UPDATE aparelhos SET ultimo_uso_em = $2::timestamptz WHERE token_hash = $1 RETURNING id, empresa_id',
+        `UPDATE aparelhos SET ultimo_uso_em = $2::timestamptz
+          WHERE token_hash = $1 AND desvinculado_em IS NULL RETURNING id, empresa_id`,
         [lido.hash, agora()],
       );
       return r.rows[0] as { id: string; empresa_id: string } | undefined;

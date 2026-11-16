@@ -8,9 +8,9 @@ import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { fecharModal, useAcao } from './comum';
 
 const PERFIL = { dono: 'Dono', vendedor: 'Vendedor' } as const;
-type Modo = 'menu' | 'pin' | 'meu-pin' | 'desativar';
+type Modo = 'menu' | 'nome' | 'pin' | 'meu-pin' | 'desativar' | 'reativar';
 
-/** RF-CFG-01: criar Vendedor, redefinir PIN, desbloquear, derrubar sessões e desativar. */
+/** RF-CFG-01: criar Vendedor, corrigir nome, redefinir PIN, desbloquear, derrubar sessões, desativar e reativar. */
 export function Usuarios(props: { api: Api; eu: string }) {
   const { api } = props;
   const { carga, recarregar, tentarDeNovo } = useCarregar(() => api.usuarios().then((r) => r.usuarios));
@@ -46,12 +46,10 @@ export function Usuarios(props: { api: Api; eu: string }) {
                 </Badge>
               )}
             </Group>
-            {/* Desativado não volta (a API não reativa): sem ações. */}
-            {u.ativo && (
-              <Button variant="default" onClick={() => setAlvo(u)} aria-label={`Opções de ${u.nome}`}>
-                Opções
-              </Button>
-            )}
+            {/* Desativado também tem opções: corrigir o nome e reativar (rodada 2 de UX). */}
+            <Button variant="default" onClick={() => setAlvo(u)} aria-label={`Opções de ${u.nome}`}>
+              Opções
+            </Button>
           </Stack>
         ))}
 
@@ -125,14 +123,17 @@ function OpcoesUsuario(props: {
   const [modo, setModo] = useState<Modo>('menu');
   const [pin, setPin] = useState('');
   const [senha, setSenha] = useState('');
+  const [nome, setNome] = useState(alvo.nome);
   const { pendente, rodar } = useAcao();
   const ehVendedor = alvo.perfil === 'vendedor';
+  const ativo = alvo.ativo;
 
   // Trocar de modo limpa o que foi digitado: PIN e senha não ficam esperando em memória.
   const ir = (m: Modo) => {
     setModo(m);
     setPin('');
     setSenha('');
+    setNome(alvo.nome);
   };
   async function executar(fn: () => Promise<unknown>, ok: string) {
     if (await rodar(fn, ok)) props.aoMudar();
@@ -141,8 +142,21 @@ function OpcoesUsuario(props: {
   return (
     <Modal opened onClose={props.aoFechar} title={alvo.nome} centered closeButtonProps={fecharModal}>
       <Stack gap="sm">
-        {modo === 'menu' && (
+        {modo === 'menu' && !ativo && (
           <>
+            <Text c="dimmed">Esta pessoa está desativada e não aparece em “Quem está usando?”.</Text>
+            <Button onClick={() => ir('reativar')}>Reativar</Button>
+            <Button variant="default" onClick={() => ir('nome')}>
+              Editar nome
+            </Button>
+          </>
+        )}
+
+        {modo === 'menu' && ativo && (
+          <>
+            <Button variant="default" onClick={() => ir('nome')}>
+              Editar nome
+            </Button>
             {/* PIN do Vendedor é redefinido pelo Dono; o do Dono, por ele mesmo com a senha (a API exige). */}
             {ehVendedor && (
               <Button variant="default" onClick={() => ir('pin')}>
@@ -170,6 +184,31 @@ function OpcoesUsuario(props: {
                 Desativar
               </Button>
             )}
+          </>
+        )}
+
+        {modo === 'nome' && (
+          <>
+            {/* Mesmo limite da API (120); o nome salvo é o digitado sem espaços nas pontas. */}
+            <TextInput label="Nome" required size="lg" maxLength={120} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
+            <Button
+              loading={pendente}
+              disabled={!nome.trim() || nome.trim() === alvo.nome}
+              onClick={() => void executar(() => api.editarUsuario(alvo.id, nome.trim()), 'Nome salvo')}
+            >
+              Salvar nome
+            </Button>
+          </>
+        )}
+
+        {modo === 'reativar' && (
+          <>
+            <Text>
+              Reativar <strong>{alvo.nome}</strong>? A pessoa volta para “Quem está usando?” e entra com o mesmo PIN de antes.
+            </Text>
+            <Button loading={pendente} onClick={() => void executar(() => api.reativar(alvo.id), 'Pessoa reativada')}>
+              Sim, reativar {alvo.nome}
+            </Button>
           </>
         )}
 

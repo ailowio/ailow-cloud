@@ -2,6 +2,7 @@ import {
   definirMeuPinBodySchema,
   definirPinBodySchema,
   criarVendedorBodySchema,
+  editarUsuarioBodySchema,
   entrarBodySchema,
   entrarResponseSchema,
   erroSchema,
@@ -98,7 +99,9 @@ export async function registrarRotasAcesso(app: FastifyInstance, deps: Deps, g: 
         let aparelhoId: string | undefined;
         let tokenAparelho: string | undefined;
         if (cookieAparelho?.empresaId === login.empresa_id) {
-          const r = await c.query('SELECT id FROM aparelhos WHERE token_hash = $1', [cookieAparelho.hash]);
+          const r = await c.query('SELECT id FROM aparelhos WHERE token_hash = $1 AND desvinculado_em IS NULL', [
+            cookieAparelho.hash,
+          ]);
           aparelhoId = r.rows[0]?.id;
         }
         if (!aparelhoId) {
@@ -294,6 +297,40 @@ export async function registrarRotasAcesso(app: FastifyInstance, deps: Deps, g: 
     },
   );
 
+  // "Sair" do app (decisão do Pedro, 2026-11-16): encerra TODAS as sessões do aparelho e o desvincula no servidor.
+  // Qualquer pessoa com sessão pode (só reduz acesso); entrar de novo exige e-mail e senha do Dono (aparelho novo).
+  rotas.post(
+    '/acesso/desvincular',
+    {
+      preValidation: g.exigirSessao,
+      schema: {
+        tags: ['acesso'],
+        summary: 'Sai e desvincula este aparelho: derruba as sessões dele e o cookie de aparelho deixa de valer',
+        security: sessaoCookie,
+        response: { 204: semConteudo, 401: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const now = agora();
+      await withEmpresa(pool, s.empresaId, async (c) => {
+        await c.query('UPDATE sessoes SET revogada_em = $2 WHERE aparelho_id = $1 AND revogada_em IS NULL', [s.aparelhoId, now]);
+        await c.query('UPDATE aparelhos SET desvinculado_em = $2 WHERE id = $1 AND desvinculado_em IS NULL', [s.aparelhoId, now]);
+        await registrarEvento(c, {
+          empresaId: s.empresaId,
+          atorTipo: 'usuario',
+          atorId: s.usuarioId,
+          alvoId: s.aparelhoId,
+          tipo: 'aparelho_desvinculado',
+          em: now,
+        });
+      });
+      reply.clearCookie('sessao', opcoesCookie(cookieSecure));
+      reply.clearCookie('aparelho', opcoesCookie(cookieSecure));
+      return reply.code(204).send(null);
+    },
+  );
+
   // ---------------------------------------------------------------- Dono define o próprio PIN
   rotas.put(
     '/acesso/meu-pin',
@@ -445,6 +482,39 @@ export async function registrarRotasAcesso(app: FastifyInstance, deps: Deps, g: 
     await derrubar(c, alvo.id, now);
     return 'ok';
   });
+
+  // Reativar (rodada 2 de UX): o Vendedor desligado volta com o mesmo PIN, sem bloqueio; quem já está ativo dá 409.
+  acaoSobreUsuario('/usuarios/:id/reativar', 'Reativa um Vendedor desativado, com o mesmo PIN e sem bloqueio (Dono)', 'usuario_reativado', async (c, alvo) => {
+    const r = await c.query('UPDATE usuarios SET ativo = true, pin_falhas = 0, bloqueado_em = NULL WHERE id = $1 AND NOT ativo', [alvo.id]);
+    return r.rowCount === 1 ? 'ok' : 'proibido';
+  });
+
+  rotas.put(
+    '/usuarios/:id',
+    {
+      preValidation: gestao,
+      schema: {
+        tags: ['usuarios'],
+        summary: 'Corrige o nome de uma pessoa da empresa (Dono). Perfil, PIN e sessões não mudam',
+        security: sessaoCookie,
+        params: usuarioIdParamsSchema,
+        body: editarUsuarioBodySchema,
+        response: { 204: semConteudo, 400: erroSchema, 401: erroSchema, 403: erroSchema, 404: erroSchema },
+      },
+    },
+    async (request, reply) => {
+      const s = sessaoDe(request);
+      const alvoId = request.params.id;
+      const ok = await withEmpresa(pool, s.empresaId, async (c) => {
+        const r = await c.query('UPDATE usuarios SET nome = $2 WHERE id = $1', [alvoId, request.body.nome]);
+        if (r.rowCount !== 1) return false;
+        await registrarEvento(c, { empresaId: s.empresaId, atorTipo: 'usuario', atorId: s.usuarioId, alvoId, tipo: 'usuario_editado', em: agora() });
+        return true;
+      });
+      if (!ok) return naoEncontrado(reply);
+      return reply.code(204).send(null);
+    },
+  );
 
   // PIN do Vendedor: o hash é calculado ANTES de abrir a transação (argon2 é lento e não deve segurar linha travada).
   rotas.put(

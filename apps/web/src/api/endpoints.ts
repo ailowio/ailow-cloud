@@ -63,6 +63,8 @@ export function criarApi(c: Cliente) {
       p<{ usuario: UsuarioPublico }>('POST', '/acesso/pin', { usuario_id: usuarioId, pin }),
     eu: () => p<{ usuario: UsuarioPublico; inatividade_minutos: number }>('GET', '/acesso/eu'),
     sair: () => p('POST', '/acesso/sair'),
+    // "Sair" do menu: encerra as sessões do aparelho e o desvincula (entrar de novo pede e-mail e senha do Dono).
+    desvincular: () => p('POST', '/acesso/desvincular'),
     definirMeuPin: (senha: string, pin: string) => p('PUT', '/acesso/meu-pin', { senha, pin }),
     // --- usuários (RF-CFG-01)
     usuarios: () => p<{ usuarios: UsuarioAdminItem[] }>('GET', '/usuarios'),
@@ -71,6 +73,8 @@ export function criarApi(c: Cliente) {
     desbloquear: (id: string) => p('POST', `/usuarios/${id}/desbloquear`),
     derrubarSessoes: (id: string) => p('POST', `/usuarios/${id}/derrubar-sessoes`),
     desativar: (id: string) => p('POST', `/usuarios/${id}/desativar`),
+    reativar: (id: string) => p('POST', `/usuarios/${id}/reativar`),
+    editarUsuario: (id: string, nome: string) => p('PUT', `/usuarios/${id}`, { nome }),
     // --- empresa + markup + logo (RF-CFG-02/03)
     empresa: () => p<Empresa>('GET', '/empresa'),
     salvarEmpresa: (e: Omit<Empresa, 'tem_logo'>) => p<Empresa>('PUT', '/empresa', e),

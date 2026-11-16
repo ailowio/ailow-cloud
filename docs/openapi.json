@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ailow Cloud API",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "description": "API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).",
     "contact": {
       "name": "Ailow Cloud",
@@ -617,6 +617,52 @@
       "post": {
         "operationId": "post_acesso_sair",
         "summary": "Encerra a sessão atual (o aparelho continua vinculado)",
+        "tags": [
+          "acesso"
+        ],
+        "security": [
+          {
+            "sessao": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acesso/desvincular": {
+      "post": {
+        "operationId": "post_acesso_desvincular",
+        "summary": "Sai e desvincula este aparelho: derruba as sessões dele e o cookie de aparelho deixa de valer",
         "tags": [
           "acesso"
         ],
@@ -1517,6 +1563,332 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios/{id}/reativar": {
+      "post": {
+        "operationId": "post_usuarios_id_reativar",
+        "summary": "Reativa um Vendedor desativado, com o mesmo PIN e sem bloqueio (Dono)",
+        "tags": [
+          "usuarios"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "sessao": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios/{id}": {
+      "put": {
+        "operationId": "put_usuarios_id",
+        "summary": "Corrige o nome de uma pessoa da empresa (Dono). Perfil, PIN e sessões não mudam",
+        "tags": [
+          "usuarios"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "nome"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "sessao": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {
