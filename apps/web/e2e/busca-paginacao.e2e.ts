@@ -137,25 +137,30 @@ for (const tela of ['Produtos', 'Etiquetas'] as const) {
       const marca = await criarLote(page);
       await abrir(page, tela, tema);
       await page.getByLabel('Buscar produto').fill(marca);
+      const nav = page.getByRole('navigation', { name: 'Paginação' });
+      await expect(nav).toBeVisible();
       await expect(page.locator('[data-paginacao-texto]')).toContainText(/Página 1 de [2-9]/);
       await expect(page.locator('html')).toHaveAttribute('data-mantine-color-scheme', tema);
+      // O rodapé de versão fica fora do <main>; a paginação sticky cola no fundo do main, não da janela.
       const m = await page.evaluate(() => {
         const raiz = document.documentElement;
-        const nav = document.querySelector('nav[aria-label="Paginação"]') as HTMLElement | null;
-        const botoes = nav ? [...nav.querySelectorAll('button')].map((b) => b.getBoundingClientRect()) : [];
+        const main = document.querySelector('main');
+        const el = document.querySelector('nav[aria-label="Paginação"]') as HTMLElement | null;
+        const botoes = el ? [...el.querySelectorAll('button')].map((b) => b.getBoundingClientRect()) : [];
+        const fundo = main ? main.getBoundingClientRect().bottom : window.innerHeight;
         return {
           largura: raiz.scrollWidth - raiz.clientWidth,
           altura: raiz.scrollHeight - raiz.clientHeight,
-          nav: nav !== null,
-          navDentro: nav ? nav.getBoundingClientRect().bottom <= window.innerHeight + 1 : false,
-          navLargura: nav ? nav.scrollWidth - nav.clientWidth : 0,
+          nav: el !== null,
+          navDentro: el ? el.getBoundingClientRect().bottom <= fundo + 1 : false,
+          navLargura: el ? el.scrollWidth - el.clientWidth : 0,
           menores: botoes.filter((b) => b.height < 48 || b.width < 48).length,
         };
       });
       expect(m.largura, 'overflow horizontal').toBeLessThanOrEqual(0);
       expect(m.altura, 'rolagem da página (só o conteúdo rola)').toBeLessThanOrEqual(0);
       expect(m.nav, 'paginação presente').toBe(true);
-      expect(m.navDentro, 'paginação fixa embaixo, à vista').toBe(true);
+      expect(m.navDentro, 'paginação fixa embaixo do main, à vista').toBe(true);
       expect(m.navLargura, 'overflow da paginação').toBeLessThanOrEqual(0);
       expect(m.menores, 'botões da paginação < 48 px').toBe(0);
     });

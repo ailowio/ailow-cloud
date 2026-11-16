@@ -119,6 +119,10 @@ export function Etiquetas(props: { api: Api }) {
       {carga.fase === 'pronto' && buscaLocal === '' && (
         <CarregarMais proximo={mais.proximo} carregando={mais.carregando} quantos={todos.length} aoTocar={mais.carregarMais} />
       )}
+      {/* Paginação fora da barra do PDF: sticky aninhada + rodapé de versão escondia o nav no e2e (360×640). */}
+      {carga.fase === 'pronto' && (
+        <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
+      )}
 
       {/* Barra fixa: o resumo e o botão ficam à vista enquanto a lista rola. */}
       <Box
@@ -128,7 +132,6 @@ export function Etiquetas(props: { api: Api }) {
         style={{ background: 'var(--mantine-color-body)', borderTop: '1px solid var(--ailow-borda)', zIndex: 2 }}
       >
         <Stack gap="xs">
-          <Paginacao pagina={pag.pagina} totalPaginas={pag.totalPaginas} aoMudar={pag.irPara} />
           <Text fw={650} aria-live="polite">
             {textoDoResumo(resumo)}
           </Text>
