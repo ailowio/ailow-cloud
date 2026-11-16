@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 // Apoio comum aos E2E. Os dados de cada teste nascem pela API (mesma sessão do navegador), com nomes únicos,
 // porque os testes dividem o mesmo banco (L-0008): nunca contar nem comparar linhas globais.
@@ -69,4 +69,17 @@ export async function saldo(api: APIRequestContext, skuId: string): Promise<numb
 export async function abrirInicio(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.getByText('O que vamos fazer?')).toBeVisible();
+}
+
+/**
+ * Preenche um campo controlado (React/Mantine) e confirma o valor.
+ * Em CI o fill às vezes cai num input que remonta no meio da digitação (valor volta a "");
+ * `toPass` repete até o valor ficar estável.
+ */
+export async function preencherCampo(campo: Locator, texto: string): Promise<void> {
+  await expect(async () => {
+    await campo.click();
+    await campo.fill(texto);
+    await expect(campo).toHaveValue(texto);
+  }).toPass({ timeout: 10_000 });
 }

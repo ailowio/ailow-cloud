@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 // S07 / UXM-09: busca ampla (caracteres soltos, código, preço) e lista paginada em Produtos e Etiquetas, a 360×640.
 // A evidência vem do navegador (nós do DOM, rolagem, caixas), não de constantes (L-0017). Dados do próprio teste.
-import { abrirInicio, entrarComoDono, sufixoUnico } from './apoio';
+import { abrirInicio, entrarComoDono, preencherCampo, sufixoUnico } from './apoio';
 
 const TEMAS = ['dark', 'light'] as const;
 const POR_PAGINA = { Produtos: 20, Etiquetas: 6 } as const;
@@ -80,30 +80,29 @@ for (const tela of ['Produtos', 'Etiquetas'] as const) {
     const busca = page.getByLabel('Buscar produto');
 
     // "cmst bra <letras>": caracteres soltos de "Camiseta" + "branca" + o sufixo único.
-    await busca.fill(`cmst bra ${c.letras}`);
-    await expect(busca).toHaveValue(`cmst bra ${c.letras}`);
+    await preencherCampo(busca, `cmst bra ${c.letras}`);
     await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
 
     // Tokens fora de ordem.
-    await busca.fill(`${c.letras} bra cmst`);
+    await preencherCampo(busca, `${c.letras} bra cmst`);
     await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
 
     // Por código do SKU.
-    await busca.fill(c.codigo);
+    await preencherCampo(busca, c.codigo);
     await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
 
     // Por preço: "77,77" e "7777" (centavos), junto do sufixo para isolar a peça.
-    await busca.fill(`77,77 ${c.letras}`);
+    await preencherCampo(busca, `77,77 ${c.letras}`);
     await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
-    await busca.fill(`7777 ${c.letras}`);
+    await preencherCampo(busca, `7777 ${c.letras}`);
     await expect(cartoes(page).filter({ hasText: c.nome })).toHaveCount(1);
     await expect(cartoes(page)).toHaveCount(1);
 
     // Sem resultado.
-    await busca.fill('qqqzzzxxx');
+    await preencherCampo(busca, 'qqqzzzxxx');
     await expect(page.getByText('Nada encontrado')).toBeVisible();
   });
 

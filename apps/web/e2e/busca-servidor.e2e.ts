@@ -3,7 +3,7 @@ import { expect, test, type APIRequestContext } from '@playwright/test';
 // S14c: com mais de 200 produtos a lista vem cortada (`truncado`). A busca passa a perguntar ao servidor (?q=) e une com
 // o que já está na tela; o corte é avisado; se a rede falhar, a lista local continua e há um toast. O cenário é o banco
 // saturado: se ele ainda não tem mais de 200 produtos, o teste completa até passar de 200 (dados sintéticos, sem apagar).
-import { abrirInicio, entrarComoDono, sufixoUnico } from './apoio';
+import { abrirInicio, entrarComoDono, preencherCampo, sufixoUnico } from './apoio';
 
 async function garantirListaCortada(api: APIRequestContext) {
   const lista = async () => (await (await api.get('/produtos')).json()) as { produtos: { nome: string }[]; truncado: boolean };
@@ -54,19 +54,18 @@ for (const tela of ['Produtos', 'Etiquetas'] as const) {
     // A busca (debounce de 300 ms) consulta o servidor com ?q= e o produto aparece.
     const campo = page.getByLabel('Buscar produto');
     const consulta = page.waitForRequest((r) => r.url().includes('/produtos?q=') && r.method() === 'GET');
-    await campo.fill(nome);
-    await expect(campo).toHaveValue(nome);
+    await preencherCampo(campo, nome);
     await consulta;
     await expect(cartoes.filter({ hasText: nome })).toHaveCount(1);
     // Busca que o servidor respondeu inteira: o aviso de corte some.
     await expect(page.locator('[data-aviso-corte]')).toHaveCount(0);
 
     // Caracteres soltos + um pedaço contínuo: o servidor recebe o pedaço, o cliente aplica o resto.
-    await page.getByLabel('Buscar produto').fill(`zz srvdr ${letras}`);
+    await preencherCampo(page.getByLabel('Buscar produto'), `zz srvdr ${letras}`);
     await expect(cartoes.filter({ hasText: nome })).toHaveCount(1);
 
     // Pelo preço (faixa do servidor): "43,21" junto do sufixo.
-    await page.getByLabel('Buscar produto').fill(`43,21 ${letras}`);
+    await preencherCampo(page.getByLabel('Buscar produto'), `43,21 ${letras}`);
     await expect(cartoes.filter({ hasText: nome })).toHaveCount(1);
   });
 }
@@ -79,7 +78,7 @@ test('Produtos: se a consulta ao servidor falhar, a lista já carregada continua
   await abrirInicio(page);
   await page.getByRole('button', { name: 'Produtos' }).first().click();
   await expect(page.locator('.ailow-cartao').first()).toBeVisible();
-  await page.getByLabel('Buscar produto').fill(conhecido);
+  await preencherCampo(page.getByLabel('Buscar produto'), conhecido);
   await expect(page.getByText('Não consegui buscar no servidor')).toBeVisible();
   await expect(page.locator('.ailow-cartao', { hasText: conhecido }).first()).toBeVisible();
 });
