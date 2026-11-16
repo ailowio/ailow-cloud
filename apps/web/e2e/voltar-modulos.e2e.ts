@@ -177,7 +177,15 @@ test('(a) assistente concluído: o Voltar não reabre o assistente (cliente cada
   await page.getByRole('button', { name: 'Cadastrar cliente' }).click();
   await expect.poll(() => caminho(page)).toBe('/clientes');
   await expect(passo(page)).toHaveCount(0);
+  // A ficha do cliente recém-cadastrado abre (decisão do Pedro, 2026-11-16) e continua aberta depois de o histórico assentar.
+  await expect(page.getByRole('dialog')).toContainText(nome);
+  await page.waitForTimeout(400);
+  await expect(page.getByRole('dialog')).toContainText(nome);
 
+  // 1º Voltar fecha a ficha (fica na lista); o 2º vai ao Início, nunca de volta ao assistente.
+  await page.goBack();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(() => caminho(page)).toBe('/clientes');
   await page.goBack();
   await expect.poll(() => caminho(page)).toBe('/');
   await expect(page.getByText(INICIO)).toBeVisible();
