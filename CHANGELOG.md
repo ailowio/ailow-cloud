@@ -4,6 +4,10 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+## [1.1.0] - 2026-11-16
+
+UX mobile (rodadas 1 e 2) em produção: OpenAPI 0.15.0 (aditivo), 4 migrações expand; versão discreta no rodapé do app (`VITE_APP_VERSION` no build da tag).
+
 ### UX/UI rodada 2 (decisões do Pedro de 2026-11-16; OpenAPI 0.15.0, aditivo; 4 migrações expand)
 - **Sair desvincula o aparelho** no servidor (`POST /acesso/desvincular`, migração `aparelhos.desvinculado_em`): o cookie antigo deixa de valer; entrar de novo pede e-mail e senha do Dono.
 - **Pessoas:** o Dono corrige o nome (`PUT /usuarios/{id}`) e reativa um Vendedor desativado (`POST /usuarios/{id}/reativar`). PIN bloqueado avisa em toast.
