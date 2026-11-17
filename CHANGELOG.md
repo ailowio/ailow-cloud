@@ -2,7 +2,9 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
-## [Não lançado]
+## [1.2.0] - 2026-11-16
+
+UX Cloud (12 itens) em produção: OpenAPI 0.16.0 (aditivo), migração `preferencias_ui`.
 
 ### UX Cloud (12 itens; OpenAPI 0.16.0 aditivo; migração `preferencias_ui`)
 - Marca: wordmark **Ailow** (sem ERP); logo SVG com `currentColor` alinhada a `--ailow-marca-texto`.
