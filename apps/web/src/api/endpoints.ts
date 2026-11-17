@@ -27,6 +27,8 @@ import type {
   PedidoReceber,
   PontoBatido,
   PontoEstado,
+  PreferenciaUiPut,
+  PreferenciasUi,
   Produto,
   ProdutoEditar,
   ProdutoNovo,
@@ -114,6 +116,9 @@ export function criarApi(c: Cliente) {
     // ADR 016: `depois` = o `proximo` da página anterior (cursor opaco); sem ele, a primeira página.
     produtos: (q?: string, depois?: string) =>
       p<{ produtos: Produto[]; truncado: boolean; proximo: string | null }>('GET', comConsulta('/produtos', [['q', q?.trim()], ['depois', depois]])),
+    sugestoesVenda: () => p<{ produtos: Produto[] }>('GET', '/produtos/sugestoes-venda'),
+    preferenciasUi: () => p<PreferenciasUi>('GET', '/preferencias-ui'),
+    salvarPreferenciasUi: (corpo: PreferenciaUiPut) => p<PreferenciasUi>('PUT', '/preferencias-ui', corpo),
     criarProduto: (n: ProdutoNovo) =>
       p<{ id: string; numero: number; skus: { id: string; codigo: string }[] }>('POST', '/produtos', n),
     editarProduto: (id: string, e: ProdutoEditar) => p<{ id: string }>('PUT', `/produtos/${id}`, e),

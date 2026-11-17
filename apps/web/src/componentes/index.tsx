@@ -105,28 +105,33 @@ export function Carrinho(props: { itens: ItemCarrinho[]; onMudar: (codigo: strin
     return <EstadoVazio titulo="Carrinho vazio" texto="Escaneie uma peça para começar." />;
   }
   return (
-    <Stack gap="sm" p="md" className="ailow-cartao">
+    <Stack gap="lg" p="md" className="ailow-cartao">
       {props.itens.map((i) => (
-        <Stack key={i.codigo} gap={6} pb="sm" style={{ borderBottom: '1px solid var(--ailow-borda)' }}>
+        <Stack
+          key={i.codigo}
+          gap="sm"
+          pb="md"
+          style={{ borderBottom: '1px solid var(--ailow-borda)' }}
+        >
           {/* Nome nunca é truncado: o vendedor precisa saber o que está no carrinho. */}
-          <Text fw={600} style={{ overflowWrap: 'anywhere' }}>{i.nome}</Text>
-          <Group justify="space-between" wrap="wrap" gap="xs">
-            <Text size="sm" c="dimmed">{i.detalhe}</Text>
-            <Group gap={8} wrap="wrap">
+          <Text fw={700} fz="md" style={{ overflowWrap: 'anywhere' }}>{i.nome}</Text>
+          <Text size="sm" c="dimmed">{i.detalhe}</Text>
+          <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+            <Group gap={8} wrap="nowrap">
               <ActionIcon variant="default" size={48} aria-label={`Menos ${i.nome}`} onClick={() => props.onMudar(i.codigo, -1)}>−</ActionIcon>
-              <Text w={28} ta="center" fw={650}>{i.qtd}</Text>
+              <Text w={36} ta="center" fw={700} fz="lg">{i.qtd}</Text>
               <ActionIcon variant="default" size={48} aria-label={`Mais ${i.nome}`} onClick={() => props.onMudar(i.codigo, 1)}>+</ActionIcon>
             </Group>
-          </Group>
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">{i.qtd} × <Valor centavos={i.precoCentavos} /></Text>
-            <Valor centavos={i.precoCentavos * i.qtd} />
+            <Stack gap={2} align="flex-end">
+              <Text size="sm" c="dimmed">{i.qtd} × <Valor centavos={i.precoCentavos} /></Text>
+              <Text fw={650}><Valor centavos={i.precoCentavos * i.qtd} /></Text>
+            </Stack>
           </Group>
         </Stack>
       ))}
-      <Group justify="space-between" pt={4}>
+      <Group justify="space-between" pt="xs" style={{ borderTop: '2px solid var(--ailow-borda)' }}>
         <Text fz="lg" fw={700}>Total</Text>
-        <Text fz="lg"><Valor centavos={total} destaque /></Text>
+        <Text fz="xl" fw={700}><Valor centavos={total} destaque /></Text>
       </Group>
     </Stack>
   );

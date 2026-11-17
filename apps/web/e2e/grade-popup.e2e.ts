@@ -173,8 +173,8 @@ test('Vendas: grade de ações com ícones; cada toque leva à tela certa', asyn
   expect(caixas.every((c) => c.width >= 48 && c.height >= 48)).toBe(true);
   expect(await grade.locator('svg').count(), 'um ícone por ação').toBeGreaterThanOrEqual(3);
 
-  // Fechar começa desligado (carrinho vazio) e liga com uma peça.
-  await expect(grade.getByRole('button', { name: 'Fechar', exact: true })).toBeDisabled();
+  // Finalizar começa desligado (carrinho vazio) e liga com uma peça.
+  await expect(grade.getByRole('button', { name: 'Finalizar', exact: true })).toBeDisabled();
 
   // Toque real em Escanear: a tela de leitura substitui a de montar.
   await grade.getByRole('button', { name: 'Escanear' }).click();
@@ -185,7 +185,7 @@ test('Vendas: grade de ações com ícones; cada toque leva à tela certa', asyn
 
   await page.getByLabel('Buscar').fill(peca.codigo);
   await page.locator('[data-toque="peca"]', { hasText: peca.codigo }).click();
-  await page.locator('[data-grade-acoes]').getByRole('button', { name: 'Fechar', exact: true }).click();
+  await page.locator('[data-grade-acoes]').getByRole('button', { name: 'Finalizar', exact: true }).click();
   await expect(page).toHaveURL(/\/vendas\/fechar$/);
   await page.goBack();
 

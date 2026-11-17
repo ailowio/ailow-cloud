@@ -21,6 +21,11 @@ export function subtotalCentavos(itens: ItemVenda[]): number {
   return itens.reduce((s, i) => s + i.precoCentavos * i.qtd, 0);
 }
 
+/** Quantidade total de peças no carrinho (soma das qtds), para o badge da barra. */
+export function quantidadeItens(itens: readonly ItemVenda[]): number {
+  return itens.reduce((s, i) => s + i.qtd, 0);
+}
+
 export function acrescentar(itens: ItemVenda[], peca: Omit<ItemVenda, 'qtd'>): PassoCarrinho {
   const i = itens.findIndex((item) => item.skuId === peca.skuId);
   if (i < 0) {

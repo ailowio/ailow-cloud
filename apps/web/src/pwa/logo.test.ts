@@ -36,4 +36,10 @@ describe('logo (marca Ailow)', () => {
     expect(fonte).toContain('logo.svg?raw');
     expect(fonte).not.toContain('M189 42L318');
   });
+
+  it('Logo não hardcoda o path da marca (fonte = logo.svg)', () => {
+    const fonte = readFileSync(new URL('../componentes/Logo.tsx', import.meta.url), 'utf8');
+    expect(fonte).toContain('logo.svg?raw');
+    expect(fonte).not.toContain('M189 42L318');
+  });
 });

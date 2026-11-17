@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { ActionIcon, Box, Button, Container, Group, Stack, Text, Title, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconArrowLeft, IconMoon, IconSun } from '@tabler/icons-react';
 import { Logo } from '../componentes/Logo';
-import { MenuUsuario } from '../componentes/sessao';
+import { BotaoTrocarUsuario, MenuUsuario } from '../componentes/sessao';
 import { versaoDoApp } from '../lib/versao';
 
 /** Alterna claro/escuro. Alvo de 48 px; o rótulo diz a ação, não o estado. */
@@ -45,13 +45,14 @@ export function Moldura(props: {
           <Group justify="space-between" wrap="nowrap" h={64}>
             <Group gap="xs" wrap="nowrap">
               <Logo altura={36} alt="" empresa={props.logoEmpresa === true} />
-              {/* Nome do produto ao lado da marca; a logo da empresa é só o ícone. */}
-              <Text ff="var(--mantine-font-family-headings)" fw={700} fz={22} c="var(--ailow-marca-texto)">
-                Ailow ERP
+              {/* Wordmark curto; mesma cor da marca via --ailow-marca-texto. */}
+              <Text ff="var(--mantine-font-family-headings)" fw={600} fz={16} c="var(--ailow-marca-texto)">
+                Ailow
               </Text>
             </Group>
             <Group gap="xs" wrap="nowrap">
-              {/* UXM-06: com sessão aberta o nome do usuário abre o menu Trocar/Sair em toda tela. */}
+              {/* UXM-06: Trocar na toolbar + menu do nome (Trocar/Sair). */}
+              <BotaoTrocarUsuario />
               <MenuUsuario />
               {props.acaoTopo && (
                 <Button variant="default" size="md" h={48} onClick={props.acaoTopo.aoClicar}>

@@ -15,7 +15,7 @@ test('cancelar venda devolve o estoque e marca a venda como cancelada', async ({
   await page.getByRole('button', { name: 'Vendas' }).click();
   await page.getByLabel('Buscar').fill(peca.codigo);
   await page.locator('[data-toque="peca"]', { hasText: peca.codigo }).click();
-  await page.getByRole('button', { name: 'Fechar', exact: true }).click();
+  await page.getByRole('button', { name: 'Finalizar', exact: true }).click();
   await page.getByLabel('Celular do cliente').fill(celular);
   await expect(page.getByText(`E2E ${sufixo}`)).toBeVisible();
   await page.getByRole('button', { name: 'Pix' }).click();

@@ -96,6 +96,32 @@ h1, h2, h3, h4 {
   border-radius: 0 0 var(--mantine-radius-md) var(--mantine-radius-md);
 }
 
+/* Barra do carrinho na venda: preenchimento marca (docs/design/barra-carrinho.html var. A). */
+.ailow-barra-carrinho {
+  margin: 0 -16px -16px;
+  background: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
+  border-top: none;
+  box-shadow: var(--ailow-brilho);
+}
+.ailow-barra-carrinho .ailow-barra-carrinho__dica {
+  opacity: 0.9;
+  color: inherit;
+}
+.ailow-barra-carrinho--pulse .ailow-barra-carrinho__icone {
+  animation: ailow-barra-bump 420ms ease;
+}
+@keyframes ailow-barra-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ailow-barra-carrinho--pulse .ailow-barra-carrinho__icone {
+    animation: none;
+  }
+}
+
 /* Bloco da tela inicial */
 .ailow-bloco {
   background: var(--ailow-superficie);

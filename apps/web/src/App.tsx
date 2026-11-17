@@ -302,8 +302,13 @@ function Logado(props: {
   const voltar = useVoltar('/');
 
   const sessaoUi = useMemo(
-    () => ({ nome: props.usuario.nome, aoTrocar: props.aoTrocar, aoSair: props.aoSair }),
-    [props.usuario.nome, props.aoTrocar, props.aoSair],
+    () => ({
+      nome: props.usuario.nome,
+      perfil: props.usuario.perfil,
+      aoTrocar: props.aoTrocar,
+      aoSair: props.aoSair,
+    }),
+    [props.usuario.nome, props.usuario.perfil, props.aoTrocar, props.aoSair],
   );
 
   return (

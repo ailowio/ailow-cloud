@@ -82,11 +82,8 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
   - Menores: `npm run dev:parar` quebrado na `main`; Zod/chunk 763 kB no bundle web; edição/desativação de produto; reescrita do histórico (acervo); ADR 003 e 006 propostos; perguntas Q1–Q5 para o Marcos.
 
 
-### Estado de retomada — 2026-11-16 (UX rodada 2; sobrescrever a cada sessão)
-- **Git:** checkout `feat/ux-mobile-rodada-2` → PR **#35** (base `feat/ux-mobile-rodada-1` → PR **#34**, todos os checks verdes). Ordem de merge: **#34 na `main`, depois #35** (retarget/rebase se o GitHub pedir). Tags em prod: `v0.1.0`, `v1.0.0`, **`v1.0.1`**. Worktrees `_wt-k6` / `_wt-s14*` ainda a limpar depois.
-- **Produção:** `https://cloud.ailow.com.br` ainda na **v1.0.1** (UX das PRs #34/#35 **não** implantada). Sem tenant de teste (0 empresas, 1 Admin). Recriar tenant **depois** do deploy da UX, se for testar no ar.
-- **Onde testar agora:** (1) local `npm run dev:db` → `dev:api` → `dev:web` na pasta `D:\apps\ailow-cloud` com a branch da rodada 2; (2) após merge+deploy autorizado: de novo `https://cloud.ailow.com.br`.
-- **CI:** #34 ✅; #35 e2e corrigido nesta sessão (Carregar mais acima da paginação sticky + espera de `data-carregados`) — conferir o run novo.
-- **Entrega Moodle:** roteiro/texto-guia/checklist em `docs/entrega/` ✅; falta gravar vídeo, confirmar enunciado no Moodle e enviar (só com pedido).
-- **RNF-02:** ainda ❌ em produção; medir k6 **dentro da VPS**, 3 rodadas; hipótese pool/`DB_POOL_MAX`. Critério intacto.
-- **Em aberto:** deploy/tag da UX; tenant de teste; vídeo/Moodle; RNF-02; board (opcional); limpar worktrees; impressão física etiquetas (S08).
+### Estado de retomada — 2026-11-16 (UX 12 itens implementado; sobrescrever a cada sessão)
+- **Código:** plano UX 12 itens feito (chrome, sugestões/Finalizar/swatch, barra+resumo, ADR 018 + DnD). Sem commit ainda (aguardar pedido). OpenAPI **0.16.0**; migração `20261120120000_preferencias-ui.sql`.
+- **Git / prod:** PRs #34/#35 e tags anteriores inalterados nesta sessão; produção ainda **v1.0.1** até deploy autorizado.
+- **Onde testar:** `dev:db` (aplicar migração nova) → `dev:api` → `dev:web`; protótipo barra em `docs/design/barra-carrinho.html`.
+- **Em aberto:** commit/PR da UX 12; E2E CI (rótulos Finalizar); migrate+deploy; tenant de teste; Moodle/vídeo; RNF-02.

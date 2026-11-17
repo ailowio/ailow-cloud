@@ -21,3 +21,25 @@ const TODOS: readonly Modulo[] = [
 ];
 
 export const modulosPara = (perfil: Perfil): Modulo[] => TODOS.filter((m) => m.perfis.includes(perfil));
+
+/**
+ * Aplica a ordem salva no perfil: ids conhecidos e permitidos primeiro;
+ * módulos novos (ainda sem preferência) no fim, na ordem padrão.
+ */
+export function ordenarModulos(disponiveis: readonly Modulo[], preferidos: readonly string[] | undefined): Modulo[] {
+  if (!preferidos || preferidos.length === 0) return [...disponiveis];
+  const porId = new Map(disponiveis.map((m) => [m.id, m]));
+  const usados = new Set<string>();
+  const ordenados: Modulo[] = [];
+  for (const id of preferidos) {
+    const m = porId.get(id as Modulo['id']);
+    if (m && !usados.has(m.id)) {
+      ordenados.push(m);
+      usados.add(m.id);
+    }
+  }
+  for (const m of disponiveis) {
+    if (!usados.has(m.id)) ordenados.push(m);
+  }
+  return ordenados;
+}

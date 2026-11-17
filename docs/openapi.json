@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ailow Cloud API",
-    "version": "0.15.0",
-    "description": "API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).",
+    "version": "0.16.0",
+    "description": "API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras, ponto e preferências de UI. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).",
     "contact": {
       "name": "Ailow Cloud",
       "url": "https://github.com/ailowio/ailow-cloud"
@@ -6457,6 +6457,206 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/produtos/sugestoes-venda": {
+      "get": {
+        "operationId": "get_produtos_sugestoes_venda",
+        "summary": "Até 5 peças com estoque para a montagem da venda (mais vendidas, senão recentes, senão alfabéticas); Dono e Vendedor",
+        "tags": [
+          "produtos"
+        ],
+        "security": [
+          {
+            "sessao": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "produtos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "numero": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "nome": {
+                            "type": "string"
+                          },
+                          "categoria_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "categoria_nome": {
+                            "type": "string"
+                          },
+                          "porte": {
+                            "type": "string",
+                            "enum": [
+                              "slim",
+                              "plus"
+                            ]
+                          },
+                          "atributos": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "preco_centavos": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "ativo": {
+                            "type": "boolean"
+                          },
+                          "custo_centavos": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "fornecedor": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "skus": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "codigo": {
+                                  "type": "string"
+                                },
+                                "tamanho": {
+                                  "type": "string"
+                                },
+                                "cor": {
+                                  "type": "string"
+                                },
+                                "estoque": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "estoque_minimo": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "codigo",
+                                "tamanho",
+                                "cor",
+                                "estoque"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "numero",
+                          "nome",
+                          "categoria_id",
+                          "categoria_nome",
+                          "porte",
+                          "atributos",
+                          "preco_centavos",
+                          "ativo",
+                          "skus"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "produtos"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -15455,6 +15655,265 @@
           }
         }
       }
+    },
+    "/preferencias-ui": {
+      "get": {
+        "operationId": "get_preferencias_ui",
+        "summary": "Preferências de UI do usuário da sessão (ordem dos módulos da home)",
+        "tags": [
+          "preferencias"
+        ],
+        "security": [
+          {
+            "sessao": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "modulos_ordem": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "vendas",
+                          "produtos",
+                          "compras",
+                          "clientes",
+                          "financeiro",
+                          "pessoas",
+                          "configuracoes"
+                        ]
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "put_preferencias_ui",
+        "summary": "Grava uma preferência de UI do usuário da sessão (UPSERT)",
+        "tags": [
+          "preferencias"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "chave": {
+                    "type": "string",
+                    "enum": [
+                      "modulos_ordem"
+                    ]
+                  },
+                  "valor": {
+                    "maxItems": 16,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "vendas",
+                        "produtos",
+                        "compras",
+                        "clientes",
+                        "financeiro",
+                        "pessoas",
+                        "configuracoes"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "chave",
+                  "valor"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessao": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "modulos_ordem": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "vendas",
+                          "produtos",
+                          "compras",
+                          "clientes",
+                          "financeiro",
+                          "pessoas",
+                          "configuracoes"
+                        ]
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "erro": {
+                      "type": "string"
+                    },
+                    "mensagem": {
+                      "type": "string"
+                    },
+                    "tentativas_restantes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "erro"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": [
@@ -15507,6 +15966,10 @@
     {
       "name": "pessoas",
       "description": "Ponto: bater entrada/saída (Dono e Vendedor) e espelho do mês (o Vendedor só o próprio)"
+    },
+    {
+      "name": "preferencias",
+      "description": "Preferências de UI do usuário da sessão (ordem dos módulos da home; ADR 018)"
     }
   ]
 }
