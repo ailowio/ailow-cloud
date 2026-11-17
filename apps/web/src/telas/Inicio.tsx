@@ -68,8 +68,12 @@ function useAlertasDeEstoque(api: Api | undefined, dono: boolean): Alertas | nul
   return alertas;
 }
 
-/** Handle de arraste separado do BlocoAcao: o DnD não pode virar um 2º role=button (quebra o E2E). */
-function ModuloArrastavel(props: { id: Modulo['id']; rotulo: string; children: ReactNode }) {
+/**
+ * Handle de arraste separado do BlocoAcao.
+ * O aria-label NÃO pode conter o rótulo do módulo: o Playwright casa `name: 'Vendas'` por substring
+ * e o handle "Reordenar Vendas" virava um segundo botão (E2E strict mode / timeout).
+ */
+function ModuloArrastavel(props: { id: Modulo['id']; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.id });
   return (
     <Box
@@ -87,7 +91,8 @@ function ModuloArrastavel(props: { id: Modulo['id']; rotulo: string; children: R
         {...listeners}
         variant="subtle"
         size={48}
-        aria-label={`Reordenar ${props.rotulo}`}
+        aria-label="Arrastar para reordenar"
+        data-reordenar={props.id}
         style={{ position: 'absolute', top: 0, right: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}
       >
         <IconGripVertical size={20} aria-hidden />
@@ -180,7 +185,7 @@ export function Inicio(props: {
           <SortableContext items={modulos.map((m) => m.id)} strategy={rectSortingStrategy}>
             <GradeModulos>
               {modulos.map((m, i) => (
-                <ModuloArrastavel key={m.id} id={m.id} rotulo={m.rotulo}>
+                <ModuloArrastavel key={m.id} id={m.id}>
                   <BlocoAcao
                     rotulo={m.rotulo}
                     icone={ICONES[m.id]}
