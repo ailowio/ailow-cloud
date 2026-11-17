@@ -168,6 +168,14 @@ h1, h2, h3, h4 {
 .ailow-acao-grade[data-desabilitado='true'] { opacity: 0.45; cursor: not-allowed; }
 .ailow-acao-grade[data-desabilitado='true'] .ailow-acao-tile { box-shadow: none; transform: none; }
 
+/* 4 ações numa linha (360 px): tile menor para caber sem segunda fileira. */
+[data-grade-acoes][data-cols='4'] .ailow-acao-grade { gap: 4px; padding: 2px 0; }
+[data-grade-acoes][data-cols='4'] .ailow-acao-tile {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+
 /* Pop-up de celular (Modal de componentes/navegacao.tsx): centralizado, cantos grandes, corpo com rolagem própria
    (UXM-01: a página nunca rola) e no máximo 85dvh. */
 .ailow-popup .mantine-Modal-content {
@@ -256,11 +264,25 @@ h1, h2, h3, h4 {
   .so-desktop { display: block; }
 }
 
+/* Handle de reordenar da home: 6 pontos discretos; alvo grande, tinta leve. */
+.ailow-reordenar {
+  opacity: 0.28;
+  color: var(--mantine-color-dimmed);
+}
+.ailow-reordenar:hover,
+.ailow-reordenar:focus-visible {
+  opacity: 0.65;
+}
+.ailow-reordenar:active {
+  opacity: 0.85;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ailow-bloco { transition: none; }
   .ailow-bloco:active { transform: none; }
   .ailow-acao-tile { transition: none; }
   .ailow-acao-grade:active .ailow-acao-tile { transform: none; }
+  [data-modulo] { transition: none !important; }
 }
 
 /* Bloco que ainda não existe nesta versão: visível (a grade mantém o formato), mas apagado e sem ação. */

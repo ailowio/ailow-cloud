@@ -105,9 +105,8 @@ test('Sair e Trocar de usuário mostram a transição; depois de Sair o aparelho
   await digitarPin(page);
   await esperarCiclo(page, 1);
 
-  // Trocar de usuário.
-  await page.getByRole('button', { name: new RegExp(`Menu de ${nomeDono}`) }).click();
-  await page.getByRole('menuitem', { name: 'Trocar de usuário' }).click();
+  // Trocar de usuário (ícone na toolbar).
+  await page.getByRole('button', { name: 'Trocar de usuário' }).click();
   const troca = await esperarCiclo(page, 2);
   expect(duracao(troca)).toBeLessThanOrEqual(1200);
   expect(troca.semScroll).toBe(true);

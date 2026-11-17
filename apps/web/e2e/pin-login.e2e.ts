@@ -130,7 +130,7 @@ test('UXM-05: sem navigator.vibrate o teclado funciona e nada quebra', async ({ 
   expect(erros).toEqual([]);
 });
 
-test('UXM-06: menu do nome tem Trocar de usuário e Sair; Sair encerra a sessão e desvincula o aparelho; sem overflow nos 2 temas', async ({ page }) => {
+test('UXM-06: toolbar tem inicial, Trocar e Tema; menu da inicial tem Sair; Sair desvincula; sem overflow nos 2 temas', async ({ page }) => {
   await abrirPinComAparelhoProprio(page);
   await tocar(page, PIN_DE_TESTE);
   await expect(page.getByText('O que vamos fazer?')).toBeVisible();
@@ -140,16 +140,17 @@ test('UXM-06: menu do nome tem Trocar de usuário e Sair; Sair encerra a sessão
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-mantine-color-scheme', tema);
     const gatilho = page.getByRole('button', { name: new RegExp(`Menu de ${nomeDono}`) });
+    const trocar = page.getByRole('button', { name: 'Trocar de usuário' });
     await expect(gatilho).toBeVisible();
+    await expect(trocar).toBeVisible();
     expect((await gatilho.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    expect((await trocar.boundingBox())?.height).toBeGreaterThanOrEqual(48);
     await semOverflow(page, `Início/${tema}`);
     await gatilho.click();
-    const trocar = page.getByRole('menuitem', { name: 'Trocar de usuário' });
     const sair = page.getByRole('menuitem', { name: 'Sair' });
-    await expect(trocar).toBeVisible();
     await expect(sair).toBeVisible();
-    expect((await trocar.boundingBox())?.height).toBeGreaterThanOrEqual(48);
     expect((await sair.boundingBox())?.height).toBeGreaterThanOrEqual(48);
+    await expect(page.getByRole('menuitem', { name: 'Trocar de usuário' })).toHaveCount(0);
     await semOverflow(page, `Menu aberto/${tema}`);
     await page.keyboard.press('Escape');
     await expect(sair).toBeHidden();
@@ -171,12 +172,11 @@ test('UXM-06: menu do nome tem Trocar de usuário e Sair; Sair encerra a sessão
   await expect(page.getByRole('button', { name: 'Trocar de usuário' })).toHaveCount(0);
 });
 
-test('UXM-06: Trocar de usuário leva a Quem está usando?', async ({ page }) => {
+test('UXM-06: Trocar de usuário (toolbar) leva a Quem está usando?', async ({ page }) => {
   await abrirPin(page);
   await tocar(page, PIN_DE_TESTE);
   await expect(page.getByText('O que vamos fazer?')).toBeVisible();
-  await page.getByRole('button', { name: new RegExp(`Menu de ${nomeDono}`) }).click();
-  await page.getByRole('menuitem', { name: 'Trocar de usuário' }).click();
+  await page.getByRole('button', { name: 'Trocar de usuário' }).click();
   await expect(page.getByText('Quem está usando?')).toBeVisible();
   expect((await page.context().request.get('/acesso/eu')).status()).toBe(401);
 });

@@ -51,9 +51,9 @@ export function Moldura(props: {
               </Text>
             </Group>
             <Group gap="xs" wrap="nowrap">
-              {/* UXM-06: Trocar na toolbar + menu do nome (Trocar/Sair). */}
-              <BotaoTrocarUsuario />
+              {/* Toolbar: inicial+badge (menu Sair) · trocar usuário · tema. */}
               <MenuUsuario />
+              <BotaoTrocarUsuario />
               {props.acaoTopo && (
                 <Button variant="default" size="md" h={48} onClick={props.acaoTopo.aoClicar}>
                   {props.acaoTopo.rotulo}
