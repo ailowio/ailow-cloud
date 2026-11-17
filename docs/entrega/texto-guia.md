@@ -29,7 +29,8 @@ ERP mobile (PWA, telas de 360 px) para uma loja pequena de moda íntima: vender 
 | Operação | [`docs/runbooks/`](../runbooks/) (deploy, rollback, backup, migrar VPS), [`ops/prometheus/`](../../ops/prometheus/) | Backup cifrado diário e ensaio de restauração (`ops/backup/`) |
 | Segurança | [`docs/seguranca/threat-model.md`](../seguranca/threat-model.md) | Rate limit no login, TOTP do Admin cifrado, RLS forçada, testes de 2 empresas × 2 perfis |
 | Testes | `apps/api/test/` (integração com Postgres real), `*.test.ts`, `apps/web/e2e/` (Playwright 360×640) | `npm run verify`; `bash scripts/e2e.sh` (stack efêmera) |
-| Uso de IA | [`docs/harness-adoption.md`](../harness-adoption.md) | Protocolo: gate antes de agir, teste antes do código, ADR para decisões, humano aprova o merge |
+| Uso de IA | [`docs/ia.md`](../ia.md) (+ [`harness-adoption.md`](../harness-adoption.md)) | Protocolo: gate antes de agir, teste antes do código, ADR para decisões, humano aprova o merge |
+| Desempenho (k6 / RNF) | [`docs/desempenho.md`](../desempenho.md) | Metas, números locais e de produção; honestidade no RNF-02 |
 
 ## Destaques técnicos (para olhar se houver tempo)
 
