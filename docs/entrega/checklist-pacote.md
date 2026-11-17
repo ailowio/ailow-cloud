@@ -11,6 +11,8 @@
 | App no ar | <https://cloud.ailow.com.br> | ✅ no ar com a `v1.0.1`; 🟡 a versão com a rodada de UX só entra depois do merge dos PRs #34/#35 e de um deploy autorizado |
 | Vídeo | _colar aqui o link depois de gravar_ | ⬜ roteiro pronto em [`roteiro-video.md`](roteiro-video.md); gravação e upload: Pedro |
 | Texto-guia | [`docs/entrega/texto-guia.md`](texto-guia.md) | ✅ |
+| Desempenho (slide do curso) | [`docs/desempenho.md`](../desempenho.md) | ✅ |
+| Uso de IA (slide do curso) | [`docs/ia.md`](../ia.md) | ✅ |
 | Tag / release | `v1.0.1` existe; próxima (`v1.1.0`, rodada de UX) | 🟡 tag e CHANGELOG da versão nova só com autorização (depois do merge) |
 
 ## Antes de enviar
