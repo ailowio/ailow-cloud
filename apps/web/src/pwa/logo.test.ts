@@ -29,4 +29,11 @@ describe('logo (marca Ailow)', () => {
     expect('/logo.png'.startsWith('/assets/') || '/logo.png'.startsWith('/icons/')).toBe(false);
     expect('/logo.svg'.startsWith('/assets/') || '/logo.svg'.startsWith('/icons/')).toBe(false);
   });
+
+  // UXM-07: a transição anima o path no DOM, mas o desenho vem de logo.svg — sem path hardcoded no componente.
+  it('TransicaoUsuario não hardcoda o path da marca (fonte = logo.svg)', () => {
+    const fonte = readFileSync(new URL('../componentes/TransicaoUsuario.tsx', import.meta.url), 'utf8');
+    expect(fonte).toContain('logo.svg?raw');
+    expect(fonte).not.toContain('M189 42L318');
+  });
 });
