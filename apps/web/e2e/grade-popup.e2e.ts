@@ -167,11 +167,17 @@ test('Vendas: grade de ações com ícones; cada toque leva à tela certa', asyn
   const grade = page.locator('[data-grade-acoes]');
   await expect(grade).toBeVisible();
   const botoes = grade.getByRole('button');
-  expect(await botoes.count()).toBe(3);
-  const caixas = [await caixa(botoes.nth(0)), await caixa(botoes.nth(1)), await caixa(botoes.nth(2))];
-  expect(caixas.every((c) => Math.abs(c.y - caixas[0]!.y) < 4), '3 ações na mesma linha').toBe(true);
+  expect(await botoes.count()).toBe(4);
+  const caixas = [
+    await caixa(botoes.nth(0)),
+    await caixa(botoes.nth(1)),
+    await caixa(botoes.nth(2)),
+    await caixa(botoes.nth(3)),
+  ];
+  expect(caixas.every((c) => Math.abs(c.y - caixas[0]!.y) < 4), '4 ações na mesma linha').toBe(true);
   expect(caixas.every((c) => c.width >= 48 && c.height >= 48)).toBe(true);
-  expect(await grade.locator('svg').count(), 'um ícone por ação').toBeGreaterThanOrEqual(3);
+  expect(await grade.locator('svg').count(), 'um ícone por ação').toBeGreaterThanOrEqual(4);
+  await expect(grade.getByRole('button', { name: 'Todos os produtos' })).toBeVisible();
 
   // Finalizar começa desligado (carrinho vazio) e liga com uma peça.
   await expect(grade.getByRole('button', { name: 'Finalizar', exact: true })).toBeDisabled();
@@ -191,4 +197,7 @@ test('Vendas: grade de ações com ícones; cada toque leva à tela certa', asyn
 
   await page.locator('[data-grade-acoes]').getByRole('button', { name: /Gerenciar vendas/ }).click();
   await expect(page).toHaveURL(/\/vendas\/relatorio$/);
+  await page.goBack();
+  await page.locator('[data-grade-acoes]').getByRole('button', { name: 'Todos os produtos' }).click();
+  await expect(page.getByRole('dialog', { name: 'Catálogo' })).toBeVisible();
 });

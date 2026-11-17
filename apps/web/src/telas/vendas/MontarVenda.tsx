@@ -123,26 +123,27 @@ export function MontarVenda(props: {
   return (
     <Stack gap="md">
       <GradeAcoes
+        cols={4}
         acoes={[
-          { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={32} stroke={1.75} />, aoTocar: () => setLendo(true) },
+          { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={28} stroke={1.75} />, aoTocar: () => setLendo(true) },
           {
             id: 'catalogo',
             rotulo: 'Catálogo',
             descricao: 'Todos os produtos',
-            icone: <IconCategory size={32} stroke={1.75} />,
+            icone: <IconCategory size={28} stroke={1.75} />,
             aoTocar: () => setCatalogo(true),
           },
           {
             id: 'gerenciar',
-            rotulo: 'Gerenciar vendas',
+            rotulo: 'Gerenciar',
             descricao: 'Gerenciar vendas (Relatório)',
-            icone: <IconReportAnalytics size={32} stroke={1.75} />,
+            icone: <IconReportAnalytics size={28} stroke={1.75} />,
             aoTocar: props.aoRelatorio,
           },
           {
             id: 'fechar',
             rotulo: 'Finalizar',
-            icone: <IconShoppingCartCheck size={32} stroke={1.75} />,
+            icone: <IconShoppingCartCheck size={28} stroke={1.75} />,
             aoTocar: props.aoFechar,
             desabilitado: props.itens.length === 0,
           },

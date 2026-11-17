@@ -8,7 +8,8 @@ describe('MontarVenda UI (itens 6–8, 11)', () => {
     expect(fonte).toMatch(/POR_PAGINA_PADRAO\s*=\s*5/);
   });
 
-  it('grade tem 4 ações: Escanear, Catálogo, Gerenciar, Finalizar', () => {
+  it('grade tem 4 ações numa linha: Escanear, Catálogo, Gerenciar, Finalizar', () => {
+    expect(fonte).toMatch(/GradeAcoes[\s\S]*?cols=\{4\}/);
     const grade = /GradeAcoes[\s\S]*?acoes=\{\[([\s\S]*?)\]\}/.exec(fonte)?.[1] ?? '';
     const ids = [...grade.matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1]);
     expect(ids).toEqual(['escanear', 'catalogo', 'gerenciar', 'fechar']);
