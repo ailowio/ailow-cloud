@@ -1,4 +1,4 @@
-import { Alert, Button, Stack, Text } from '@mantine/core';
+import { ActionIcon, Alert, Box, Button, Stack, Text } from '@mantine/core';
 import {
   DndContext,
   type DragEndEvent,
@@ -20,6 +20,7 @@ import {
   IconAlertTriangle,
   IconCash,
   IconClockHour4,
+  IconGripVertical,
   IconSettings,
   IconShoppingBag,
   IconTag,
@@ -67,23 +68,32 @@ function useAlertasDeEstoque(api: Api | undefined, dono: boolean): Alertas | nul
   return alertas;
 }
 
-function ModuloArrastavel(props: { id: Modulo['id']; children: ReactNode }) {
+/** Handle de arraste separado do BlocoAcao: o DnD não pode virar um 2º role=button (quebra o E2E). */
+function ModuloArrastavel(props: { id: Modulo['id']; rotulo: string; children: ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.id });
   return (
-    <div
+    <Box
       ref={setNodeRef}
+      pos="relative"
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.88 : 1,
         zIndex: isDragging ? 2 : undefined,
-        touchAction: 'none',
       }}
-      {...attributes}
-      {...listeners}
     >
+      <ActionIcon
+        {...attributes}
+        {...listeners}
+        variant="subtle"
+        size={48}
+        aria-label={`Reordenar ${props.rotulo}`}
+        style={{ position: 'absolute', top: 0, right: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}
+      >
+        <IconGripVertical size={20} aria-hidden />
+      </ActionIcon>
       {props.children}
-    </div>
+    </Box>
   );
 }
 
@@ -170,7 +180,7 @@ export function Inicio(props: {
           <SortableContext items={modulos.map((m) => m.id)} strategy={rectSortingStrategy}>
             <GradeModulos>
               {modulos.map((m, i) => (
-                <ModuloArrastavel key={m.id} id={m.id}>
+                <ModuloArrastavel key={m.id} id={m.id} rotulo={m.rotulo}>
                   <BlocoAcao
                     rotulo={m.rotulo}
                     icone={ICONES[m.id]}
