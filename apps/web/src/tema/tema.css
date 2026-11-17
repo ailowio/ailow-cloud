@@ -256,11 +256,25 @@ h1, h2, h3, h4 {
   .so-desktop { display: block; }
 }
 
+/* Handle de reordenar da home: 6 pontos discretos; alvo grande, tinta leve. */
+.ailow-reordenar {
+  opacity: 0.28;
+  color: var(--mantine-color-dimmed);
+}
+.ailow-reordenar:hover,
+.ailow-reordenar:focus-visible {
+  opacity: 0.65;
+}
+.ailow-reordenar:active {
+  opacity: 0.85;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ailow-bloco { transition: none; }
   .ailow-bloco:active { transform: none; }
   .ailow-acao-tile { transition: none; }
   .ailow-acao-grade:active .ailow-acao-tile { transform: none; }
+  [data-modulo] { transition: none !important; }
 }
 
 /* Bloco que ainda não existe nesta versão: visível (a grade mantém o formato), mas apagado e sem ação. */

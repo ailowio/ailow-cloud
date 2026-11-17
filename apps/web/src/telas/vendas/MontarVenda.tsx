@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, Box, Group, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconAlertCircle, IconCamera, IconReportAnalytics, IconShoppingCartCheck } from '@tabler/icons-react';
+import { IconAlertCircle, IconCamera, IconCategory, IconReportAnalytics, IconShoppingCartCheck } from '@tabler/icons-react';
 import { chaveCor, type Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { GradeAcoes } from '../../componentes/GradeAcoes';
@@ -13,6 +13,7 @@ import { Carregando, useCarregar } from '../estados';
 import { BarraCarrinho } from './BarraCarrinho';
 import { MENSAGEM_SEM_ESTOQUE, type ItemVenda, acrescentar, quantidadeItens, subtotalCentavos } from './carrinho';
 import { Scanner } from './Scanner';
+import { WizardCatalogo } from './WizardCatalogo';
 
 const SEM_PRODUTOS: Produto[] = [];
 /** Opções de peças por página na busca da venda; padrão 5. */
@@ -47,6 +48,7 @@ export function MontarVenda(props: {
 }) {
   const [busca, setBusca] = useState('');
   const [lendo, setLendo] = useState(false);
+  const [catalogo, setCatalogo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
   const consulta = useTextoComEspera(busca, 250);
@@ -124,6 +126,13 @@ export function MontarVenda(props: {
         acoes={[
           { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={32} stroke={1.75} />, aoTocar: () => setLendo(true) },
           {
+            id: 'catalogo',
+            rotulo: 'Catálogo',
+            descricao: 'Todos os produtos',
+            icone: <IconCategory size={32} stroke={1.75} />,
+            aoTocar: () => setCatalogo(true),
+          },
+          {
             id: 'gerenciar',
             rotulo: 'Gerenciar vendas',
             descricao: 'Gerenciar vendas (Relatório)',
@@ -139,7 +148,14 @@ export function MontarVenda(props: {
           },
         ]}
       />
-      <TextInput size="lg" label="Buscar" placeholder="Nome, código ou preço" value={busca} onChange={(e) => setBusca(e.currentTarget.value)} autoFocus autoComplete="off" />
+      <WizardCatalogo
+        aberto={catalogo}
+        api={props.api}
+        aoFechar={() => setCatalogo(false)}
+        aoEscolher={entrar}
+      />
+      {/* No celular o teclado só abre ao tocar em Buscar (sem foco automático). */}
+      <TextInput size="lg" label="Buscar" placeholder="Nome, código ou preço" value={busca} onChange={(e) => setBusca(e.currentTarget.value)} autoComplete="off" />
       {carregando && <Carregando linhas={2} />}
       {erroBusca && (
         <Alert color="red" icon={<IconAlertCircle />} role="alert">

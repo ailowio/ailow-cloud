@@ -1,12 +1,16 @@
 import { ActionIcon, Alert, Box, Button, Stack, Text } from '@mantine/core';
 import {
   DndContext,
-  type DragEndEvent,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
+  defaultDropAnimationSideEffects,
   useSensor,
   useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DropAnimation,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -47,6 +51,17 @@ const ICONES: Record<Modulo['id'], React.ReactNode> = {
 
 const ITENS_NO_AVISO = 3;
 
+/** Pouso suave após soltar (evita o "snap" seco do layout). */
+export const TRANSICAO_POUSO_MODULO = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
+
+const dropAnimation: DropAnimation = {
+  duration: 320,
+  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: '0.35' } },
+  }),
+};
+
 interface Alertas {
   total: number;
   itens: AlertaEstoque[];
@@ -73,32 +88,64 @@ function useAlertasDeEstoque(api: Api | undefined, dono: boolean): Alertas | nul
  * O aria-label NÃO pode conter o rótulo do módulo: o Playwright casa `name: 'Vendas'` por substring
  * e o handle "Reordenar Vendas" virava um segundo botão (E2E strict mode / timeout).
  */
-function ModuloArrastavel(props: { id: Modulo['id']; children: ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.id });
+function ModuloArrastavel(props: {
+  id: Modulo['id'];
+  children: ReactNode;
+  arrastando: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: props.id });
   return (
     <Box
       ref={setNodeRef}
       pos="relative"
+      data-modulo={props.id}
       style={{
         transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.88 : 1,
+        transition: isDragging ? undefined : TRANSICAO_POUSO_MODULO,
+        opacity: isDragging ? 0.35 : 1,
         zIndex: isDragging ? 2 : undefined,
       }}
     >
       <ActionIcon
         {...attributes}
         {...listeners}
-        variant="subtle"
-        size={48}
+        className="ailow-reordenar"
+        variant="transparent"
+        size={44}
         aria-label="Arrastar para reordenar"
         data-reordenar={props.id}
-        style={{ position: 'absolute', top: 0, right: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}
+        style={{
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          zIndex: 1,
+          cursor: props.arrastando || isDragging ? 'grabbing' : 'grab',
+          touchAction: 'none',
+        }}
       >
-        <IconGripVertical size={20} aria-hidden />
+        <IconGripVertical size={14} stroke={1.5} aria-hidden />
       </ActionIcon>
       {props.children}
     </Box>
+  );
+}
+
+function BlocoModulo(props: {
+  modulo: Modulo;
+  indice: number;
+  alertaProdutos: number;
+  aoAbrir: (m: Modulo['id']) => void;
+}) {
+  const { modulo: m, indice: i } = props;
+  return (
+    <BlocoAcao
+      rotulo={m.rotulo}
+      icone={ICONES[m.id]}
+      destaque={i === 0}
+      alerta={m.id === 'produtos' && props.alertaProdutos > 0 ? props.alertaProdutos : undefined}
+      emBreve={!m.pronto}
+      onClick={() => props.aoAbrir(m.id)}
+    />
   );
 }
 
@@ -110,6 +157,7 @@ export function Inicio(props: {
 }) {
   const base = useMemo(() => modulosPara(props.usuario.perfil), [props.usuario.perfil]);
   const [modulos, setModulos] = useState(base);
+  const [arrastandoId, setArrastandoId] = useState<Modulo['id'] | null>(null);
   const alertas = useAlertasDeEstoque(props.api, props.usuario.perfil === 'dono');
   const total = alertas?.total ?? 0;
   const restantes = alertas ? resumoDeRestantes(total, Math.min(ITENS_NO_AVISO, alertas.itens.length)) : null;
@@ -142,8 +190,13 @@ export function Inicio(props: {
     [props.api],
   );
 
+  function aoPegar(evento: DragStartEvent) {
+    setArrastandoId(String(evento.active.id) as Modulo['id']);
+  }
+
   function aoSoltar(evento: DragEndEvent) {
     const { active, over } = evento;
+    setArrastandoId(null);
     if (!over || active.id === over.id) return;
     setModulos((atual) => {
       const de = atual.findIndex((m) => m.id === active.id);
@@ -154,6 +207,9 @@ export function Inicio(props: {
       return proximo;
     });
   }
+
+  const moduloArrastado = arrastandoId ? modulos.find((m) => m.id === arrastandoId) : undefined;
+  const indiceArrastado = moduloArrastado ? modulos.findIndex((m) => m.id === arrastandoId) : -1;
 
   return (
     <Moldura
@@ -181,23 +237,32 @@ export function Inicio(props: {
             </Stack>
           </Alert>
         )}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={aoSoltar}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={aoPegar}
+          onDragEnd={aoSoltar}
+          onDragCancel={() => setArrastandoId(null)}
+        >
           <SortableContext items={modulos.map((m) => m.id)} strategy={rectSortingStrategy}>
             <GradeModulos>
               {modulos.map((m, i) => (
-                <ModuloArrastavel key={m.id} id={m.id}>
-                  <BlocoAcao
-                    rotulo={m.rotulo}
-                    icone={ICONES[m.id]}
-                    destaque={i === 0}
-                    alerta={m.id === 'produtos' && total > 0 ? total : undefined}
-                    emBreve={!m.pronto}
-                    onClick={() => props.aoAbrir(m.id)}
-                  />
+                <ModuloArrastavel key={m.id} id={m.id} arrastando={arrastandoId === m.id}>
+                  <BlocoModulo modulo={m} indice={i} alertaProdutos={total} aoAbrir={props.aoAbrir} />
                 </ModuloArrastavel>
               ))}
             </GradeModulos>
           </SortableContext>
+          <DragOverlay dropAnimation={dropAnimation}>
+            {moduloArrastado ? (
+              <BlocoModulo
+                modulo={moduloArrastado}
+                indice={Math.max(0, indiceArrastado)}
+                alertaProdutos={total}
+                aoAbrir={() => {}}
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
         {modulos.some((m) => !m.pronto) && (
           <Text size="sm" c="dimmed">
