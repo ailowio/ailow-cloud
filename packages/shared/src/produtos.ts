@@ -180,6 +180,10 @@ export const paginaSchema = { proximo: cursorSchema.nullable() };
 export const produtosQuerySchema = z.object({ q: z.string().trim().max(80).optional(), depois: cursorSchema.optional() });
 export const produtosResponseSchema = z.object({ produtos: z.array(produtoSchema), truncado: z.boolean(), ...paginaSchema });
 
+/** Até 5 peças para a montagem da venda (busca vazia): mais vendidas → recentes → alfabéticas. */
+export const LIMITE_SUGESTOES_VENDA = 5;
+export const sugestoesVendaResponseSchema = z.object({ produtos: z.array(produtoSchema) });
+
 export const produtoCriadoSchema = z.object({
   id: z.uuid(),
   numero: z.number().int(),

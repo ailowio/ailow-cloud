@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
+import marcaSvg from '../../public/logo.svg?raw';
+import { extrairPathMarca } from '../marca/extrair-path';
+
+const { viewBox, d } = extrairPathMarca(marcaSvg);
 
 /**
- * Marca no topo. Com sessão (`empresa`), tenta `GET /empresa/logo` e cai em
- * `public/logo.png` se 401/404. Sem sessão, só a marca do produto (evita falhar
- * antes do login e "grudar" no fallback). Fora de /icons e /assets: o SW não guarda.
+ * Marca no topo. Com sessão (`empresa`), tenta `GET /empresa/logo` e cai na
+ * marca SVG se 401/404. Sem sessão (ou fallback), SVG com fill currentColor
+ * para acompanhar `--ailow-marca-texto` nos dois temas. Fora de /icons e /assets:
+ * o SW não guarda.
  */
 export function Logo({
   altura = 36,
-  alt = 'Ailow ERP',
+  alt = 'Ailow',
   empresa = false,
   /** Incrementar após upload/remoção para forçar novo GET. */
   versao = 0,
@@ -17,20 +22,41 @@ export function Logo({
   empresa?: boolean;
   versao?: number;
 }) {
-  const marca = '/logo.png';
   const empresaSrc = `/empresa/logo?v=${versao}`;
-  const [src, setSrc] = useState(empresa ? empresaSrc : marca);
+  const [srcEmpresa, setSrcEmpresa] = useState<string | null>(empresa ? empresaSrc : null);
   useEffect(() => {
-    setSrc(empresa ? empresaSrc : marca);
+    setSrcEmpresa(empresa ? empresaSrc : null);
   }, [empresa, empresaSrc]);
 
+  if (srcEmpresa) {
+    return (
+      <img
+        src={srcEmpresa}
+        alt={alt}
+        height={altura}
+        onError={() => setSrcEmpresa(null)}
+        style={{ display: 'block', height: altura, width: 'auto', maxWidth: 160 }}
+      />
+    );
+  }
+
   return (
-    <img
-      src={src}
-      alt={alt}
+    <svg
+      viewBox={viewBox}
+      role="img"
+      aria-label={alt || 'Ailow'}
       height={altura}
-      onError={() => setSrc(marca)}
-      style={{ display: 'block', height: altura, width: 'auto', maxWidth: 160 }}
-    />
+      focusable="false"
+      style={{
+        display: 'block',
+        height: altura,
+        width: 'auto',
+        maxWidth: 160,
+        color: 'var(--ailow-marca-texto)',
+        flexShrink: 0,
+      }}
+    >
+      <path fill="currentColor" fillRule="evenodd" d={d} />
+    </svg>
   );
 }

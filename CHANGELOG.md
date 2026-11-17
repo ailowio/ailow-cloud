@@ -4,6 +4,14 @@ Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamen
 
 ## [Não lançado]
 
+### UX Cloud (12 itens; OpenAPI 0.16.0 aditivo; migração `preferencias_ui`)
+- Marca: wordmark **Ailow** (sem ERP); logo SVG com `currentColor` alinhada a `--ailow-marca-texto`.
+- Sessão: nome sem truncar + badge de perfil; **Trocar de usuário** na toolbar; QuemUsa com Badge.
+- Home: drag-and-drop da ordem dos módulos (`@dnd-kit`); `GET/PUT /preferencias-ui` (ADR 018).
+- Nova venda: sugestões (`GET /produtos/sugestoes-venda`, cascata mais vendidas → recentes → alfa); swatch de cor; grade **Escanear / Gerenciar / Finalizar**; paginação padrão 5 mantida.
+- Carrinho: barra sticky com preenchimento marca + pulse; resumo com hierarquia reforçada; botão **Finalizar venda**.
+- Protótipo: `docs/design/barra-carrinho.html`.
+
 ## [1.1.0] - 2026-11-16
 
 UX mobile (rodadas 1 e 2) em produção: OpenAPI 0.15.0 (aditivo), 4 migrações expand; versão discreta no rodapé do app (`VITE_APP_VERSION` no build da tag).

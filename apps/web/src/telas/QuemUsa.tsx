@@ -35,16 +35,20 @@ export function QuemUsa(props: {
           >
             <Group wrap="nowrap" gap="md">
               <IconUser aria-hidden />
-              <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+              <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
                 {/* Nome inteiro, nunca cortado (D23): quebra de linha em vez de reticências. */}
                 <Text fw={650} fz="lg" style={{ overflowWrap: 'anywhere' }}>{u.nome}</Text>
-                <Text size="sm" c="dimmed">{PERFIL[u.perfil]}</Text>
+                <Group gap="xs">
+                  <Badge variant="light" color="gray">
+                    {PERFIL[u.perfil]}
+                  </Badge>
+                  {u.bloqueado && (
+                    <Badge color="red" variant="light" leftSection={<IconLock size={12} aria-hidden />} style={{ flexShrink: 0 }}>
+                      Bloqueado
+                    </Badge>
+                  )}
+                </Group>
               </Stack>
-              {u.bloqueado && (
-                <Badge color="red" variant="light" leftSection={<IconLock size={12} aria-hidden />} style={{ flexShrink: 0 }}>
-                  Bloqueado
-                </Badge>
-              )}
             </Group>
           </UnstyledButton>
         ))}

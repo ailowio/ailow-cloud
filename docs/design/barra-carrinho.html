@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-mantine-color-scheme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Barra carrinho — opções</title>
+  <style>
+    :root {
+      --ailow-marca: #07bdd5;
+      --ailow-marca-texto: #036171;
+      --ailow-acao: #047e90;
+      --ailow-sobre-acao: #fff;
+      --ailow-texto: #16181a;
+      --ailow-apagado: #565c62;
+      --ailow-superficie: #fff;
+      --ailow-superficie-2: #f6f7f8;
+      --ailow-borda: #dcdfe2;
+      --ailow-brilho: 0 6px 20px rgb(4 126 144 / 30%);
+      --ailow-sombra: 0 1px 2px rgb(20 22 24 / 6%), 0 4px 14px rgb(20 22 24 / 6%);
+      --font: "Sora", "Segoe UI", sans-serif;
+    }
+    html[data-mantine-color-scheme="dark"] {
+      --ailow-marca-texto: #07bdd5;
+      --ailow-acao: #07bdd5;
+      --ailow-sobre-acao: #06161a;
+      --ailow-texto: #ececed;
+      --ailow-apagado: #a3a7ad;
+      --ailow-superficie: #26282b;
+      --ailow-superficie-2: #2f3236;
+      --ailow-borda: #44474c;
+      --ailow-brilho: 0 0 0 1px rgb(7 189 213 / 60%), 0 8px 28px rgb(7 189 213 / 30%);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: #eff1f2;
+      color: var(--ailow-texto);
+      padding: 24px;
+    }
+    html[data-mantine-color-scheme="dark"] body { background: #1b1c1e; }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
+    p.lead { color: var(--ailow-apagado); margin: 0 0 24px; max-width: 40rem; }
+    .grid { display: grid; gap: 28px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .card {
+      background: var(--ailow-superficie-2);
+      border: 1px solid var(--ailow-borda);
+      border-radius: 16px;
+      overflow: hidden;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+    }
+    .card header {
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      font-weight: 650;
+      border-bottom: 1px solid var(--ailow-borda);
+    }
+    .phone {
+      flex: 1;
+      position: relative;
+      background: linear-gradient(180deg, var(--ailow-superficie-2), var(--ailow-superficie));
+      padding: 16px 16px 0;
+    }
+    .fake-list { opacity: 0.45; font-size: 0.8rem; line-height: 1.6; }
+    .bar {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .bar:focus-visible { outline: 2px solid var(--ailow-acao); outline-offset: 2px; }
+    .left { display: flex; align-items: center; gap: 10px; }
+    .icon-wrap { position: relative; line-height: 0; color: inherit; }
+    .badge {
+      position: absolute;
+      top: -6px; right: -8px;
+      min-width: 20px; height: 20px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #e03131;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+    }
+    .label { font-weight: 650; }
+    .valor { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+    .hint { font-size: 0.75rem; opacity: 0.85; }
+    /* A — preenchimento marca (escolhida) */
+    .v-marca {
+      background: var(--ailow-acao);
+      color: var(--ailow-sobre-acao);
+      box-shadow: var(--ailow-brilho);
+    }
+    .v-marca .hint { opacity: 0.9; }
+    /* B — superfície + faixa superior */
+    .v-faixa {
+      background: var(--ailow-superficie);
+      color: var(--ailow-texto);
+      border-top: 3px solid var(--ailow-acao);
+      box-shadow: var(--ailow-sombra);
+    }
+    .v-faixa .valor { color: var(--ailow-marca-texto); }
+    /* C — elevação forte + pulse */
+    .v-pulse {
+      background: var(--ailow-superficie);
+      color: var(--ailow-texto);
+      box-shadow: var(--ailow-brilho), var(--ailow-sombra);
+      border-top: 1px solid var(--ailow-borda);
+    }
+    .v-pulse.bump .icon-wrap { animation: bump 420ms ease; }
+    @keyframes bump {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.22); }
+      100% { transform: scale(1); }
+    }
+    .toolbar { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    button.tweak {
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid var(--ailow-borda);
+      background: var(--ailow-superficie);
+      color: var(--ailow-texto);
+      font: inherit;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Barra de subtotais — variações</h1>
+  <p class="lead">Tokens Ailow. Destino do toque: resumo do carrinho. Variação A (preenchimento marca) é a candidata para portar ao React — máxima legibilidade no modo claro.</p>
+  <div class="toolbar">
+    <button type="button" class="tweak" id="tema">Alternar tema</button>
+    <button type="button" class="tweak" id="bump">Simular +1 item (pulse)</button>
+  </div>
+  <div class="grid">
+    <section class="card" data-screen-label="01 Marca preenchida">
+      <header>A · Preenchimento marca (recomendada)</header>
+      <div class="phone">
+        <div class="fake-list">Peça · M · Azul<br />Peça · P · Preto<br />…</div>
+        <div class="bar v-marca" role="button" tabindex="0">
+          <div class="left">
+            <span class="icon-wrap">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M6 6 5 3H2"/></svg>
+              <span class="badge">2</span>
+            </span>
+            <div>
+              <div class="label">Carrinho</div>
+              <div class="hint">Toque para o resumo</div>
+            </div>
+          </div>
+          <div class="valor">R$&nbsp;179,80</div>
+        </div>
+      </div>
+    </section>
+    <section class="card" data-screen-label="02 Faixa superior">
+      <header>B · Superfície + faixa</header>
+      <div class="phone">
+        <div class="fake-list">Peça · M · Azul<br />…</div>
+        <div class="bar v-faixa" role="button" tabindex="0">
+          <div class="left">
+            <span class="icon-wrap">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M6 6 5 3H2"/></svg>
+              <span class="badge">2</span>
+            </span>
+            <div class="label">Carrinho</div>
+          </div>
+          <div class="valor">R$&nbsp;179,80</div>
+        </div>
+      </div>
+    </section>
+    <section class="card" data-screen-label="03 Pulse">
+      <header>C · Elevação + pulse no badge</header>
+      <div class="phone">
+        <div class="fake-list">Peça · M · Azul<br />…</div>
+        <div class="bar v-pulse" id="bar-pulse" role="button" tabindex="0">
+          <div class="left">
+            <span class="icon-wrap">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M6 6 5 3H2"/></svg>
+              <span class="badge" id="badge-qtd">2</span>
+            </span>
+            <div class="label">Carrinho</div>
+          </div>
+          <div class="valor">R$&nbsp;179,80</div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+    document.getElementById('tema').onclick = () => {
+      const h = document.documentElement;
+      h.dataset.mantineColorScheme = h.dataset.mantineColorScheme === 'dark' ? 'light' : 'dark';
+    };
+    document.getElementById('bump').onclick = () => {
+      const bar = document.getElementById('bar-pulse');
+      const b = document.getElementById('badge-qtd');
+      b.textContent = String(Number(b.textContent) + 1);
+      bar.classList.remove('bump');
+      void bar.offsetWidth;
+      bar.classList.add('bump');
+    };
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ import {
   skuIdParamsSchema,
   skuParaVendaSchema,
   skuPorCodigoQuerySchema,
+  sugestoesVendaResponseSchema,
 } from '@ailow/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -35,6 +36,7 @@ import {
   editarProduto,
   listarProdutos,
   movimentosDoSku,
+  sugestoesParaVenda,
 } from './produtos.js';
 
 const sessaoCookie = [{ sessao: [] }];
@@ -99,6 +101,25 @@ export async function registrarRotasProdutos(app: FastifyInstance, deps: Deps, g
       const cursor = depois === undefined ? null : lerCursor(depois, 'numero');
       if (depois !== undefined && cursor === null) return reply.code(400).send({ erro: 'cursor_invalido' });
       return withEmpresa(pool, s.empresaId, (c) => listarProdutos(c, s.perfil, q, cursor));
+    },
+  );
+
+  // Antes de /produtos/:id — senão "sugestoes-venda" vira id.
+  rotas.get(
+    '/produtos/sugestoes-venda',
+    {
+      preValidation: logado,
+      schema: {
+        tags: ['produtos'],
+        summary:
+          'Até 5 peças com estoque para a montagem da venda (mais vendidas, senão recentes, senão alfabéticas); Dono e Vendedor',
+        security: sessaoCookie,
+        response: { 200: sugestoesVendaResponseSchema, ...erros },
+      },
+    },
+    async (request) => {
+      const s = sessaoDe(request);
+      return withEmpresa(pool, s.empresaId, (c) => sugestoesParaVenda(c, s.perfil));
     },
   );
 

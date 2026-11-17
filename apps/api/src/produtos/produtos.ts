@@ -6,6 +6,7 @@ import {
   type ProdutoEditar,
   type ProdutoNovo,
   type Sku,
+  LIMITE_SUGESTOES_VENDA,
   atribuirCodigosDeCor,
   chaveCor,
   compararTamanhos,
@@ -286,6 +287,93 @@ const SQL_SKU_VENDA = `SELECT s.id, s.codigo, p.nome, s.tamanho, s.cor, p.preco_
 export async function buscarSkuPorCodigo(c: pg.PoolClient, codigo: string): Promise<SkuParaVenda | null> {
   const r = await c.query(`${SQL_SKU_VENDA} WHERE s.codigo = upper(btrim($1)) AND p.ativo`, [codigo]);
   return (r.rows[0] as SkuParaVenda | undefined) ?? null;
+}
+
+/**
+ * Até LIMITE_SUGESTOES_VENDA peças com estoque para a montagem (busca vazia).
+ * Cascata: mais vendidas (vendas finalizadas) → produtos mais recentes → alfabético.
+ * Cada produto na resposta traz só o(s) SKU(s) sugerido(s).
+ */
+export async function sugestoesParaVenda(c: pg.PoolClient, perfil: Perfil): Promise<{ produtos: Produto[] }> {
+  const dono = perfil === 'dono';
+  const limite = LIMITE_SUGESTOES_VENDA;
+  const escolhidos: string[] = [];
+
+  const maisVendidos = await c.query(
+    `SELECT s.id
+       FROM itens_venda iv
+       JOIN vendas v ON v.empresa_id = iv.empresa_id AND v.id = iv.venda_id AND v.status = 'finalizada'
+       JOIN skus s ON s.empresa_id = iv.empresa_id AND s.id = iv.sku_id AND s.estoque > 0
+       JOIN produtos p ON p.empresa_id = s.empresa_id AND p.id = s.produto_id AND p.ativo
+      GROUP BY s.id
+      ORDER BY sum(iv.quantidade) DESC, s.id
+      LIMIT $1`,
+    [limite],
+  );
+  for (const r of maisVendidos.rows) escolhidos.push(r.id as string);
+
+  if (escolhidos.length < limite) {
+    const recentes = await c.query(
+      `SELECT s.id
+         FROM skus s
+         JOIN produtos p ON p.empresa_id = s.empresa_id AND p.id = s.produto_id AND p.ativo
+        WHERE s.estoque > 0
+          AND NOT (s.id = ANY($1::uuid[]))
+        ORDER BY p.criado_em DESC, s.id
+        LIMIT $2`,
+      [escolhidos, limite - escolhidos.length],
+    );
+    for (const r of recentes.rows) escolhidos.push(r.id as string);
+  }
+
+  if (escolhidos.length < limite) {
+    const alfa = await c.query(
+      `SELECT s.id
+         FROM skus s
+         JOIN produtos p ON p.empresa_id = s.empresa_id AND p.id = s.produto_id AND p.ativo
+        WHERE s.estoque > 0
+          AND NOT (s.id = ANY($1::uuid[]))
+        ORDER BY lower(p.nome), p.numero, s.id
+        LIMIT $2`,
+      [escolhidos, limite - escolhidos.length],
+    );
+    for (const r of alfa.rows) escolhidos.push(r.id as string);
+  }
+
+  if (escolhidos.length === 0) return { produtos: [] };
+
+  const produtos = await c.query(
+    `SELECT ${dono ? COLUNAS_PRODUTO_DONO : COLUNAS_PRODUTO_BASE}, s.id AS sku_escolhido
+       FROM skus s
+       JOIN produtos p ON p.empresa_id = s.empresa_id AND p.id = s.produto_id
+       JOIN categorias c ON c.empresa_id = p.empresa_id AND c.id = p.categoria_id
+      WHERE s.id = ANY($1::uuid[])`,
+    [escolhidos],
+  );
+  const skus = await c.query(`SELECT ${dono ? COLUNAS_SKU_DONO : COLUNAS_SKU_BASE} FROM skus s WHERE s.id = ANY($1::uuid[])`, [
+    escolhidos,
+  ]);
+  const skuPorId = new Map((skus.rows as Sku[]).map((s) => [s.id, s]));
+  const ordem = new Map(escolhidos.map((id, i) => [id, i]));
+  const porProduto = new Map<string, { produto: Omit<Produto, 'skus'>; skus: Sku[] }>();
+
+  for (const row of produtos.rows as Array<Produto & { sku_escolhido: string }>) {
+    const { sku_escolhido, ...resto } = row;
+    const sku = skuPorId.get(sku_escolhido);
+    if (!sku) continue;
+    const atual = porProduto.get(resto.id);
+    if (atual) atual.skus.push(sku);
+    else porProduto.set(resto.id, { produto: resto, skus: [sku] });
+  }
+
+  const lista = [...porProduto.values()]
+    .map(({ produto, skus: ss }) => ({
+      ...produto,
+      skus: ss.sort((a, b) => (ordem.get(a.id) ?? 0) - (ordem.get(b.id) ?? 0)),
+    }))
+    .sort((a, b) => (ordem.get(a.skus[0]?.id ?? '') ?? 0) - (ordem.get(b.skus[0]?.id ?? '') ?? 0));
+
+  return { produtos: lista };
 }
 
 /**

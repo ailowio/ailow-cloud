@@ -44,7 +44,7 @@ test('RNF-04: venda de 1 peça, cliente cadastrado, Pix, em até 8 toques', asyn
   await page.getByLabel('Buscar').fill(peca.codigo);
   // A busca lista todas as variações do produto: o toque vai na que tem o código (e o saldo) escolhido.
   await page.locator('[data-toque="peca"]', { hasText: peca.codigo }).click();
-  await page.getByRole('button', { name: 'Fechar', exact: true }).click();
+  await page.getByRole('button', { name: 'Finalizar', exact: true }).click();
   await page.getByLabel('Celular do cliente').fill(celular);
   await expect(page.getByText(`E2E ${sufixo}`)).toBeVisible();
   await page.getByRole('button', { name: 'Pix' }).click();

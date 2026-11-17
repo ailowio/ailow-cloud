@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MENSAGEM_SEM_ESTOQUE, acrescentar, mudarQuantidade, subtotalCentavos } from './carrinho';
+import { MENSAGEM_SEM_ESTOQUE, acrescentar, mudarQuantidade, quantidadeItens, subtotalCentavos } from './carrinho';
 
 const peca = {
   skuId: '11111111-1111-4111-8111-111111111111',
@@ -35,6 +35,13 @@ describe('carrinho da venda (RF-VEN-03/04)', () => {
   it('diminuir até zero tira a peça do carrinho', () => {
     const um = acrescentar([], peca).itens;
     expect(mudarQuantidade(um, peca.codigo, -1).itens).toEqual([]);
+  });
+
+  it('quantidadeItens soma as peças (badge da barra)', () => {
+    expect(quantidadeItens([])).toBe(0);
+    const um = acrescentar([], peca).itens;
+    const dois = acrescentar(um, peca).itens;
+    expect(quantidadeItens(dois)).toBe(2);
   });
 
   it('aumentar além do estoque não muda a quantidade', () => {

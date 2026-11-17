@@ -34,6 +34,7 @@ import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
 import { registrarRotasProdutos } from './produtos/rotas.js';
 import { registrarRotasOpcoesGrade } from './produtos/opcoes-grade.js';
+import { registrarRotasPreferencias } from './preferencias/rotas.js';
 import { registrarRotasVendas } from './vendas/rotas.js';
 
 export interface AppDeps {
@@ -125,9 +126,9 @@ export async function buildApp({
       openapi: '3.1.0',
       info: {
         title: 'Ailow Cloud API',
-        version: '0.15.0',
+        version: '0.16.0',
         description:
-          'API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras e ponto. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).',
+          'API do Ailow Cloud (ERP mobile multi-tenant): acesso por PIN, financeiro, produtos, clientes, vendas, compras, ponto e preferências de UI. Autenticação por cookie de sessão (ADR 004); cada empresa só enxerga os próprios dados (ADR 002).',
         contact: { name: 'Ailow Cloud', url: 'https://github.com/ailowio/ailow-cloud' },
       },
       // Mesma origem do app web (o proxy HTTPS da produção e o do Vite repassam a API).
@@ -144,6 +145,7 @@ export async function buildApp({
         { name: 'vendas', description: 'Vendas: finalizar, comprovante, cancelar e relatório (Dono e Vendedor; o mês é só do Dono)' },
         { name: 'compras', description: 'Fornecedores e pedidos de compra (somente Dono); receber é atômico com estoque e parcelas' },
         { name: 'pessoas', description: 'Ponto: bater entrada/saída (Dono e Vendedor) e espelho do mês (o Vendedor só o próprio)' },
+        { name: 'preferencias', description: 'Preferências de UI do usuário da sessão (ordem dos módulos da home; ADR 018)' },
       ],
       // Autenticação por cookie de sessão no servidor (ADR 004); nenhum token é exposto ao JavaScript.
       components: {
@@ -248,6 +250,7 @@ export async function buildApp({
   await registrarRotasVendas(app, deps, guardas);
   await registrarRotasCompras(app, deps, guardas);
   await registrarRotasPessoas(app, deps, guardas);
+  await registrarRotasPreferencias(app, deps, guardas);
 
   app.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

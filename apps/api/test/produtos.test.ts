@@ -657,4 +657,30 @@ describe('Produtos (API)', () => {
       expect(r.itens).toHaveLength(50);
     });
   });
+
+  describe('GET /produtos/sugestoes-venda', () => {
+    it('sem estoque devolve lista vazia; com estoque, no máximo 5 peças (alfabético se sem vendas)', async () => {
+      const lado = await montar('Prod sugestões vazias');
+      const vazio = await lado.dono.get('/produtos/sugestoes-venda');
+      expect(vazio.statusCode).toBe(200);
+      expect((vazio.json() as { produtos: ProdutoResp[] }).produtos).toEqual([]);
+
+      const nomes = ['Zeta', 'Alpha', 'Meio', 'Beta', 'Omega', 'Extra'];
+      for (const nome of nomes) await criar(lado, { nome: `${nome} ${randomUUID().slice(0, 6)}` });
+      const r = await lado.vendedor.get('/produtos/sugestoes-venda');
+      expect(r.statusCode).toBe(200);
+      const produtos = (r.json() as { produtos: ProdutoResp[] }).produtos;
+      const pecas = produtos.flatMap((p) => p.skus);
+      expect(pecas.length).toBeLessThanOrEqual(5);
+      expect(pecas.length).toBe(5);
+      for (const p of produtos) expect(p.custo_centavos).toBeUndefined();
+    });
+
+    it('empresa A não vê sugestões da B', async () => {
+      const nome = `Só B sugestão ${randomUUID().slice(0, 8)}`;
+      await criar(b, { nome });
+      const daA = (await a.dono.get('/produtos/sugestoes-venda')).json() as { produtos: ProdutoResp[] };
+      expect(daA.produtos.some((p) => p.nome === nome)).toBe(false);
+    });
+  });
 });

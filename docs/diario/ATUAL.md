@@ -31,6 +31,12 @@ Falhas: 2 runs do `Deploy` falharam ao reimplantar a mesma tag (corrida de DNS d
 Pendências: (1) **tenant de teste foi apagado** antes de o Pedro pedir para mantê-lo; recriar com `criar-tenant-teste.ps1` (corrigido) e repopular; **só apagar quando o Pedro terminar os aprimoramentos de UX/UI**; produção hoje 0 empresas, 1 Admin, 14 migrações; (2) corrigir `deploy.sh`; (3) otimizar a busca; (4) vídeo, pacote do curso e etiquetas (S08), com o Pedro.
 Verificação: k6 `rodada1/2b` (exit 99, só o limiar da busca); `/health` 200; `check-harness` e checks da PR final: ver PR.
 
+### UX 12 itens (chrome + venda + DnD) — 2026-11-16 — Composer
+Gate: feature/UI + migração, **tier B**; UXM-06/08, TEST-*, ADR 002/018, AUD-20. Plano A→C→D→B.
+Feito: logo/wordmark Ailow; Trocar na toolbar + badges; sugestões-venda + Finalizar + swatch; barra marca + pulse; Finalizar venda; hierarquia do Carrinho; ADR 018 + `preferencias_ui` + DnD home; OpenAPI 0.16.0; protótipo `docs/design/barra-carrinho.html`.
+Pendências: commit/PR (pedido explícito); E2E Playwright no CI; migrate/deploy produção; validar barra em 360 light/dark.
+Verificação: web 469 testes; API preferencias+openapi+proxy+produtos ok; `npm run verify` a fechar nesta sessão.
+
 ### UX rodada 2 + entrega Moodle — 2026-11-16 — Claude Opus 5.5 / Composer
 Gate: feature/UI + docs de entrega, **tier B**; UXM-*, TEST-01/08/10, DOC-*, ADR 013–017. Branch `feat/ux-mobile-rodada-2` (base `feat/ux-mobile-rodada-1`); PRs #34 e #35.
 Feito: decisões do checklist (Sair desvincula, ficha após cadastro, seta do wizard, receita/receber, grade configurável, paginação cursor+trigramas, refazer venda); `docs/entrega/` (roteiro, texto-guia, checklist Moodle); checklist PRD 4/8/9 atualizado; CHANGELOG da rodada 2; correção RNF-02 (k6 foi do PC). Handoff retomado após limite do Claude Code: S14b arquivada; e2e do #35 (Carregar mais / Etiquetas) corrigido — `Carregar mais` acima da paginação sticky.

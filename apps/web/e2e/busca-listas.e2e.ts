@@ -322,7 +322,23 @@ test('Venda, busca da peça: caracteres soltos, valor e código; Próxima/Anteri
   await busca.fill('qqqzzzxxx');
   await expect(page.getByText('Nenhuma peça com esse texto')).toBeVisible();
 
+  // Padrão: 5 por página (16 peças → 4 páginas). O teste de Próxima/Anterior usa 10 para caber em 2 páginas.
+  await busca.fill(`zv ${letras}`);
+  await expect(page.getByLabel('Itens por página')).toHaveValue('5');
+  await expect(page.locator('[data-paginacao-texto]')).toHaveText('Página 1 de 4');
+  await expect(pecas).toHaveCount(5);
+  await page.getByLabel('Itens por página').selectOption('10');
   await conferirPaginacao(page, pecas, 'Buscar', `zv ${letras}`, 10);
+
+  // Barra do carrinho: só aparece com peça; toque abre /vendas/carrinho.
+  await expect(page.getByTestId('barra-carrinho')).toHaveCount(0);
+  await pecas.first().click();
+  const barra = page.getByTestId('barra-carrinho');
+  await expect(barra).toBeVisible();
+  await expect(barra).toContainText('1');
+  await barra.click();
+  await expect(page).toHaveURL(/\/vendas\/carrinho$/);
+  await expect(page.getByRole('button', { name: 'Finalizar venda' })).toBeVisible();
 });
 
 for (const tema of TEMAS) {
@@ -333,7 +349,8 @@ for (const tema of TEMAS) {
     await criarProdutosParaVenda(api, letras, sufixo);
     await abrirModulo(page, 'Vendas', tema);
     await page.getByLabel('Buscar', { exact: true }).fill(`zv ${letras}`);
-    await expect(page.locator('[data-paginacao-texto]')).toHaveText('Página 1 de 2');
+    await expect(page.getByLabel('Itens por página')).toHaveValue('5');
+    await expect(page.locator('[data-paginacao-texto]')).toHaveText('Página 1 de 4');
     await expect(page.locator('html')).toHaveAttribute('data-mantine-color-scheme', tema);
     await medirTela(page, `${tema}/Venda`);
   });

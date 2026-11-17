@@ -31,6 +31,12 @@ describe('endpoints de Produtos', () => {
     expect(chamadas).toEqual([{ url: '/produtos', metodo: 'GET', corpo: undefined }]);
   });
 
+  it('sugestões da venda: GET /produtos/sugestoes-venda', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { produtos: [] } });
+    expect(await api.sugestoesVenda()).toEqual({ produtos: [] });
+    expect(chamadas).toEqual([{ url: '/produtos/sugestoes-venda', metodo: 'GET', corpo: undefined }]);
+  });
+
   it('busca: o texto vai codificado na query (acento, espaço, vírgula, &, #)', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { produtos: [], truncado: false } });
     await api.produtos('sutiã 89,90 & #1');

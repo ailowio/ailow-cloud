@@ -1,5 +1,22 @@
 import { Alert, Button, Stack, Text } from '@mantine/core';
 import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   IconAlertTriangle,
   IconCash,
   IconClockHour4,
@@ -9,9 +26,9 @@ import {
   IconTruckDelivery,
   IconUsers,
 } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AlertaEstoque, UsuarioPublico } from '@ailow/shared';
-import { modulosPara, type Modulo } from '../acesso/modulos';
+import { modulosPara, ordenarModulos, type Modulo } from '../acesso/modulos';
 import type { Api } from '../api/endpoints';
 import { BlocoAcao, GradeModulos } from '../componentes';
 import { Moldura } from './Moldura';
@@ -27,7 +44,6 @@ const ICONES: Record<Modulo['id'], React.ReactNode> = {
   configuracoes: <IconSettings size={32} aria-hidden />,
 };
 
-// Quantos itens o aviso lista na própria tela inicial; o resto fica em Produtos › Abaixo do mínimo.
 const ITENS_NO_AVISO = 3;
 
 interface Alertas {
@@ -35,10 +51,6 @@ interface Alertas {
   itens: AlertaEstoque[];
 }
 
-/**
- * RF-PRO-05: só o Dono vê o aviso de estoque abaixo do mínimo. Se a consulta falhar, a tela inicial segue sem o
- * aviso (não deve travar a entrada na loja); o aviso volta na próxima vez que a tela abrir.
- */
 function useAlertasDeEstoque(api: Api | undefined, dono: boolean): Alertas | null {
   const [alertas, setAlertas] = useState<Alertas | null>(null);
   useEffect(() => {
@@ -55,21 +67,83 @@ function useAlertasDeEstoque(api: Api | undefined, dono: boolean): Alertas | nul
   return alertas;
 }
 
-/** Tela inicial: grade de 3 colunas com os módulos do perfil (RNF-05). Vendas é o primeiro (RF-VEN-01). */
+function ModuloArrastavel(props: { id: Modulo['id']; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.88 : 1,
+        zIndex: isDragging ? 2 : undefined,
+        touchAction: 'none',
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+/** Tela inicial: grade de 3 colunas com os módulos do perfil (RNF-05). Ordem arrastável (ADR 018). */
 export function Inicio(props: {
   usuario: UsuarioPublico;
   api?: Api;
   aoAbrir: (m: Modulo['id']) => void;
 }) {
-  const modulos = modulosPara(props.usuario.perfil);
+  const base = useMemo(() => modulosPara(props.usuario.perfil), [props.usuario.perfil]);
+  const [modulos, setModulos] = useState(base);
   const alertas = useAlertasDeEstoque(props.api, props.usuario.perfil === 'dono');
   const total = alertas?.total ?? 0;
   const restantes = alertas ? resumoDeRestantes(total, Math.min(ITENS_NO_AVISO, alertas.itens.length)) : null;
 
+  useEffect(() => {
+    setModulos(base);
+    if (!props.api) return;
+    let ativo = true;
+    props.api
+      .preferenciasUi()
+      .then((r) => {
+        if (ativo) setModulos(ordenarModulos(base, r.modulos_ordem));
+      })
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, [base, props.api]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const persistir = useCallback(
+    (ids: Modulo['id'][]) => {
+      if (!props.api) return;
+      void props.api.salvarPreferenciasUi({ chave: 'modulos_ordem', valor: ids }).catch(() => {});
+    },
+    [props.api],
+  );
+
+  function aoSoltar(evento: DragEndEvent) {
+    const { active, over } = evento;
+    if (!over || active.id === over.id) return;
+    setModulos((atual) => {
+      const de = atual.findIndex((m) => m.id === active.id);
+      const para = atual.findIndex((m) => m.id === over.id);
+      if (de < 0 || para < 0) return atual;
+      const proximo = arrayMove(atual, de, para);
+      persistir(proximo.map((m) => m.id));
+      return proximo;
+    });
+  }
+
   return (
     <Moldura
       titulo={`Olá, ${props.usuario.nome}`}
-      subtitulo="O que vamos fazer?"
+      subtitulo="O que vamos fazer? Segure e arraste para reordenar."
       logoEmpresa
     >
       <Stack gap="md">
@@ -86,26 +160,30 @@ export function Inicio(props: {
                   {restantes}
                 </Text>
               )}
-              {/* red.9: texto branco com contraste >= 4,5:1 sobre o vermelho do aviso */}
               <Button h={48} color="red.9" onClick={() => props.aoAbrir('produtos')}>
                 Ver produtos
               </Button>
             </Stack>
           </Alert>
         )}
-        <GradeModulos>
-          {modulos.map((m, i) => (
-            <BlocoAcao
-              key={m.id}
-              rotulo={m.rotulo}
-              icone={ICONES[m.id]}
-              destaque={i === 0}
-              alerta={m.id === 'produtos' && total > 0 ? total : undefined}
-              emBreve={!m.pronto}
-              onClick={() => props.aoAbrir(m.id)}
-            />
-          ))}
-        </GradeModulos>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={aoSoltar}>
+          <SortableContext items={modulos.map((m) => m.id)} strategy={rectSortingStrategy}>
+            <GradeModulos>
+              {modulos.map((m, i) => (
+                <ModuloArrastavel key={m.id} id={m.id}>
+                  <BlocoAcao
+                    rotulo={m.rotulo}
+                    icone={ICONES[m.id]}
+                    destaque={i === 0}
+                    alerta={m.id === 'produtos' && total > 0 ? total : undefined}
+                    emBreve={!m.pronto}
+                    onClick={() => props.aoAbrir(m.id)}
+                  />
+                </ModuloArrastavel>
+              ))}
+            </GradeModulos>
+          </SortableContext>
+        </DndContext>
         {modulos.some((m) => !m.pronto) && (
           <Text size="sm" c="dimmed">
             Os módulos marcados com “em breve” chegam nas próximas versões.

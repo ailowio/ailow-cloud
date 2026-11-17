@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Group, Text } from '@mantine/core';
+import { Box, Button, Group, NativeSelect, Text } from '@mantine/core';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { paginar } from '../lib/paginar';
 
@@ -16,61 +16,90 @@ export function usePaginacao<T>(itens: readonly T[], tamanho: number, busca?: st
   const [pagina, setPagina] = useState(1);
   const [lista, setLista] = useState(itens);
   const [buscaAnterior, setBuscaAnterior] = useState(busca);
-  if (lista !== itens || buscaAnterior !== busca) {
-    const manter = busca !== undefined && buscaAnterior === busca;
+  const [tamanhoAnterior, setTamanhoAnterior] = useState(tamanho);
+  if (lista !== itens || buscaAnterior !== busca || tamanhoAnterior !== tamanho) {
+    const manter = busca !== undefined && buscaAnterior === busca && tamanhoAnterior === tamanho;
     setLista(itens);
     setBuscaAnterior(busca);
+    setTamanhoAnterior(tamanho);
     if (!manter) setPagina(1);
   }
   const p = paginar(itens, pagina, tamanho);
   return { ...p, irPara: setPagina };
 }
 
+export type ControlePorPagina = {
+  valor: number;
+  opcoes: readonly number[];
+  aoMudar: (n: number) => void;
+};
+
 /**
- * "Anterior / Página X de Y / Próxima", fixa embaixo (UXM-01) com alvos de 48 px (UXM-03). Some quando cabe numa página.
+ * "Anterior / Página X de Y / Próxima", fixa embaixo (UXM-01) com alvos de 48 px (UXM-03). Some quando cabe numa página
+ * e não há seletor de tamanho. `porPagina` (opcional) fica junto à paginação.
  */
-export function Paginacao(props: { pagina: number; totalPaginas: number; aoMudar: (pagina: number) => void }) {
-  if (props.totalPaginas <= 1) return null;
+export function Paginacao(props: {
+  pagina: number;
+  totalPaginas: number;
+  aoMudar: (pagina: number) => void;
+  /** Empurra a barra sticky para cima (ex.: altura da barra do carrinho). */
+  bottom?: number;
+  porPagina?: ControlePorPagina;
+}) {
+  const temControle = props.porPagina !== undefined;
+  if (props.totalPaginas <= 1 && !temControle) return null;
+  const bottom = props.bottom ?? 0;
   return (
     <Box
       component="nav"
       aria-label="Paginação"
       pos="sticky"
-      bottom={0}
+      bottom={bottom}
       py="xs"
       style={{ background: 'var(--mantine-color-body)', borderTop: '1px solid var(--ailow-borda)', zIndex: 2 }}
     >
-      {/* A 360 px os 3 itens têm de caber: botões do tamanho do conteúdo (flex 0 0 auto), texto da página numa
-          linha só e com a sobra da linha (UXM-11). */}
-      <Group wrap="nowrap" justify="space-between" gap={4}>
-        <Button
-          h={48}
-          variant="default"
-          px={8}
-          fz="sm"
-          style={{ flex: '0 0 auto' }}
-          leftSection={<IconChevronLeft size={18} aria-hidden />}
-          disabled={props.pagina <= 1}
-          onClick={() => props.aoMudar(props.pagina - 1)}
-        >
-          Anterior
-        </Button>
-        <Text fw={600} fz="sm" ta="center" aria-live="polite" data-paginacao-texto style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
-          Página {props.pagina} de {props.totalPaginas}
-        </Text>
-        <Button
-          h={48}
-          variant="default"
-          px={8}
-          fz="sm"
-          style={{ flex: '0 0 auto' }}
-          rightSection={<IconChevronRight size={18} aria-hidden />}
-          disabled={props.pagina >= props.totalPaginas}
-          onClick={() => props.aoMudar(props.pagina + 1)}
-        >
-          Próxima
-        </Button>
-      </Group>
+      {temControle && (
+        <NativeSelect
+          size="md"
+          label="Por página"
+          aria-label="Itens por página"
+          data={props.porPagina!.opcoes.map((n) => ({ value: String(n), label: String(n) }))}
+          value={String(props.porPagina!.valor)}
+          onChange={(e) => props.porPagina!.aoMudar(Number(e.currentTarget.value))}
+          mb={props.totalPaginas > 1 ? 'xs' : 0}
+        />
+      )}
+      {props.totalPaginas > 1 && (
+        <Group wrap="nowrap" justify="space-between" gap={4}>
+          <Button
+            h={48}
+            variant="default"
+            px={8}
+            fz="sm"
+            style={{ flex: '0 0 auto' }}
+            leftSection={<IconChevronLeft size={18} aria-hidden />}
+            disabled={props.pagina <= 1}
+            onClick={() => props.aoMudar(props.pagina - 1)}
+          >
+            Anterior
+          </Button>
+          <Text fw={600} fz="sm" ta="center" aria-live="polite" data-paginacao-texto style={{ flex: '1 1 auto', whiteSpace: 'nowrap' }}>
+            Página {props.pagina} de {props.totalPaginas}
+          </Text>
+          <Button
+            h={48}
+            variant="default"
+            px={8}
+            fz="sm"
+            style={{ flex: '0 0 auto' }}
+            rightSection={<IconChevronRight size={18} aria-hidden />}
+            disabled={props.pagina >= props.totalPaginas}
+            onClick={() => props.aoMudar(props.pagina + 1)}
+          >
+            Próxima
+          </Button>
+        </Group>
+      )}
     </Box>
   );
 }

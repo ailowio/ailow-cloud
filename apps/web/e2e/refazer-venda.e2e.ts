@@ -36,12 +36,11 @@ test('Refazer venda: cancela com motivo, o carrinho volta com as peças e a vend
   await confirmar.getByLabel('Motivo').fill('Peça trocada (E2E)');
   await confirmar.getByRole('button', { name: 'Cancelar e refazer' }).click();
 
-  // Carrinho da venda nova com a mesma peça e a mesma quantidade.
-  await expect(page).toHaveURL(/\/vendas$/);
+  // Carrinho da venda nova (rota /vendas/carrinho) com a mesma peça e a mesma quantidade.
+  await expect(page).toHaveURL(/\/vendas\/carrinho$/);
   await expect(page.locator('.mantine-Notifications-root').getByText(/Venda \d+ cancelada/)).toBeVisible();
-  // Os pop-ups do relatório somem (o "X" deles também se chama "Fechar"); o botão é o do carrinho, no conteúdo.
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  const fechar = page.getByRole('main').getByRole('button', { name: 'Fechar', exact: true });
+  const fechar = page.getByRole('main').getByRole('button', { name: 'Finalizar venda', exact: true });
   await expect(fechar).toBeVisible();
   // O carrinho mostra o nome da peça (criarPeca: "Peça E2E <sufixo>") e a quantidade da venda original (2).
   const nomePeca = `Peça E2E ${s}`;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { modulosPara } from './modulos';
+import { modulosPara, ordenarModulos } from './modulos';
 
 // RN-10: Vendedor nunca acessa Financeiro, Compras, Configurações nem custo. A tela inicial é 3 por linha (RNF-05).
 describe('módulos da tela inicial por perfil', () => {
@@ -34,5 +34,24 @@ describe('módulos da tela inicial por perfil', () => {
   it('o Vendedor abre Produtos (consulta de produto, preço e estoque, RF-PRO-07)', () => {
     const produtos = modulosPara('vendedor').find((m) => m.id === 'produtos');
     expect(produtos?.pronto).toBe(true);
+  });
+
+  describe('ordenarModulos (preferência do usuário)', () => {
+    const base = modulosPara('vendedor');
+
+    it('sem preferência mantém a ordem padrão (Vendas primeiro)', () => {
+      expect(ordenarModulos(base, undefined).map((m) => m.id)).toEqual(base.map((m) => m.id));
+      expect(ordenarModulos(base, []).map((m) => m.id)).toEqual(base.map((m) => m.id));
+    });
+
+    it('reordena pelos ids salvos e ignora ids de outro perfil', () => {
+      const ids = ordenarModulos(base, ['pessoas', 'financeiro', 'clientes', 'vendas']).map((m) => m.id);
+      expect(ids).toEqual(['pessoas', 'clientes', 'vendas', 'produtos']);
+    });
+
+    it('módulos novos (ainda sem preferência) ficam no fim', () => {
+      const ids = ordenarModulos(base, ['clientes']).map((m) => m.id);
+      expect(ids).toEqual(['clientes', 'vendas', 'produtos', 'pessoas']);
+    });
   });
 });
