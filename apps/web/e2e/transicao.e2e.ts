@@ -83,8 +83,25 @@ test('Entrar com PIN: overlay aparece, some sozinho em até 1,2 s e o Início fi
   await observar(page);
   await abrirPin(page);
   await digitarPin(page);
+  // Overlay: marca oficial (5 paths LogoA) + animação de traço/preenchimento do vídeo.
+  const overlay = page.getByTestId(ID);
+  await expect(overlay).toBeVisible();
+  const marca = await overlay.evaluate((el) => {
+    const paths = [...el.querySelectorAll('path')];
+    const c = paths[0] ? getComputedStyle(paths[0]) : null;
+    return {
+      n: paths.length,
+      d0: paths[0]?.getAttribute('d')?.slice(0, 12) ?? '',
+      fill: c?.fill ?? '',
+      stroke: c?.stroke ?? '',
+    };
+  });
+  expect(marca.n, '5 paths da marca oficial').toBe(5);
+  expect(marca.d0, 'path oficial (Remotion LogoA)').toMatch(/^M7200/);
+  expect(marca.fill, 'fill da marca').toMatch(/rgb\(\s*7,\s*189,\s*213\s*\)|#07bdd5/i);
+  expect(marca.stroke, 'stroke da animação LogoA').toMatch(/rgb\(\s*7,\s*189,\s*213\s*\)|#07bdd5/i);
   const v = await esperarCiclo(page, 1);
-  expect(duracao(v), 'vida do overlay (ms)').toBeLessThanOrEqual(1200);
+  expect(duracao(v), 'vida do overlay (ms)').toBeLessThanOrEqual(1400);
   expect(duracao(v), 'não pisca: dura o bastante para ser vista').toBeGreaterThanOrEqual(400);
   expect(v.semScroll, 'sem scroll de página nem overflow durante a transição').toBe(true);
   await expect(page.getByText('O que vamos fazer?')).toBeVisible();

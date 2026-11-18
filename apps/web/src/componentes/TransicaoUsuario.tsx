@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
 import marcaSvg from '../../public/logo.svg?raw';
-import { extrairPathMarca } from '../marca/extrair-path';
+import { extrairPathsMarca } from '../marca/extrair-path';
 import './transicao.css';
 
-/** UXM-07. Mesma duração do keyframe em transicao.css (800 ms) + folga; no movimento reduzido o fade dura 180 ms. */
-const DURACAO_MS = 820;
+/**
+ * UXM-07. Animação portada do Remotion `LogoA` (vídeo do projeto final):
+ * desenha o contorno (~700 ms) e preenche (~300 ms a partir de 450 ms).
+ * Duração total do overlay = keyframe 1000 ms + folga.
+ */
+const DURACAO_MS = 1050;
 const DURACAO_REDUZIDA_MS = 200;
-const { viewBox, d } = extrairPathMarca(marcaSvg);
+/** ViewBox ampliado como no Remotion, para o stroke não cortar. */
+const VIEWBOX_TRANSICAO = '-1389 -980 12600 12600';
+const { paths } = extrairPathsMarca(marcaSvg);
 
 function movimentoReduzido(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /**
- * Transição de tela cheia com a marca (traço + preenchimento em CSS puro) ao entrar, sair ou trocar de usuário.
- * `disparo` é um contador: cada incremento reinicia a transição; 0 = nunca disparou. Some sozinha e nunca captura toque.
- * Desenho vem de public/logo.svg (única fonte).
+ * Transição de tela cheia com a marca oficial Ailow (5 paths do brand/logo-ailow.svg)
+ * ao entrar, sair ou trocar de usuário. `disparo` incrementa a cada troca; 0 = nunca.
  */
 export function TransicaoUsuario({ disparo }: { disparo: number }) {
   const [visivel, setVisivel] = useState(0);
@@ -30,8 +35,10 @@ export function TransicaoUsuario({ disparo }: { disparo: number }) {
   if (visivel === 0) return null;
   return (
     <div key={visivel} className="ailow-transicao" data-testid="transicao-usuario" aria-hidden="true">
-      <svg className="ailow-transicao__marca" viewBox={viewBox} role="img" aria-label="Ailow" focusable="false">
-        <path pathLength={1} fillRule="evenodd" d={d} />
+      <svg className="ailow-transicao__marca" viewBox={VIEWBOX_TRANSICAO} role="img" aria-label="Ailow" focusable="false">
+        {paths.map((d) => (
+          <path key={d.slice(0, 24)} pathLength={1} d={d} />
+        ))}
       </svg>
     </div>
   );

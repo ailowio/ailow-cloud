@@ -50,13 +50,17 @@ export function MenuUsuario() {
   return (
     <Menu position="bottom-end" width={220} withinPortal>
       <Menu.Target>
-        <Box pos="relative" style={{ display: 'inline-flex' }}>
+        <Box pos="relative" style={{ display: 'inline-flex', overflow: 'visible' }}>
           <Badge
             className="ailow-menu-usuario__badge"
             variant="filled"
             color="gray"
             size="xs"
             px={6}
+            styles={{
+              root: { overflow: 'visible', maxWidth: 'none' },
+              label: { overflow: 'visible', textOverflow: 'clip', whiteSpace: 'nowrap' },
+            }}
             style={{
               position: 'absolute',
               top: 0,
