@@ -1,13 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Box, Group, Stack, Text, UnstyledButton } from '@mantine/core';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Badge, Box, Group, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core';
+import {
+  IconBottle,
+  IconCategory,
+  IconHanger,
+  IconMoon,
+  IconShirt,
+  IconSock,
+  IconTag,
+  IconAlertTriangle,
+} from '@tabler/icons-react';
 import type { Categoria, Produto } from '@ailow/shared';
 import { chaveCor } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
+import { Valor } from '../../componentes';
 import { ProgressoDoPasso } from '../../componentes/Assistente';
 import { Modal } from '../../componentes/navegacao';
 import { amostraDaCor } from '../produtos/grade';
 import { Carregando } from '../estados';
 import type { ItemVenda } from './carrinho';
+import { chaveIconeCategoria, resumoEstoqueProduto, type ChaveIconeCategoria } from './icone-categoria';
+import { rotuloEstoqueVenda } from './selo-estoque-venda';
 import {
   eixosDoProduto,
   opcoesDoEixo,
@@ -23,6 +36,17 @@ import {
 
 type CargaLista<T> = { fase: 'carregando' } | { fase: 'pronto'; dados: T } | { fase: 'erro' };
 
+const ICONES: Record<ChaveIconeCategoria, ReactNode> = {
+  sutia: <IconHanger size={22} stroke={1.75} aria-hidden />,
+  calcinha: <IconShirt size={22} stroke={1.75} aria-hidden />,
+  bebida: <IconBottle size={22} stroke={1.75} aria-hidden />,
+  acessorio: <IconTag size={22} stroke={1.75} aria-hidden />,
+  body: <IconCategory size={22} stroke={1.75} aria-hidden />,
+  pijama: <IconMoon size={22} stroke={1.75} aria-hidden />,
+  meia: <IconSock size={22} stroke={1.75} aria-hidden />,
+  geral: <IconTag size={22} stroke={1.75} aria-hidden />,
+};
+
 function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda, 'qtd'> {
   return {
     skuId: sku.id,
@@ -33,20 +57,37 @@ function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda,
       : `${sku.tamanho} · ${sku.cor}`,
     precoCentavos: produto.preco_centavos,
     estoque: sku.estoque,
+    estoqueMinimo: sku.estoque_minimo,
   };
 }
 
-function Opcao(props: { rotulo: string; detalhe?: string; amostra?: string | null; onClick: () => void }) {
+function Opcao(props: {
+  rotulo: string;
+  detalhe?: string;
+  amostra?: string | null;
+  icone?: ReactNode;
+  precoCentavos?: number;
+  estoque?: number;
+  estoqueMinimo?: number;
+  baixo?: boolean;
+  onClick: () => void;
+}) {
+  const temEstoque = props.estoque !== undefined;
   return (
     <UnstyledButton
       onClick={props.onClick}
       className="ailow-cartao"
       mih={48}
-      p="md"
+      p="sm"
       w="100%"
       style={{ textAlign: 'left' }}
     >
-      <Group gap="sm" wrap="nowrap">
+      <Group gap="sm" wrap="nowrap" align="flex-start">
+        {props.icone && (
+          <Box c="var(--ailow-marca-texto)" lh={0} mt={2} aria-hidden>
+            {props.icone}
+          </Box>
+        )}
         {props.amostra && (
           <Box
             aria-hidden
@@ -55,19 +96,39 @@ function Opcao(props: { rotulo: string; detalhe?: string; amostra?: string | nul
               height: 16,
               borderRadius: 999,
               flexShrink: 0,
+              marginTop: 4,
               background: props.amostra,
               border: '1px solid var(--ailow-borda)',
             }}
           />
         )}
-        <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
-          <Text fw={650} style={{ overflowWrap: 'anywhere' }}>
-            {props.rotulo}
-          </Text>
+        <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
+          <Group gap={4} wrap="nowrap" justify="space-between" align="flex-start">
+            <Text fw={650} style={{ overflowWrap: 'anywhere', flex: 1 }}>
+              {props.rotulo}
+            </Text>
+            {props.precoCentavos !== undefined && (
+              <Text fw={700} style={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                <Valor centavos={props.precoCentavos} destaque />
+              </Text>
+            )}
+          </Group>
           {props.detalhe && (
             <Text size="sm" c="dimmed">
               {props.detalhe}
             </Text>
+          )}
+          {temEstoque && props.estoque !== undefined && (
+            <Badge
+              data-estoque
+              color={props.baixo ? 'ambar' : 'gray'}
+              variant="light"
+              leftSection={
+                props.baixo ? <IconAlertTriangle size={12} aria-hidden data-alerta-estoque /> : undefined
+              }
+            >
+              {rotuloEstoqueVenda(props.estoque, props.estoqueMinimo)}
+            </Badge>
           )}
         </Stack>
       </Group>
@@ -206,7 +267,6 @@ export function WizardCatalogo(props: {
     setPasso(proximo);
   }
 
-  // escolhas já feitas = eixos anteriores ao atual
   const escolhasAnteriores = useMemo(() => {
     if (!slugAtual) return {};
     const i = eixosPassos.indexOf(`eixo:${slugAtual}` as PassoEixo);
@@ -230,36 +290,48 @@ export function WizardCatalogo(props: {
         {carregando && <Carregando linhas={3} />}
         {erro && !carregando && <Text c="dimmed">Não consegui carregar o catálogo. Feche e tente de novo.</Text>}
         {!carregando && !erro && passo === 'categoria' && (
-          <Stack gap="xs">
+          <>
             {listaCategorias.length === 0 && <Text c="dimmed">Nenhuma categoria com estoque.</Text>}
-            {listaCategorias.map((c) => (
-              <Opcao
-                key={c.id}
-                rotulo={c.nome}
-                onClick={() => {
-                  setCategoriaId(c.id);
-                  setPasso('produto');
-                }}
-              />
-            ))}
-          </Stack>
+            <SimpleGrid cols={2} spacing="xs">
+              {listaCategorias.map((c) => (
+                <Opcao
+                  key={c.id}
+                  rotulo={c.nome}
+                  icone={ICONES[chaveIconeCategoria(c.nome)]}
+                  onClick={() => {
+                    setCategoriaId(c.id);
+                    setPasso('produto');
+                  }}
+                />
+              ))}
+            </SimpleGrid>
+          </>
         )}
         {!carregando && !erro && passo === 'produto' && (
-          <Stack gap="xs">
+          <>
             {listaProdutos.length === 0 && <Text c="dimmed">Nenhum produto com estoque nesta categoria.</Text>}
-            {listaProdutos.map((p) => (
-              <Opcao
-                key={p.id}
-                rotulo={p.nome}
-                onClick={() => {
-                  setProdutoId(p.id);
-                  setEscolhas({});
-                  const eixos = passosEixosDoProduto(p);
-                  setPasso(eixos[0] ?? 'eixo:tamanho');
-                }}
-              />
-            ))}
-          </Stack>
+            <SimpleGrid cols={2} spacing="xs">
+              {listaProdutos.map((p) => {
+                const resumo = resumoEstoqueProduto(p);
+                return (
+                  <Opcao
+                    key={p.id}
+                    rotulo={p.nome}
+                    precoCentavos={resumo.precoCentavos}
+                    estoque={resumo.estoque}
+                    estoqueMinimo={resumo.estoqueMinimo}
+                    baixo={resumo.baixo}
+                    onClick={() => {
+                      setProdutoId(p.id);
+                      setEscolhas({});
+                      const eixos = passosEixosDoProduto(p);
+                      setPasso(eixos[0] ?? 'eixo:tamanho');
+                    }}
+                  />
+                );
+              })}
+            </SimpleGrid>
+          </>
         )}
         {!carregando && !erro && slugAtual && produto && (
           <Stack gap="xs">
@@ -267,15 +339,23 @@ export function WizardCatalogo(props: {
               const amostra = slugAtual === 'cor' ? (amostras.get(chaveCor(valor)) ?? amostraDaCor(valor)) : null;
               const i = eixosPassos.indexOf(`eixo:${slugAtual}` as PassoEixo);
               const ultimo = i === eixosPassos.length - 1;
-              const detalhe = ultimo
-                ? skusFiltrados(produto, { ...escolhasAnteriores, [slugAtual]: valor })[0]?.codigo
+              const sku = ultimo
+                ? skusFiltrados(produto, { ...escolhasAnteriores, [slugAtual]: valor })[0]
                 : undefined;
               return (
                 <Opcao
                   key={valor}
                   rotulo={valor}
-                  detalhe={detalhe}
+                  detalhe={sku?.codigo}
                   amostra={amostra}
+                  precoCentavos={ultimo ? produto.preco_centavos : undefined}
+                  estoque={sku?.estoque}
+                  estoqueMinimo={sku?.estoque_minimo}
+                  baixo={
+                    sku?.estoque_minimo !== undefined && sku.estoque < sku.estoque_minimo
+                      ? true
+                      : undefined
+                  }
                   onClick={() => escolherEixo(slugAtual, valor)}
                 />
               );

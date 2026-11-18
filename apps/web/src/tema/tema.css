@@ -167,6 +167,13 @@ h1, h2, h3, h4 {
 .ailow-acao-grade:active .ailow-acao-tile { transform: scale(0.95); }
 .ailow-acao-grade[data-desabilitado='true'] { opacity: 0.45; cursor: not-allowed; }
 .ailow-acao-grade[data-desabilitado='true'] .ailow-acao-tile { box-shadow: none; transform: none; }
+.ailow-acao-grade[data-destaque='true'] .ailow-acao-tile {
+  background: var(--ailow-acao);
+  border-color: var(--ailow-acao);
+  color: var(--ailow-sobre-acao);
+  box-shadow: var(--ailow-brilho);
+}
+.ailow-acao-grade[data-destaque='true'] { color: var(--ailow-acao); }
 
 /* 4 ações numa linha (360 px): tile menor para caber sem segunda fileira. */
 [data-grade-acoes][data-cols='4'] .ailow-acao-grade { gap: 4px; padding: 2px 0; }

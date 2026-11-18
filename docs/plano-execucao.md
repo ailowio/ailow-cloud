@@ -82,8 +82,7 @@ O prompt de cada sessão é entregue **no chat** ao fechar a anterior; não é g
   - Menores: `npm run dev:parar` quebrado na `main`; Zod/chunk 763 kB no bundle web; edição/desativação de produto; reescrita do histórico (acervo); ADR 003 e 006 propostos; perguntas Q1–Q5 para o Marcos.
 
 
-### Estado de retomada — 2026-11-16 (UX 12 itens implementado; sobrescrever a cada sessão)
-- **Código:** plano UX 12 itens feito (chrome, sugestões/Finalizar/swatch, barra+resumo, ADR 018 + DnD). Sem commit ainda (aguardar pedido). OpenAPI **0.16.0**; migração `20261120120000_preferencias-ui.sql`.
-- **Git / prod:** PRs #34/#35 e tags anteriores inalterados nesta sessão; produção ainda **v1.0.1** até deploy autorizado.
-- **Onde testar:** `dev:db` (aplicar migração nova) → `dev:api` → `dev:web`; protótipo barra em `docs/design/barra-carrinho.html`.
-- **Em aberto:** commit/PR da UX 12; E2E CI (rótulos Finalizar); migrate+deploy; tenant de teste; Moodle/vídeo; RNF-02.
+### Estado de retomada — 2026-11-17 (UX venda voz; sobrescrever a cada sessão)
+- **Código / branch:** `feat/ux-venda-cards-paginacao` — cards de peça (preço/estoque/+/−), paginação discreta, catálogo 2 colunas + ícones, Finalizar CTA. Sem OpenAPI/migração. CHANGELOG **1.5.0**.
+- **Git / prod:** última tag conhecida `v1.4.1`; esta entrega sobe como **v1.5.0** após merge + Publicar + Deploy.
+- **Em aberto:** merge da PR (humano); Deploy; tenant de teste na VPS; Admin master + PTT; RNF-02; etiquetas S08.

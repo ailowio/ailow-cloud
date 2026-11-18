@@ -9,6 +9,8 @@ export interface ItemVenda {
   detalhe: string;
   precoCentavos: number;
   estoque: number;
+  /** Presente para o Dono (RF-PRO-07); ausente para o Vendedor. */
+  estoqueMinimo?: number;
   qtd: number;
 }
 
