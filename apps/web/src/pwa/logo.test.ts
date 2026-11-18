@@ -30,16 +30,23 @@ describe('logo (marca Ailow)', () => {
     expect('/logo.svg'.startsWith('/assets/') || '/logo.svg'.startsWith('/icons/')).toBe(false);
   });
 
-  // UXM-07: a transição anima o path no DOM, mas o desenho vem de logo.svg — sem path hardcoded no componente.
+  // UXM-07: desenho = logo.svg oficial (5 paths); componentes não hardcodam o d.
   it('TransicaoUsuario não hardcoda o path da marca (fonte = logo.svg)', () => {
     const fonte = readFileSync(new URL('../componentes/TransicaoUsuario.tsx', import.meta.url), 'utf8');
     expect(fonte).toContain('logo.svg?raw');
-    expect(fonte).not.toContain('M189 42L318');
+    expect(fonte).not.toContain('M7200.09');
   });
 
   it('Logo não hardcoda o path da marca (fonte = logo.svg)', () => {
     const fonte = readFileSync(new URL('../componentes/Logo.tsx', import.meta.url), 'utf8');
     expect(fonte).toContain('logo.svg?raw');
-    expect(fonte).not.toContain('M189 42L318');
+    expect(fonte).not.toContain('M7200.09');
+  });
+
+  it('logo.svg é a marca oficial (5 paths CorelDRAW), não o SVG evenodd simplificado', () => {
+    expect(svg.match(/\bd="/g)?.length).toBe(5);
+    expect(svg).toContain('M7200.09');
+    expect(svg).not.toContain('M189 42');
   });
 });
+

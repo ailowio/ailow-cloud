@@ -1,25 +1,30 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { extrairPathMarca } from './extrair-path';
+import { extrairPathMarca, extrairPathsMarca } from './extrair-path';
 
 const logo = readFileSync(new URL('../../public/logo.svg', import.meta.url), 'utf8');
 
-describe('extrairPathMarca', () => {
-  it('lê viewBox e path d de public/logo.svg (fonte única da marca)', () => {
-    const { viewBox, d } = extrairPathMarca(logo);
-    expect(viewBox).toBe('0 0 378 378');
-    expect(d).toContain('M189 42');
-    expect(d).toContain('L318 336');
-    expect(d).toContain('A22 22 0 1 1 168 212');
-    expect(d).toMatch(/^M189 42/);
-    expect(d).not.toMatch(/\s{2,}/);
+describe('extrairPathsMarca', () => {
+  it('lê viewBox e os 5 paths oficiais de public/logo.svg', () => {
+    const { viewBox, paths } = extrairPathsMarca(logo);
+    expect(viewBox).toBe('0 0 10000 10000');
+    expect(paths).toHaveLength(5);
+    expect(paths[0]).toMatch(/^M7200\.09/);
+    expect(paths[1]).toMatch(/^M5455\.51/);
+    expect(paths[4]).toMatch(/^M3171\.89/);
+    for (const d of paths) expect(d).not.toMatch(/\s{2,}/);
+  });
+
+  it('extrairPathMarca devolve o primeiro path', () => {
+    const { d } = extrairPathMarca(logo);
+    expect(d).toMatch(/^M7200\.09/);
   });
 
   it('falha se faltar viewBox', () => {
-    expect(() => extrairPathMarca('<svg><path d="M0 0"/></svg>')).toThrow(/viewBox/);
+    expect(() => extrairPathsMarca('<svg><path d="M0 0"/></svg>')).toThrow(/viewBox/);
   });
 
   it('falha se faltar path d', () => {
-    expect(() => extrairPathMarca('<svg viewBox="0 0 1 1"></svg>')).toThrow(/path/);
+    expect(() => extrairPathsMarca('<svg viewBox="0 0 1 1"></svg>')).toThrow(/path/);
   });
 });

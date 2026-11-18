@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import marcaSvg from '../../public/logo.svg?raw';
-import { extrairPathMarca } from '../marca/extrair-path';
+import { extrairPathsMarca } from '../marca/extrair-path';
 
-const { viewBox, d } = extrairPathMarca(marcaSvg);
+const { viewBox, paths } = extrairPathsMarca(marcaSvg);
 
 /**
  * Marca no topo. Com sessão (`empresa`), tenta `GET /empresa/logo` e cai na
  * marca SVG se 401/404. Sem sessão (ou fallback), SVG com fill currentColor
  * para acompanhar `--ailow-marca-texto` nos dois temas. Fora de /icons e /assets:
  * o SW não guarda.
+ * Desenho = marca oficial (mesmos 5 paths do vídeo Remotion / brand/logo-ailow.svg).
  */
 export function Logo({
   altura = 36,
@@ -31,7 +32,7 @@ export function Logo({
   if (srcEmpresa) {
     return (
       <img
-        src={srcEmpresa}
+        src={empresaSrc}
         alt={alt}
         height={altura}
         onError={() => setSrcEmpresa(null)}
@@ -56,7 +57,9 @@ export function Logo({
         flexShrink: 0,
       }}
     >
-      <path fill="currentColor" fillRule="evenodd" d={d} />
+      {paths.map((d) => (
+        <path key={d.slice(0, 24)} fill="currentColor" d={d} />
+      ))}
     </svg>
   );
 }
