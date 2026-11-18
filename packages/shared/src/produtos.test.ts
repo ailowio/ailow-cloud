@@ -255,6 +255,14 @@ describe('produto novo (RF-PRO-01)', () => {
     expect(produtoNovoSchema.safeParse(produto({ skus })).success).toBe(true);
   });
 
+  it('mesmo tamanho e cor com extras diferentes (ex.: taça) são SKUs distintos', () => {
+    const skus = [
+      sku({ extras: [{ slug: 'taca', valor: 'A' }] }),
+      sku({ extras: [{ slug: 'taca', valor: 'B' }] }),
+    ];
+    expect(produtoNovoSchema.safeParse(produto({ skus })).success).toBe(true);
+  });
+
   it('aceita no máximo 144 SKUs e 12 cores', () => {
     const tamanhos = ['P', 'M', 'G', 'GG', '40', '42', '44', '46', '48', '50', '52', '54'];
     const cores = (n: number) => Array.from({ length: n }, (_, i) => `Cor${String.fromCharCode(65 + i)}`);

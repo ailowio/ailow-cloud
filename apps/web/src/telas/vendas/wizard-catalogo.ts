@@ -5,7 +5,8 @@ import { TAMANHOS_PADRAO } from '@ailow/shared';
 export const PASSOS_FIXOS = ['categoria', 'produto'] as const;
 export type PassoFixo = (typeof PASSOS_FIXOS)[number];
 export type PassoEixo = `eixo:${string}`;
-export type PassoCatalogo = PassoFixo | PassoEixo;
+/** Inclui `tamanho`/`cor` legados (PASSOS_CATALOGO / testes) além de `eixo:slug`. */
+export type PassoCatalogo = PassoFixo | PassoEixo | 'tamanho' | 'cor';
 
 /** Compat: testes e callers que ainda esperam a sequência clássica de 4 passos. */
 export const PASSOS_CATALOGO = ['categoria', 'produto', 'tamanho', 'cor'] as const;
@@ -114,6 +115,10 @@ export function skusDoTamanho(produto: Produto, tamanho: string): Produto['skus'
 export function indicePasso(passo: PassoCatalogo, eixos: readonly PassoEixo[]): number {
   if (passo === 'categoria') return 0;
   if (passo === 'produto') return 1;
+  if (passo === 'tamanho' || passo === 'cor') {
+    const i = eixos.indexOf(`eixo:${passo}` as PassoEixo);
+    return i >= 0 ? 2 + i : PASSOS_CATALOGO.indexOf(passo);
+  }
   const i = eixos.indexOf(passo);
   return i >= 0 ? 2 + i : -1;
 }
@@ -122,9 +127,10 @@ export function passoAnterior(passo: PassoCatalogo, eixos: readonly PassoEixo[] 
   if (passo === 'categoria') return null;
   if (passo === 'produto') return 'categoria';
   // Compat testes clássicos sem lista de eixos.
-  if (passo === ('tamanho' as PassoCatalogo)) return 'produto';
-  if (passo === ('cor' as PassoCatalogo)) return 'tamanho' as PassoCatalogo;
+  if (passo === 'tamanho') return 'produto';
+  if (passo === 'cor') return 'tamanho';
   const i = eixos.indexOf(passo as PassoEixo);
-  if (i <= 0) return 'produto';
-  return eixos[i - 1]!;
+  if (i < 0) return 'produto';
+  if (i === 0) return 'produto';
+  return eixos[i - 1] ?? 'produto';
 }

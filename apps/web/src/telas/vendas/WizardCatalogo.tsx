@@ -181,7 +181,8 @@ export function WizardCatalogo(props: {
       const prev: Record<string, string> = {};
       for (const p of eixosPassos.slice(0, i)) {
         const s = p.slice('eixo:'.length);
-        if (escolhas[s] !== undefined) prev[s] = escolhas[s]!;
+        const v = escolhas[s];
+        if (v !== undefined) prev[s] = v;
       }
       setEscolhas(prev);
     }
@@ -191,7 +192,8 @@ export function WizardCatalogo(props: {
     if (!produto) return;
     const novas = { ...escolhas, [slug]: valor };
     const i = eixosPassos.indexOf(`eixo:${slug}` as PassoEixo);
-    const ultimo = i === eixosPassos.length - 1;
+    const proximo = eixosPassos[i + 1];
+    const ultimo = i === eixosPassos.length - 1 || proximo === undefined;
     if (ultimo) {
       const restantes = skusFiltrados(produto, novas);
       const sku = restantes[0];
@@ -201,7 +203,7 @@ export function WizardCatalogo(props: {
       return;
     }
     setEscolhas(novas);
-    setPasso(eixosPassos[i + 1]!);
+    setPasso(proximo);
   }
 
   // escolhas já feitas = eixos anteriores ao atual
@@ -211,7 +213,8 @@ export function WizardCatalogo(props: {
     const prev: Record<string, string> = {};
     for (const p of eixosPassos.slice(0, i)) {
       const s = p.slice('eixo:'.length);
-      if (escolhas[s] !== undefined) prev[s] = escolhas[s]!;
+      const v = escolhas[s];
+      if (v !== undefined) prev[s] = v;
     }
     return prev;
   }, [escolhas, eixosPassos, slugAtual]);

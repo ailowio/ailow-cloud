@@ -22,7 +22,7 @@ describe('endpoints de Produtos', () => {
     fornecedor: null,
     custo_centavos: 4500,
     preco_centavos: 8990,
-    skus: [{ tamanho: 'M', cor: 'Preto', estoque_inicial: 3, estoque_minimo: 1 }],
+    skus: [{ tamanho: 'M', cor: 'Preto', estoque_inicial: 3, estoque_minimo: 1, extras: [] }],
   };
 
   it('lista sem busca: GET /produtos', async () => {

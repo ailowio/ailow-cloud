@@ -87,8 +87,9 @@ describe('Eixos de grade (biblioteca + categoria)', () => {
     };
     const taca = eixos.eixos.find((e) => e.slug === 'taca');
     expect(taca).toBeTruthy();
-    expect((await a.dono.post(`/eixos-grade/${taca!.id}/valores`, { nome: 'A' })).statusCode).toBe(201);
-    expect((await a.dono.post(`/eixos-grade/${taca!.id}/valores`, { nome: 'B' })).statusCode).toBe(201);
+    if (!taca) throw new Error('eixo taca ausente');
+    expect((await a.dono.post(`/eixos-grade/${taca.id}/valores`, { nome: 'A' })).statusCode).toBe(201);
+    expect((await a.dono.post(`/eixos-grade/${taca.id}/valores`, { nome: 'B' })).statusCode).toBe(201);
 
     const cat = await a.dono.post('/categorias', {
       nome: `Sutiã Eixos ${relogio.agora.getTime()}`,
@@ -100,13 +101,15 @@ describe('Eixos de grade (biblioteca + categoria)', () => {
 
     // força semente de vínculos padrão
     await a.dono.get('/eixos-grade');
-    const tam = eixos.eixos.find((e) => e.slug === 'tamanho')!;
-    const cor = eixos.eixos.find((e) => e.slug === 'cor')!;
+    const tam = eixos.eixos.find((e) => e.slug === 'tamanho');
+    const cor = eixos.eixos.find((e) => e.slug === 'cor');
+    expect(tam && cor).toBeTruthy();
+    if (!tam || !cor) throw new Error('eixos sistema ausentes');
     const put = await a.dono.put(`/categorias/${catId}/eixos`, {
       eixos: [
         { eixo_id: tam.id, seq: 0 },
         { eixo_id: cor.id, seq: 1 },
-        { eixo_id: taca!.id, seq: 2 },
+        { eixo_id: taca.id, seq: 2 },
       ],
     });
     expect(put.statusCode).toBe(204);
@@ -134,8 +137,12 @@ describe('Eixos de grade (biblioteca + categoria)', () => {
     const eixos = (await a.dono.get('/eixos-grade')).json() as {
       eixos: { id: string; slug: string; valores: { id: string; nome: string }[] }[];
     };
-    const taca = eixos.eixos.find((e) => e.slug === 'taca')!;
-    const valorA = taca.valores.find((v) => v.nome === 'A')!;
+    const taca = eixos.eixos.find((e) => e.slug === 'taca');
+    expect(taca).toBeTruthy();
+    if (!taca) throw new Error('eixo taca ausente');
+    const valorA = taca.valores.find((v) => v.nome === 'A');
+    expect(valorA).toBeTruthy();
+    if (!valorA) throw new Error('valor A ausente');
     expect(
       (await a.dono.put(`/eixos-grade/valores/${valorA.id}`, { nome: 'A', amostra: null, ativa: false })).statusCode,
     ).toBe(204);

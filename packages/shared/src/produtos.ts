@@ -62,9 +62,19 @@ export const skuNovoSchema = z.object({
   estoque_inicial: estoqueSchema,
   // Obrigatório no cadastro (RF-PRO-05): 0 = não quero aviso.
   estoque_minimo: estoqueSchema,
-  extras: z.array(skuExtraEixoSchema).max(2).default([]),
+  extras: z.array(skuExtraEixoSchema).max(2).optional().default([]),
 });
 export type SkuNovo = z.infer<typeof skuNovoSchema>;
+
+/** Chave de unicidade da variação: tamanho + cor + extras (ordem do array). */
+export function chaveVariacaoSku(s: {
+  tamanho: string;
+  cor: string;
+  extras?: readonly { slug: string; valor: string }[];
+}): string {
+  const extras = (s.extras ?? []).map((e) => `${e.slug}:${e.valor}`).join('|');
+  return extras ? `${s.tamanho}|${chaveCor(s.cor)}|${extras}` : `${s.tamanho}|${chaveCor(s.cor)}`;
+}
 
 const atributoSchema = z.string().trim().min(1).max(40);
 
@@ -83,7 +93,7 @@ export const produtoNovoSchema = z
     preco_centavos: valorCentavosSchema,
     skus: z.array(skuNovoSchema).min(1, { error: 'escolha ao menos um tamanho e uma cor' }).max(MAX_SKUS_POR_PRODUTO),
   })
-  .refine((p) => new Set(p.skus.map((s) => `${s.tamanho}|${chaveCor(s.cor)}`)).size === p.skus.length, {
+  .refine((p) => new Set(p.skus.map((s) => chaveVariacaoSku(s))).size === p.skus.length, {
     error: 'tamanho e cor repetidos',
     path: ['skus'],
   })
