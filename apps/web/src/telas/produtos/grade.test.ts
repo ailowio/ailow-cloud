@@ -106,8 +106,8 @@ describe('SKUs do formulário (estoque inicial e mínimo por SKU)', () => {
     expect(skusDoFormulario(tamanhos, cores, linhas)).toEqual({
       pendentes: 0,
       skus: [
-        { tamanho: 'P', cor: 'Preto', estoque_inicial: 4, estoque_minimo: 1 },
-        { tamanho: 'M', cor: 'Preto', estoque_inicial: 0, estoque_minimo: 2 },
+        { tamanho: 'P', cor: 'Preto', estoque_inicial: 4, estoque_minimo: 1, extras: [] },
+        { tamanho: 'M', cor: 'Preto', estoque_inicial: 0, estoque_minimo: 2, extras: [] },
       ],
     });
   });

@@ -16,19 +16,21 @@ import {
   adicionarTamanho,
   alternarCor,
   alternarTamanho,
-  combinacoes,
+  combinacoesComExtras,
   skusDoFormulario,
 } from './grade';
-import { PassoCores, PassoGrade, PassoTamanhos } from './PassosGrade';
+import { PassoCores, PassoEixoExtra, PassoGrade, PassoTamanhos } from './PassosGrade';
 import { PassoCusto, PassoPreco } from './PassosValores';
 import { PORTES_DISPONIVEIS, mensagemProdutos, rotuloPorte } from './rotulos';
 import { bpsParaTexto, markupBpsDoPreco, percentualParaBps, precoPorMarkup } from './valores-produto';
 
-type Passo = 'categoria' | 'modelo' | 'atributos' | 'tamanhos' | 'cores' | 'grade' | 'custo' | 'preco' | 'estoque';
+type PassoFixo = 'categoria' | 'modelo' | 'atributos' | 'tamanhos' | 'cores' | 'grade' | 'custo' | 'preco' | 'estoque';
+type PassoEixo = `eixo:${string}`;
+type Passo = PassoFixo | PassoEixo;
 
-const ORDEM: Passo[] = ['categoria', 'modelo', 'atributos', 'tamanhos', 'cores', 'grade', 'custo', 'preco', 'estoque'];
+const ORDEM_BASE: PassoFixo[] = ['categoria', 'modelo', 'atributos', 'tamanhos', 'cores', 'grade', 'custo', 'preco', 'estoque'];
 
-const TITULOS: Record<Passo, string> = {
+const TITULOS_FIXOS: Record<PassoFixo, string> = {
   categoria: 'Que tipo de peça é?',
   modelo: 'Nome e porte',
   atributos: 'O que ela tem?',
@@ -39,6 +41,14 @@ const TITULOS: Record<Passo, string> = {
   preco: 'Por quanto vende?',
   estoque: 'Quantas peças?',
 };
+
+function tituloDoPasso(passo: Passo, eixos: { slug: string; nome: string }[]): string {
+  if (passo.startsWith('eixo:')) {
+    const slug = passo.slice('eixo:'.length);
+    return `Quais ${eixos.find((e) => e.slug === slug)?.nome.toLowerCase() ?? slug}?`;
+  }
+  return TITULOS_FIXOS[passo as PassoFixo];
+}
 
 /** RF-PRO-01: novo produto passo a passo, uma decisão por tela. Só chega aqui o Dono (a API também exige). */
 export function NovoProduto(props: { api: Api; aoTerminar: (codigoParaBuscar?: string) => void; aoCancelar: () => void }) {
@@ -114,12 +124,52 @@ function Assistente(props: {
   const [fornecedor, setFornecedor] = useState('');
   const [linhas, setLinhas] = useState<Record<string, LinhaEstoque>>({});
   const [criado, setCriado] = useState<{ numero: number; codigos: string[] } | null>(null);
+  const [eixosCat, setEixosCat] = useState<{ slug: string; nome: string; valores: string[] }[]>([]);
+  const [escolhasExtras, setEscolhasExtras] = useState<Record<string, string[]>>({});
   const { pendente, rodar } = useAcao(mensagemProdutos);
 
   const categoria = props.categorias.find((c) => c.id === categoriaId) ?? null;
+  const eixosExtras = eixosCat.filter((e) => e.slug !== 'tamanho' && e.slug !== 'cor');
 
-  // O passo "O que ela tem?" some quando a categoria não tem atributos.
-  const passos = ORDEM.filter((p) => p !== 'atributos' || (categoria?.atributos.length ?? 0) > 0);
+  useEffect(() => {
+    if (!categoriaId) {
+      setEixosCat([]);
+      setEscolhasExtras({});
+      return;
+    }
+    let ativo = true;
+    void props.api
+      .eixosDaCategoria(categoriaId)
+      .then(async (r) => {
+        const lib = await props.api.eixosGrade().catch(() => null);
+        if (!ativo) return;
+        const porSlug = new Map((lib?.eixos ?? []).map((e) => [e.slug, e]));
+        setEixosCat(
+          r.eixos.map((e) => ({
+            slug: e.slug,
+            nome: e.nome,
+            valores: (porSlug.get(e.slug)?.valores ?? []).filter((v) => v.ativa).map((v) => v.nome),
+          })),
+        );
+        setEscolhasExtras({});
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setEixosCat([]);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [categoriaId, props.api]);
+
+  // Passos: fixos + um por eixo extra (entre cores e grade). Atributos some se a categoria não tem.
+  const passos: Passo[] = ORDEM_BASE.flatMap((p) => {
+    if (p === 'atributos' && (categoria?.atributos.length ?? 0) === 0) return [];
+    if (p === 'cores') {
+      return [p, ...eixosExtras.map((e) => `eixo:${e.slug}` as PassoEixo)];
+    }
+    return [p];
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const doHistorico = (location.state as { passo?: Passo } | null)?.passo;
@@ -150,12 +200,16 @@ function Assistente(props: {
     document.getElementById('conteudo')?.scrollTo({ top: 0 });
   }, [passoAtual]);
 
-  const grade = combinacoes(tamanhos, cores);
-  const { skus, pendentes } = skusDoFormulario(tamanhos, cores, linhas);
+  const eixosParaGrade = eixosExtras.map((e) => ({
+    slug: e.slug,
+    valores: escolhasExtras[e.slug] ?? [],
+  }));
+  const grade = combinacoesComExtras(tamanhos, cores, eixosParaGrade);
+  const { skus, pendentes } = skusDoFormulario(tamanhos, cores, linhas, eixosParaGrade);
 
   const custoOk = custo !== null && custo <= PRECO_MAXIMO_CENTAVOS;
   const precoOk = preco !== null && preco >= 1 && preco <= PRECO_MAXIMO_CENTAVOS;
-  const podeContinuar: Record<Passo, boolean> = {
+  const podeContinuarFixo: Record<PassoFixo, boolean> = {
     categoria: categoria !== null,
     modelo: nome.trim() !== '' && porte !== null,
     atributos: true,
@@ -166,6 +220,13 @@ function Assistente(props: {
     preco: precoOk,
     estoque: pendentes === 0,
   };
+  function podeContinuarPasso(p: Passo): boolean {
+    if (p.startsWith('eixo:')) {
+      const slug = p.slice('eixo:'.length);
+      return (escolhasExtras[slug] ?? []).length > 0;
+    }
+    return podeContinuarFixo[p as PassoFixo];
+  }
 
   async function salvar() {
     if (!categoria || !porte || !precoOk || custo === null || pendentes !== 0) return;
@@ -199,13 +260,21 @@ function Assistente(props: {
   }
 
   function avancar() {
-    if (!podeContinuar[passoAtual]) return;
+    if (!podeContinuarPasso(passoAtual)) return;
     if (ultimo) {
       void salvar();
       return;
     }
     if (passoAtual === 'custo') reconciliarValores();
     navigate(location.pathname + location.search, { state: estadoDoPasso(passos[indice + 1] as Passo, indice + 1) });
+  }
+
+  function alternarExtra(slug: string, valor: string) {
+    setEscolhasExtras((atual) => {
+      const lista = atual[slug] ?? [];
+      const next = lista.includes(valor) ? lista.filter((x) => x !== valor) : [...lista, valor];
+      return { ...atual, [slug]: next };
+    });
   }
 
   function voltar() {
@@ -240,11 +309,12 @@ function Assistente(props: {
     <Stack gap="md" className="ailow-cartao" p="md" data-assistente={passoAtual}>
       <Group justify="space-between" wrap="nowrap" gap="xs" align="center">
         <Title order={2} fz="lg" style={{ overflowWrap: 'anywhere' }}>
-          {TITULOS[passoAtual]}
+          {tituloDoPasso(passoAtual, eixosExtras)}
         </Title>
         {passoAtual === 'categoria' && <BotaoConfigCategorias api={props.api} aoFechar={props.aoRecarregarCategorias} />}
         {passoAtual === 'tamanhos' && <BotaoConfigCategorias api={props.api} aba="tamanhos" aoFechar={props.aoRecarregarCategorias} />}
         {passoAtual === 'cores' && <BotaoConfigCategorias api={props.api} aba="cores" aoFechar={props.aoRecarregarCategorias} />}
+        {passoAtual.startsWith('eixo:') && <BotaoConfigCategorias api={props.api} aba="eixos" aoFechar={props.aoRecarregarCategorias} />}
       </Group>
       <Stack gap={6}>
         <Text size="sm" c="dimmed" data-progresso>
@@ -387,6 +457,21 @@ function Assistente(props: {
         />
       )}
 
+      {passoAtual.startsWith('eixo:') &&
+        (() => {
+          const slug = passoAtual.slice('eixo:'.length);
+          const eixo = eixosExtras.find((e) => e.slug === slug);
+          if (!eixo) return null;
+          return (
+            <PassoEixoExtra
+              nome={eixo.nome}
+              disponiveis={eixo.valores}
+              escolhidos={escolhasExtras[slug] ?? []}
+              aoAlternar={(v) => alternarExtra(slug, v)}
+            />
+          );
+        })()}
+
       {passoAtual === 'grade' && <PassoGrade grade={grade} tamanhos={tamanhos} cores={cores} />}
 
       {passoAtual === 'custo' && (
@@ -435,7 +520,7 @@ function Assistente(props: {
             fw={700}
             onClick={avancar}
             loading={pendente}
-            disabled={!podeContinuar[passoAtual]}
+            disabled={!podeContinuarPasso(passoAtual)}
             style={{ flex: '2 1 0' }}
           >
             {ultimo ? 'Salvar produto' : 'Continuar'}
@@ -447,7 +532,7 @@ function Assistente(props: {
 }
 
 function EstoquePorSku(props: {
-  grade: ReturnType<typeof combinacoes>;
+  grade: ReturnType<typeof combinacoesComExtras>;
   linhas: Record<string, LinhaEstoque>;
   aoMudar: (l: Record<string, LinhaEstoque>) => void;
   pendentes: number;
@@ -492,7 +577,7 @@ function EstoquePorSku(props: {
         return (
           <Stack key={g.chave} gap={6} pb="sm" style={{ borderBottom: '1px solid var(--ailow-borda)' }}>
             <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
-              {g.tamanho} · {g.cor}
+              {[g.tamanho, g.cor, ...g.extras.map((e) => e.valor)].join(' · ')}
             </Text>
             <SimpleGrid cols={2} spacing="xs">
               <TextInput

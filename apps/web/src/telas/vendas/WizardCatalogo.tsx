@@ -9,14 +9,16 @@ import { amostraDaCor } from '../produtos/grade';
 import { Carregando } from '../estados';
 import type { ItemVenda } from './carrinho';
 import {
-  PASSOS_CATALOGO,
-  TITULOS_CATALOGO,
-  categoriasComEstoque,
+  eixosDoProduto,
+  opcoesDoEixo,
   passoAnterior,
+  passosEixosDoProduto,
   produtosDaCategoria,
-  skusDoTamanho,
-  tamanhosComEstoque,
+  skusFiltrados,
+  tituloDoEixo,
+  categoriasComEstoque,
   type PassoCatalogo,
+  type PassoEixo,
 } from './wizard-catalogo';
 
 type CargaLista<T> = { fase: 'carregando' } | { fase: 'pronto'; dados: T } | { fase: 'erro' };
@@ -26,7 +28,9 @@ function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda,
     skuId: sku.id,
     codigo: sku.codigo,
     nome: produto.nome,
-    detalhe: `${sku.tamanho} · ${sku.cor}`,
+    detalhe: sku.eixos?.length
+      ? sku.eixos.map((e) => e.valor).join(' · ')
+      : `${sku.tamanho} · ${sku.cor}`,
     precoCentavos: produto.preco_centavos,
     estoque: sku.estoque,
   };
@@ -72,8 +76,8 @@ function Opcao(props: { rotulo: string; detalhe?: string; amostra?: string | nul
 }
 
 /**
- * Wizard em modal: Categoria → Produto → Tamanho → Cor.
- * Toque numa opção avança; na cor, acrescenta a peça e fecha.
+ * Wizard em modal: Categoria → Produto → um passo por eixo (tamanho, cor, …).
+ * No último eixo, escolhe o SKU restante e fecha.
  */
 export function WizardCatalogo(props: {
   aberto: boolean;
@@ -84,7 +88,7 @@ export function WizardCatalogo(props: {
   const [passo, setPasso] = useState<PassoCatalogo>('categoria');
   const [categoriaId, setCategoriaId] = useState<string | null>(null);
   const [produtoId, setProdutoId] = useState<string | null>(null);
-  const [tamanho, setTamanho] = useState<string | null>(null);
+  const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [categorias, setCategorias] = useState<CargaLista<Categoria[]>>({ fase: 'carregando' });
   const [produtos, setProdutos] = useState<CargaLista<Produto[]>>({ fase: 'carregando' });
   const [amostras, setAmostras] = useState<Map<string, string | null>>(new Map());
@@ -94,7 +98,7 @@ export function WizardCatalogo(props: {
       setPasso('categoria');
       setCategoriaId(null);
       setProdutoId(null);
-      setTamanho(null);
+      setEscolhas({});
       return;
     }
     let ativo = true;
@@ -138,18 +142,28 @@ export function WizardCatalogo(props: {
     return produtos.dados.find((p) => p.id === produtoId) ?? null;
   }, [produtos, produtoId]);
 
-  const listaTamanhos = useMemo(() => (produto ? tamanhosComEstoque(produto) : []), [produto]);
-  const listaSkus = useMemo(
-    () => (produto && tamanho ? skusDoTamanho(produto, tamanho) : []),
-    [produto, tamanho],
-  );
+  const eixosPassos: PassoEixo[] = useMemo(() => (produto ? passosEixosDoProduto(produto) : []), [produto]);
+  const eixosMeta = useMemo(() => (produto ? eixosDoProduto(produto) : []), [produto]);
 
   const carregando = categorias.fase === 'carregando' || produtos.fase === 'carregando';
   const erro = categorias.fase === 'erro' || produtos.fase === 'erro';
-  const indice = PASSOS_CATALOGO.indexOf(passo);
+  const totalPassos = 2 + Math.max(eixosPassos.length, 1);
+  const indice =
+    passo === 'categoria' ? 0 : passo === 'produto' ? 1 : Math.max(0, eixosPassos.indexOf(passo as PassoEixo)) + 2;
+
+  const slugAtual = typeof passo === 'string' && passo.startsWith('eixo:') ? passo.slice('eixo:'.length) : null;
+  const metaAtual = eixosMeta.find((e) => e.slug === slugAtual);
+  const titulo =
+    passo === 'categoria' || passo === 'produto'
+      ? passo === 'categoria'
+        ? 'Escolha a categoria'
+        : 'Escolha o produto'
+      : metaAtual
+        ? tituloDoEixo(metaAtual.slug, metaAtual.nome)
+        : 'Escolha';
 
   function voltar() {
-    const ant = passoAnterior(passo);
+    const ant = passoAnterior(passo, eixosPassos);
     if (!ant) {
       props.aoFechar();
       return;
@@ -158,20 +172,58 @@ export function WizardCatalogo(props: {
     if (ant === 'categoria') {
       setCategoriaId(null);
       setProdutoId(null);
-      setTamanho(null);
+      setEscolhas({});
     } else if (ant === 'produto') {
       setProdutoId(null);
-      setTamanho(null);
-    } else if (ant === 'tamanho') {
-      setTamanho(null);
+      setEscolhas({});
+    } else if (typeof ant === 'string' && ant.startsWith('eixo:')) {
+      const i = eixosPassos.indexOf(ant as PassoEixo);
+      const prev: Record<string, string> = {};
+      for (const p of eixosPassos.slice(0, i)) {
+        const s = p.slice('eixo:'.length);
+        if (escolhas[s] !== undefined) prev[s] = escolhas[s]!;
+      }
+      setEscolhas(prev);
     }
   }
+
+  function escolherEixo(slug: string, valor: string) {
+    if (!produto) return;
+    const novas = { ...escolhas, [slug]: valor };
+    const i = eixosPassos.indexOf(`eixo:${slug}` as PassoEixo);
+    const ultimo = i === eixosPassos.length - 1;
+    if (ultimo) {
+      const restantes = skusFiltrados(produto, novas);
+      const sku = restantes[0];
+      if (!sku) return;
+      props.aoEscolher(pecaDe(produto, sku));
+      props.aoFechar();
+      return;
+    }
+    setEscolhas(novas);
+    setPasso(eixosPassos[i + 1]!);
+  }
+
+  // escolhas já feitas = eixos anteriores ao atual
+  const escolhasAnteriores = useMemo(() => {
+    if (!slugAtual) return {};
+    const i = eixosPassos.indexOf(`eixo:${slugAtual}` as PassoEixo);
+    const prev: Record<string, string> = {};
+    for (const p of eixosPassos.slice(0, i)) {
+      const s = p.slice('eixo:'.length);
+      if (escolhas[s] !== undefined) prev[s] = escolhas[s]!;
+    }
+    return prev;
+  }, [escolhas, eixosPassos, slugAtual]);
+
+  const opcoesFiltradas =
+    produto && slugAtual ? opcoesDoEixo(produto, escolhasAnteriores, slugAtual) : [];
 
   return (
     <Modal opened={props.aberto} onClose={props.aoFechar} title="Catálogo" size="md">
       <Stack gap="md" data-wizard-catalogo={passo}>
-        <Text fw={650}>{TITULOS_CATALOGO[passo]}</Text>
-        <ProgressoDoPasso indice={indice} total={PASSOS_CATALOGO.length} />
+        <Text fw={650}>{titulo}</Text>
+        <ProgressoDoPasso indice={indice} total={totalPassos} />
         {carregando && <Carregando linhas={3} />}
         {erro && !carregando && <Text c="dimmed">Não consegui carregar o catálogo. Feche e tente de novo.</Text>}
         {!carregando && !erro && passo === 'categoria' && (
@@ -198,40 +250,33 @@ export function WizardCatalogo(props: {
                 rotulo={p.nome}
                 onClick={() => {
                   setProdutoId(p.id);
-                  setPasso('tamanho');
+                  setEscolhas({});
+                  const eixos = passosEixosDoProduto(p);
+                  setPasso(eixos[0] ?? 'eixo:tamanho');
                 }}
               />
             ))}
           </Stack>
         )}
-        {!carregando && !erro && passo === 'tamanho' && produto && (
+        {!carregando && !erro && slugAtual && produto && (
           <Stack gap="xs">
-            {listaTamanhos.map((t) => (
-              <Opcao
-                key={t}
-                rotulo={t}
-                onClick={() => {
-                  setTamanho(t);
-                  setPasso('cor');
-                }}
-              />
-            ))}
-          </Stack>
-        )}
-        {!carregando && !erro && passo === 'cor' && produto && tamanho && (
-          <Stack gap="xs">
-            {listaSkus.map((s) => (
-              <Opcao
-                key={s.id}
-                rotulo={s.cor}
-                detalhe={s.codigo}
-                amostra={amostras.get(chaveCor(s.cor)) ?? amostraDaCor(s.cor)}
-                onClick={() => {
-                  props.aoEscolher(pecaDe(produto, s));
-                  props.aoFechar();
-                }}
-              />
-            ))}
+            {opcoesFiltradas.map((valor) => {
+              const amostra = slugAtual === 'cor' ? (amostras.get(chaveCor(valor)) ?? amostraDaCor(valor)) : null;
+              const i = eixosPassos.indexOf(`eixo:${slugAtual}` as PassoEixo);
+              const ultimo = i === eixosPassos.length - 1;
+              const detalhe = ultimo
+                ? skusFiltrados(produto, { ...escolhasAnteriores, [slugAtual]: valor })[0]?.codigo
+                : undefined;
+              return (
+                <Opcao
+                  key={valor}
+                  rotulo={valor}
+                  detalhe={detalhe}
+                  amostra={amostra}
+                  onClick={() => escolherEixo(slugAtual, valor)}
+                />
+              );
+            })}
           </Stack>
         )}
         <UnstyledButton onClick={voltar} mih={48} px="sm" style={{ alignSelf: 'flex-start' }}>

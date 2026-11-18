@@ -8,9 +8,14 @@ import type {
   Cliente as ClienteFicha,
   ContaAPagar,
   DespesaEntrada,
+  CategoriaEixosDefinir,
+  EixoGrade,
+  EixoGradeNovo,
   OpcaoGradeAlterar,
   OpcaoGradeCorpo,
   OpcoesGrade,
+  ValorEixoAlterar,
+  ValorEixoNovo,
   ReceitaEntrada,
   Empresa,
   Espelho,
@@ -127,6 +132,18 @@ export function criarApi(c: Cliente) {
     opcoesGrade: () => p<OpcoesGrade>('GET', '/opcoes-grade'),
     criarOpcaoGrade: (o: OpcaoGradeCorpo) => p<{ id: string }>('POST', '/opcoes-grade', o),
     alterarOpcaoGrade: (id: string, o: OpcaoGradeAlterar) => p('PUT', `/opcoes-grade/${id}`, o),
+    // --- eixos de grade (biblioteca + categoria)
+    eixosGrade: () => p<{ eixos: EixoGrade[] }>('GET', '/eixos-grade'),
+    criarEixoGrade: (o: EixoGradeNovo) => p<{ id: string; slug: string }>('POST', '/eixos-grade', o),
+    criarValorEixo: (eixoId: string, o: ValorEixoNovo) => p<{ id: string }>('POST', `/eixos-grade/${eixoId}/valores`, o),
+    alterarValorEixo: (id: string, o: ValorEixoAlterar) => p('PUT', `/eixos-grade/valores/${id}`, o),
+    eixosDaCategoria: (categoriaId: string) =>
+      p<{ eixos: { eixo_id: string; slug: string; nome: string; tipo_valor: string; seq: number }[] }>(
+        'GET',
+        `/categorias/${categoriaId}/eixos`,
+      ),
+    definirEixosDaCategoria: (categoriaId: string, corpo: CategoriaEixosDefinir) =>
+      p('PUT', `/categorias/${categoriaId}/eixos`, corpo),
     ajustarEstoque: (skuId: string, a: AjusteEstoque) => p<{ estoque: number }>('POST', `/skus/${skuId}/estoque`, a),
     movimentos: (skuId: string) => p<{ movimentos: Movimento[] }>('GET', `/skus/${skuId}/movimentos`),
     alertasEstoque: () => p<{ total: number; itens: AlertaEstoque[] }>('GET', '/estoque/alertas'),

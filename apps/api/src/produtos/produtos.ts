@@ -18,11 +18,16 @@ import type pg from 'pg';
 import { type Cursor, novoCursor } from '../paginacao.js';
 import { type ContextoEstoque, registrarMovimento } from './estoque.js';
 import type { DadosEtiqueta } from './etiquetas.js';
+import { semearEixosSistemaSeVazio } from './eixos-grade.js';
 
 // Cadastro, consulta e alertas de Produtos (S07). Só este módulo (src/produtos/) toca as tabelas `produtos`, `skus`
 // e `movimentos_estoque` (ADR 006). Recebem o cliente da transação do chamador (`withEmpresa`), que já traz a RLS.
 
-export type CodigoErroProduto = 'categoria_invalida' | 'atributos_invalidos' | 'limite_de_produtos';
+export type CodigoErroProduto =
+  | 'categoria_invalida'
+  | 'atributos_invalidos'
+  | 'limite_de_produtos'
+  | 'eixos_invalidos';
 
 export class ErroProduto extends Error {
   constructor(readonly codigo: CodigoErroProduto) {
@@ -53,6 +58,19 @@ export async function criarProduto(
   const daCategoria = new Map((cat.rows[0].atributos as string[]).map((a) => [a.toLowerCase(), a]));
   const atributos = p.atributos.map((a) => daCategoria.get(a.toLowerCase()));
   if (atributos.some((a) => a === undefined)) throw new ErroProduto('atributos_invalidos');
+
+  await semearEixosSistemaSeVazio(c, ctx.empresaId, ctx.agora);
+  const eixosCat = await c.query<{ eixo_id: string; slug: string; nome: string; seq: number }>(
+    `SELECT ce.eixo_id, e.slug, e.nome, ce.seq
+       FROM categoria_eixos ce
+       JOIN eixos_grade e ON e.id = ce.eixo_id
+      WHERE ce.categoria_id = $1
+      ORDER BY ce.seq`,
+    [p.categoria_id],
+  );
+  const eixosExtras = eixosCat.rows.filter((e) => e.slug !== 'tamanho' && e.slug !== 'cor');
+  const eixoTamanho = eixosCat.rows.find((e) => e.slug === 'tamanho');
+  const eixoCor = eixosCat.rows.find((e) => e.slug === 'cor');
 
   await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`produtos:${ctx.empresaId}`]);
   const proximo = await c.query('SELECT coalesce(max(numero), 0) + 1 AS numero FROM produtos');
@@ -85,11 +103,49 @@ export async function criarProduto(
   const grafia = new Map<string, string>();
   for (const s of p.skus) if (!grafia.has(chaveCor(s.cor))) grafia.set(chaveCor(s.cor), s.cor);
 
+  // Compat: o assistente ainda pode mandar cor/tamanho novos; grava o valor na biblioteca se faltar.
+  const garantirValor = async (eixoId: string, nome: string, amostra: string | null = null): Promise<string> => {
+    const r = await c.query(
+      `SELECT id FROM valores_eixo WHERE eixo_id = $1 AND lower(btrim(nome)) = lower(btrim($2))`,
+      [eixoId, nome],
+    );
+    if (r.rowCount === 1) return r.rows[0].id as string;
+    try {
+      const ins = await c.query(
+        `INSERT INTO valores_eixo (empresa_id, eixo_id, nome, amostra, criado_em)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [ctx.empresaId, eixoId, nome, amostra, ctx.agora],
+      );
+      return ins.rows[0].id as string;
+    } catch (err) {
+      if ((err as { code?: string }).code !== '23505') throw err;
+      const deNovo = await c.query(
+        `SELECT id FROM valores_eixo WHERE eixo_id = $1 AND lower(btrim(nome)) = lower(btrim($2))`,
+        [eixoId, nome],
+      );
+      if (deNovo.rowCount !== 1) throw new ErroProduto('eixos_invalidos');
+      return deNovo.rows[0].id as string;
+    }
+  };
+
   const skus: { id: string; codigo: string }[] = [];
   for (const s of p.skus) {
+    const extras = s.extras ?? [];
+    if (extras.length !== eixosExtras.length) throw new ErroProduto('eixos_invalidos');
+    const porSlug = new Map(extras.map((e) => [e.slug, e.valor]));
+    const sufixos: string[] = [];
+    const valorIdsExtras: { eixo_id: string; valor_id: string }[] = [];
+    for (const eixo of eixosExtras) {
+      const valor = porSlug.get(eixo.slug);
+      if (!valor) throw new ErroProduto('eixos_invalidos');
+      const valorId = await garantirValor(eixo.eixo_id, valor);
+      sufixos.push(valor.toUpperCase());
+      valorIdsExtras.push({ eixo_id: eixo.eixo_id, valor_id: valorId });
+    }
+
     const chave = chaveCor(s.cor);
     const corCodigo = codigosDeCor.get(chave) as string;
-    const codigo = montarCodigoSku(numero, s.tamanho, corCodigo);
+    const codigo = montarCodigoSku(numero, s.tamanho, corCodigo, sufixos);
     const sku = await c.query(
       `INSERT INTO skus (empresa_id, produto_id, tamanho, cor, cor_codigo, codigo, estoque, estoque_minimo, criado_em)
        VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8)
@@ -97,6 +153,28 @@ export async function criarProduto(
       [ctx.empresaId, produtoId, s.tamanho, grafia.get(chave), corCodigo, codigo, s.estoque_minimo, ctx.agora],
     );
     const skuId = sku.rows[0].id as string;
+
+    if (eixoTamanho) {
+      const valorId = await garantirValor(eixoTamanho.eixo_id, s.tamanho);
+      await c.query(
+        `INSERT INTO sku_valores (empresa_id, sku_id, eixo_id, valor_id) VALUES ($1, $2, $3, $4)`,
+        [ctx.empresaId, skuId, eixoTamanho.eixo_id, valorId],
+      );
+    }
+    if (eixoCor) {
+      const valorId = await garantirValor(eixoCor.eixo_id, grafia.get(chave) as string);
+      await c.query(
+        `INSERT INTO sku_valores (empresa_id, sku_id, eixo_id, valor_id) VALUES ($1, $2, $3, $4)`,
+        [ctx.empresaId, skuId, eixoCor.eixo_id, valorId],
+      );
+    }
+    for (const v of valorIdsExtras) {
+      await c.query(
+        `INSERT INTO sku_valores (empresa_id, sku_id, eixo_id, valor_id) VALUES ($1, $2, $3, $4)`,
+        [ctx.empresaId, skuId, v.eixo_id, v.valor_id],
+      );
+    }
+
     if (s.estoque_inicial > 0) {
       await registrarMovimento(c, ctx, { skuId, tipo: 'inicial', quantidade: s.estoque_inicial, motivo: 'Estoque inicial' });
     }

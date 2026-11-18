@@ -3,9 +3,12 @@ import type { Categoria, Produto } from '@ailow/shared';
 import {
   PASSOS_CATALOGO,
   categoriasComEstoque,
+  eixosDoProduto,
+  opcoesDoEixo,
   passoAnterior,
   produtosDaCategoria,
   skusDoTamanho,
+  skusFiltrados,
   tamanhosComEstoque,
 } from './wizard-catalogo';
 
@@ -90,5 +93,42 @@ describe('wizard-catalogo', () => {
     });
     expect(tamanhosComEstoque(p)).toEqual(['P', 'G']);
     expect(skusDoTamanho(p, 'P').map((s) => s.cor)).toEqual(['Preto']);
+  });
+
+  it('eixos extras filtram SKUs na ordem do produto', () => {
+    const p = produto({
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      nome: 'Sutiã',
+      categoria_id: catA.id,
+      skus: [
+        sku({
+          id: '1',
+          codigo: '1-A',
+          tamanho: '42',
+          cor: 'Preto',
+          estoque: 1,
+          eixos: [
+            { slug: 'tamanho', nome: 'Tamanho', valor: '42' },
+            { slug: 'cor', nome: 'Cor', valor: 'Preto' },
+            { slug: 'taca', nome: 'Taça', valor: 'A' },
+          ],
+        }),
+        sku({
+          id: '2',
+          codigo: '1-B',
+          tamanho: '42',
+          cor: 'Preto',
+          estoque: 2,
+          eixos: [
+            { slug: 'tamanho', nome: 'Tamanho', valor: '42' },
+            { slug: 'cor', nome: 'Cor', valor: 'Preto' },
+            { slug: 'taca', nome: 'Taça', valor: 'B' },
+          ],
+        }),
+      ],
+    });
+    expect(eixosDoProduto(p).map((e) => e.slug)).toEqual(['tamanho', 'cor', 'taca']);
+    expect(opcoesDoEixo(p, { tamanho: '42', cor: 'Preto' }, 'taca')).toEqual(['A', 'B']);
+    expect(skusFiltrados(p, { tamanho: '42', cor: 'Preto', taca: 'B' }).map((s) => s.codigo)).toEqual(['1-B']);
   });
 });

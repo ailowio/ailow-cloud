@@ -5,14 +5,21 @@ import type { Api } from '../../api/endpoints';
 import { Modal } from '../../componentes/navegacao';
 import { ListaCategorias } from '../config/Categorias';
 import { fecharModal } from '../config/comum';
+import { ListaEixosGrade } from './ConfigEixosGrade';
 import { ListaOpcoesGrade } from './ConfigOpcoesGrade';
 
-type Aba = 'categorias' | 'tamanhos' | 'cores';
-const TITULOS: Record<Aba, string> = { categorias: 'Categorias', tamanhos: 'Tamanhos', cores: 'Cores' };
+type Aba = 'categorias' | 'tamanhos' | 'cores' | 'eixos';
+const TITULOS: Record<Aba, string> = {
+  categorias: 'Categorias',
+  tamanhos: 'Tamanhos',
+  cores: 'Cores',
+  eixos: 'Eixos',
+};
 const ROTULO_BOTAO: Record<Aba, string> = {
   categorias: 'Configurar categorias',
   tamanhos: 'Configurar tamanhos',
   cores: 'Configurar cores',
+  eixos: 'Configurar eixos',
 };
 
 /**
@@ -59,6 +66,7 @@ export function BotaoConfigCategorias(props: { api: Api; aoFechar: () => void; a
             {aba === 'categorias' && <ListaCategorias key="categorias" api={props.api} tipo="produto" />}
             {aba === 'tamanhos' && <ListaOpcoesGrade key="tamanhos" api={props.api} tipo="tamanho" />}
             {aba === 'cores' && <ListaOpcoesGrade key="cores" api={props.api} tipo="cor" />}
+            {aba === 'eixos' && <ListaEixosGrade key="eixos" api={props.api} />}
           </Stack>
         </Modal>
       )}

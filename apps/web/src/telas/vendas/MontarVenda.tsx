@@ -27,7 +27,9 @@ function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda,
     skuId: sku.id,
     codigo: sku.codigo,
     nome: produto.nome,
-    detalhe: `${sku.tamanho} · ${sku.cor}`,
+    detalhe: sku.eixos?.length
+      ? sku.eixos.map((e) => e.valor).join(' · ')
+      : `${sku.tamanho} · ${sku.cor}`,
     precoCentavos: produto.preco_centavos,
     estoque: sku.estoque,
   };

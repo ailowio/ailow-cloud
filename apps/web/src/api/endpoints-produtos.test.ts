@@ -76,6 +76,30 @@ describe('endpoints de Produtos', () => {
     expect(alterado.chamadas).toEqual([{ url: '/opcoes-grade/o1', metodo: 'PUT', corpo: { nome: 'XG', amostra: null, ativa: false } }]);
   });
 
+  it('eixos de grade: GET biblioteca, POST eixo, valores e eixos da categoria', async () => {
+    const lido = apiComEspiao({ corpo: { eixos: [] } });
+    expect(await lido.api.eixosGrade()).toEqual({ eixos: [] });
+    expect(lido.chamadas).toEqual([{ url: '/eixos-grade', metodo: 'GET', corpo: undefined }]);
+
+    const criado = apiComEspiao({ status: 201, corpo: { id: 'e1', slug: 'taca' } });
+    await criado.api.criarEixoGrade({ nome: 'Taça', tipo_valor: 'texto' });
+    expect(criado.chamadas).toEqual([{ url: '/eixos-grade', metodo: 'POST', corpo: { nome: 'Taça', tipo_valor: 'texto' } }]);
+
+    const valor = apiComEspiao({ status: 201, corpo: { id: 'v1' } });
+    await valor.api.criarValorEixo('e1', { nome: 'A' });
+    expect(valor.chamadas).toEqual([{ url: '/eixos-grade/e1/valores', metodo: 'POST', corpo: { nome: 'A' } }]);
+
+    const cat = apiComEspiao({ corpo: { eixos: [] } });
+    await cat.api.eixosDaCategoria('c1');
+    expect(cat.chamadas).toEqual([{ url: '/categorias/c1/eixos', metodo: 'GET', corpo: undefined }]);
+
+    const def = apiComEspiao({ status: 204 });
+    await def.api.definirEixosDaCategoria('c1', { eixos: [{ eixo_id: 'e1', seq: 0 }] });
+    expect(def.chamadas).toEqual([
+      { url: '/categorias/c1/eixos', metodo: 'PUT', corpo: { eixos: [{ eixo_id: 'e1', seq: 0 }] } },
+    ]);
+  });
+
   it('arquivar produto: POST /produtos/{id}/arquivar (S09)', async () => {
     const { api, chamadas } = apiComEspiao({ corpo: { id: 'abc' } });
     await api.arquivarProduto('abc');
