@@ -2,6 +2,18 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.5.0] - 2026-11-17
+
+UX da Nova venda (nota de voz 17/11): cards com preço/estoque, paginação discreta, catálogo em 2 colunas, Finalizar em CTA. Sem mudança de OpenAPI nem migração.
+
+### Adicionado
+- `CartaoPecaVenda`: preço, badge de estoque (alerta se abaixo do mínimo do Dono) e stepper −/+ quando a peça já está no carrinho.
+- Catálogo (wizard): grade 2×N em categoria/produto, ícone por nome da categoria, preço + estoque no card do produto.
+- `GradeAcoes` com `destaque` (tile na cor de ação) — Finalizar da venda.
+
+### Alterado
+- Paginação da venda: “Por página” some quando a lista cabe numa página; seletor compacto (`xs`) quando aparece.
+
 ## [1.2.0] - 2026-11-16
 
 UX Cloud (12 itens) em produção: OpenAPI 0.16.0 (aditivo), migração `preferencias_ui`.

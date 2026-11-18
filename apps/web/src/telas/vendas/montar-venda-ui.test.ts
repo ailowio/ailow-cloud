@@ -17,10 +17,14 @@ describe('MontarVenda UI (itens 6–8, 11)', () => {
     expect(fonte).toContain('WizardCatalogo');
   });
 
-  it('busca vazia usa sugestões e mostra amostra de cor', () => {
+  it('busca vazia usa sugestões e CartaoPecaVenda (amostra no card)', () => {
     expect(fonte).toContain('sugestoesVenda');
-    expect(fonte).toContain('data-amostra-cor');
+    expect(fonte).toContain('CartaoPecaVenda');
     expect(fonte).toContain('amostraDaCor');
+  });
+
+  it('Finalizar da grade é CTA com destaque', () => {
+    expect(fonte).toMatch(/id:\s*'fechar'[\s\S]*?destaque:\s*true/);
   });
 
   it('Buscar não tem autoFocus (teclado só ao tocar no campo)', () => {

@@ -10,6 +10,8 @@ export interface AcaoDaGrade {
   desabilitado?: boolean;
   /** Nome falado pelo leitor de tela quando precisa ser mais completo que o rótulo curto. */
   descricao?: string;
+  /** CTA preenchido com a cor de ação (ex.: Finalizar na venda). */
+  destaque?: boolean;
 }
 
 /**
@@ -28,6 +30,7 @@ export function GradeAcoes({ acoes, cols = 3 }: { acoes: AcaoDaGrade[]; cols?: 2
             disabled={a.desabilitado}
             onClick={a.aoTocar}
             data-desabilitado={a.desabilitado ? 'true' : 'false'}
+            data-destaque={a.destaque ? 'true' : 'false'}
           >
             <Box className="ailow-acao-tile" aria-hidden>
               {a.icone}

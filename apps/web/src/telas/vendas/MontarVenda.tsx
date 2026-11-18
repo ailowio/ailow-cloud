@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Box, Group, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { Alert, Stack, Text, TextInput } from '@mantine/core';
 import { IconAlertCircle, IconCamera, IconCategory, IconReportAnalytics, IconShoppingCartCheck } from '@tabler/icons-react';
 import { chaveCor, type Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
@@ -11,7 +11,15 @@ import { amostraDaCor } from '../produtos/grade';
 import { camposDoProduto } from '../produtos/busca-produto';
 import { Carregando, useCarregar } from '../estados';
 import { BarraCarrinho } from './BarraCarrinho';
-import { MENSAGEM_SEM_ESTOQUE, type ItemVenda, acrescentar, quantidadeItens, subtotalCentavos } from './carrinho';
+import { CartaoPecaVenda } from './CartaoPecaVenda';
+import {
+  MENSAGEM_SEM_ESTOQUE,
+  type ItemVenda,
+  acrescentar,
+  mudarQuantidade,
+  quantidadeItens,
+  subtotalCentavos,
+} from './carrinho';
 import { Scanner } from './Scanner';
 import { WizardCatalogo } from './WizardCatalogo';
 
@@ -32,6 +40,7 @@ function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda,
       : `${sku.tamanho} · ${sku.cor}`,
     precoCentavos: produto.preco_centavos,
     estoque: sku.estoque,
+    estoqueMinimo: sku.estoque_minimo,
   };
 }
 
@@ -103,6 +112,12 @@ export function MontarVenda(props: {
     setAviso(r.aviso);
   }
 
+  function ajustar(codigo: string, delta: number) {
+    const r = mudarQuantidade(props.itens, codigo, delta);
+    props.aoMudar(r.itens);
+    setAviso(r.aviso);
+  }
+
   async function aoCodigo(codigo: string) {
     setLendo(false);
     try {
@@ -148,6 +163,7 @@ export function MontarVenda(props: {
             icone: <IconShoppingCartCheck size={28} stroke={1.75} />,
             aoTocar: props.aoFechar,
             desabilitado: props.itens.length === 0,
+            destaque: true,
           },
         ]}
       />
@@ -177,41 +193,19 @@ export function MontarVenda(props: {
         </Text>
       )}
       <Stack gap="xs">
-        {pag.itens.map(({ key, peca, amostra }) => (
-          <UnstyledButton
-            key={key}
-            onClick={() => entrar(peca)}
-            className="ailow-cartao"
-            data-toque="peca"
-            style={{ minHeight: 48, padding: 12, textAlign: 'left', width: '100%' }}
-          >
-            <Group gap="sm" wrap="nowrap" align="flex-start">
-              {amostra && (
-                <Box
-                  data-amostra-cor
-                  aria-hidden
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 999,
-                    flexShrink: 0,
-                    marginTop: 4,
-                    background: amostra,
-                    border: '1px solid var(--ailow-borda)',
-                  }}
-                />
-              )}
-              <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
-                <Text fw={650} style={{ overflowWrap: 'anywhere' }}>
-                  {peca.nome}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {peca.detalhe} · {peca.codigo}
-                </Text>
-              </Stack>
-            </Group>
-          </UnstyledButton>
-        ))}
+        {pag.itens.map(({ key, peca, amostra }) => {
+          const noCarrinho = props.itens.find((i) => i.skuId === peca.skuId);
+          return (
+            <CartaoPecaVenda
+              key={key}
+              peca={peca}
+              amostra={amostra}
+              qtdNoCarrinho={noCarrinho?.qtd ?? 0}
+              aoTocar={() => entrar(peca)}
+              aoMudarQtd={(delta) => ajustar(peca.codigo, delta)}
+            />
+          );
+        })}
         {avisoDeCorte(cortada, consulta, servidor.truncado) && consulta !== '' && (
           <Text size="sm" c="dimmed" data-aviso-corte>
             {AVISO_CORTE}
@@ -223,6 +217,7 @@ export function MontarVenda(props: {
             totalPaginas={pag.totalPaginas}
             aoMudar={pag.irPara}
             bottom={temCarrinho ? ALTURA_BARRA_CARRINHO : 0}
+            itensTotais={linhas.length}
             porPagina={{
               valor: porPagina,
               opcoes: POR_PAGINA_OPCOES,

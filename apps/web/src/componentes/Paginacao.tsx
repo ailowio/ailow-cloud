@@ -35,8 +35,9 @@ export type ControlePorPagina = {
 };
 
 /**
- * "Anterior / Página X de Y / Próxima", fixa embaixo (UXM-01) com alvos de 48 px (UXM-03). Some quando cabe numa página
- * e não há seletor de tamanho. `porPagina` (opcional) fica junto à paginação.
+ * "Anterior / Página X de Y / Próxima", fixa embaixo (UXM-01) com alvos de 48 px (UXM-03).
+ * Some quando cabe numa página. "Por página" só aparece se há mais de uma página ou se a lista
+ * ultrapassa a menor opção (lista curta = nada sticky).
  */
 export function Paginacao(props: {
   pagina: number;
@@ -45,9 +46,14 @@ export function Paginacao(props: {
   /** Empurra a barra sticky para cima (ex.: altura da barra do carrinho). */
   bottom?: number;
   porPagina?: ControlePorPagina;
+  /** Total de itens da lista (para decidir se o seletor "Por página" faz sentido). */
+  itensTotais?: number;
 }) {
-  const temControle = props.porPagina !== undefined;
-  if (props.totalPaginas <= 1 && !temControle) return null;
+  const menorOpcao = props.porPagina ? Math.min(...props.porPagina.opcoes) : 0;
+  const itensTotais = props.itensTotais ?? 0;
+  const mostrarPorPagina =
+    props.porPagina !== undefined && (props.totalPaginas > 1 || itensTotais > menorOpcao);
+  if (props.totalPaginas <= 1 && !mostrarPorPagina) return null;
   const bottom = props.bottom ?? 0;
   return (
     <Box
@@ -58,14 +64,17 @@ export function Paginacao(props: {
       py="xs"
       style={{ background: 'var(--mantine-color-body)', borderTop: '1px solid var(--ailow-borda)', zIndex: 2 }}
     >
-      {temControle && (
+      {mostrarPorPagina && props.porPagina && (
         <NativeSelect
-          size="md"
+          size="xs"
           label="Por página"
           aria-label="Itens por página"
-          data={props.porPagina!.opcoes.map((n) => ({ value: String(n), label: String(n) }))}
-          value={String(props.porPagina!.valor)}
-          onChange={(e) => props.porPagina!.aoMudar(Number(e.currentTarget.value))}
+          data={props.porPagina.opcoes.map((n) => ({ value: String(n), label: String(n) }))}
+          value={String(props.porPagina.valor)}
+          onChange={(e) => {
+            const ctrl = props.porPagina;
+            if (ctrl) ctrl.aoMudar(Number(e.currentTarget.value));
+          }}
           mb={props.totalPaginas > 1 ? 'xs' : 0}
         />
       )}
