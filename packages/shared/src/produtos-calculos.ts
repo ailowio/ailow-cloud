@@ -50,12 +50,24 @@ export function faixaDePreco(texto: string): { min: number; max: number } | null
   return { min: exato, max: exato };
 }
 
-// ------------------------------------------------------------------ código do SKU (P1 §4)
-export function montarCodigoSku(numeroProduto: number, tamanho: string, corCodigo: string): string {
+// ------------------------------------------------------------------ código do SKU (P1 §4; eixos extras = sufixos)
+const SUFIXO_EIXO = /^[A-Z0-9]{1,3}$/;
+
+export function montarCodigoSku(
+  numeroProduto: number,
+  tamanho: string,
+  corCodigo: string,
+  extras: readonly string[] = [],
+): string {
   if (!Number.isInteger(numeroProduto) || numeroProduto < 1 || numeroProduto > NUMERO_MAXIMO_PRODUTO) {
     throw new Error(`número do produto fora de 1 a ${NUMERO_MAXIMO_PRODUTO}`);
   }
-  return `${String(numeroProduto).padStart(4, '0')}-${tamanho}-${corCodigo}`;
+  const base = `${String(numeroProduto).padStart(4, '0')}-${tamanho}-${corCodigo}`;
+  if (extras.length === 0) return base;
+  for (const e of extras) {
+    if (!SUFIXO_EIXO.test(e)) throw new Error('sufixo de eixo inválido');
+  }
+  return `${base}-${extras.join('-')}`;
 }
 
 const semAcento = (texto: string): string => texto.normalize('NFD').replace(/\p{M}/gu, '');

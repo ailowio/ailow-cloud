@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Button, Group, SegmentedControl, Stack, Switch, TagsInput, Text, TextInput } from '@mantine/core';
 import { Modal } from '../../componentes/navegacao';
 import { IconPlus } from '@tabler/icons-react';
@@ -119,19 +119,50 @@ function FormCategoria(props: {
   const [nome, setNome] = useState(categoria?.nome ?? '');
   const [atributos, setAtributos] = useState<string[]>(categoria?.atributos ?? []);
   const [ativa, setAtiva] = useState(categoria?.ativa ?? true);
+  const [eixosLib, setEixosLib] = useState<{ id: string; nome: string; slug: string; sistema: boolean }[]>([]);
+  const [eixosLigados, setEixosLigados] = useState<string[]>([]);
   const { pendente, rodar } = useAcao('Já existe uma categoria com esse nome.');
+
+  useEffect(() => {
+    if (tipo !== 'produto' || !categoria) return;
+    let ativo = true;
+    void Promise.all([props.api.eixosGrade().catch(() => null), props.api.eixosDaCategoria(categoria.id).catch(() => null)]).then(
+      ([lib, cat]) => {
+        if (!ativo) return;
+        if (lib) setEixosLib(lib.eixos.map((e) => ({ id: e.id, nome: e.nome, slug: e.slug, sistema: e.sistema })));
+        if (cat) setEixosLigados(cat.eixos.map((e) => e.eixo_id));
+      },
+    );
+    return () => {
+      ativo = false;
+    };
+  }, [tipo, categoria, props.api]);
 
   async function salvar() {
     // Só categoria de produto tem atributos; o tipo é definido na criação e não muda depois.
     const corpo = { nome: nome.trim(), atributos: tipo === 'produto' ? atributos : [] };
-    const ok = await rodar(
-      () =>
-        categoria
-          ? props.api.alterarCategoria(categoria.id, { ...corpo, ativa })
-          : props.api.criarCategoria({ ...corpo, tipo }),
-      categoria ? 'Categoria salva' : 'Categoria criada',
-    );
+    const ok = await rodar(async () => {
+      if (categoria) {
+        await props.api.alterarCategoria(categoria.id, { ...corpo, ativa });
+        if (tipo === 'produto' && eixosLib.length > 0) {
+          await props.api.definirEixosDaCategoria(categoria.id, {
+            eixos: eixosLigados.map((id, seq) => ({ eixo_id: id, seq })),
+          });
+        }
+      } else {
+        await props.api.criarCategoria({ ...corpo, tipo });
+      }
+    }, categoria ? 'Categoria salva' : 'Categoria criada');
     if (ok) props.aoSalvar();
+  }
+
+  function alternarEixo(id: string, ligado: boolean) {
+    setEixosLigados((atual) => {
+      if (ligado) return atual.includes(id) ? atual : [...atual, id];
+      const alvo = eixosLib.find((e) => e.id === id);
+      if (alvo?.sistema) return atual; // tamanho/cor não saem pela UI
+      return atual.filter((x) => x !== id);
+    });
   }
 
   return (
@@ -149,6 +180,26 @@ function FormCategoria(props: {
             value={atributos}
             onChange={setAtributos}
           />
+        )}
+        {tipo === 'produto' && categoria && eixosLib.length > 0 && (
+          <Stack gap="xs">
+            <Text fw={600}>Eixos desta categoria</Text>
+            <Text size="sm" c="dimmed">
+              Eixos geram variações com estoque e QR. Atributos (bojo, aro…) só descrevem a peça.
+            </Text>
+            {eixosLib.map((e) => (
+              <Switch
+                key={e.id}
+                size="lg"
+                label={e.nome}
+                description={e.sistema ? 'Sistema (sempre ligado)' : undefined}
+                checked={eixosLigados.includes(e.id)}
+                disabled={e.sistema}
+                styles={{ body: { minHeight: 48, alignItems: 'center' }, label: { paddingBlock: 12 } }}
+                onChange={(ev) => alternarEixo(e.id, ev.currentTarget.checked)}
+              />
+            ))}
+          </Stack>
         )}
         {/* Categoria em uso não se apaga (produtos e lançamentos vão referenciá-la): desativa-se. */}
         {categoria && (

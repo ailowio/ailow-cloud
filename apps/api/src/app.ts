@@ -34,6 +34,7 @@ import { registrarRotasConfiguracoes } from './configuracoes/rotas.js';
 import { registrarRotasFinanceiro } from './financeiro/rotas.js';
 import { registrarRotasProdutos } from './produtos/rotas.js';
 import { registrarRotasOpcoesGrade } from './produtos/opcoes-grade.js';
+import { registrarRotasEixosGrade } from './produtos/eixos-grade.js';
 import { registrarRotasPreferencias } from './preferencias/rotas.js';
 import { registrarRotasVendas } from './vendas/rotas.js';
 
@@ -246,6 +247,7 @@ export async function buildApp({
   await registrarRotasFinanceiro(app, deps, guardas);
   await registrarRotasProdutos(app, deps, guardas);
   await registrarRotasOpcoesGrade(app, deps, guardas);
+  await registrarRotasEixosGrade(app, deps, guardas);
   await registrarRotasClientes(app, deps, guardas);
   await registrarRotasVendas(app, deps, guardas);
   await registrarRotasCompras(app, deps, guardas);

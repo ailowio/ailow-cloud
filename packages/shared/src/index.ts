@@ -9,4 +9,5 @@ export * from './vendas.js';
 export * from './compras.js';
 export * from './pessoas.js';
 export * from './opcoes-grade.js';
+export * from './eixos-grade.js';
 export * from './preferencias-ui.js';

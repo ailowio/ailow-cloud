@@ -82,19 +82,43 @@ export function adicionarCor(cores: readonly string[], digitada: string): string
   return [...cores, cor];
 }
 
-export const chaveSku = (tamanho: string, cor: string): string => `${tamanho}|${chaveCor(cor)}`;
+export const chaveSku = (tamanho: string, cor: string, extras: readonly { slug: string; valor: string }[] = []): string => {
+  const base = `${tamanho}|${chaveCor(cor)}`;
+  if (extras.length === 0) return base;
+  return `${base}|${extras.map((e) => `${e.slug}:${e.valor}`).join('|')}`;
+};
 
 export interface Combinacao {
   chave: string;
   tamanho: string;
   cor: string;
+  extras: { slug: string; valor: string }[];
 }
 
 /** Um SKU por par tamanho × cor: tamanhos na ordem de grade, cores na ordem em que foram escolhidas. */
 export function combinacoes(tamanhos: readonly string[], cores: readonly string[]): Combinacao[] {
-  return [...tamanhos]
+  return combinacoesComExtras(tamanhos, cores, []);
+}
+
+/** Cartesian tamanho × cor × valores de cada eixo extra (na ordem dos eixos). */
+export function combinacoesComExtras(
+  tamanhos: readonly string[],
+  cores: readonly string[],
+  eixosExtras: readonly { slug: string; valores: readonly string[] }[],
+): Combinacao[] {
+  let base: { tamanho: string; cor: string; extras: { slug: string; valor: string }[] }[] = [...tamanhos]
     .sort(compararTamanhos)
-    .flatMap((tamanho) => cores.map((cor) => ({ chave: chaveSku(tamanho, cor), tamanho, cor })));
+    .flatMap((tamanho) => cores.map((cor) => ({ tamanho, cor, extras: [] as { slug: string; valor: string }[] })));
+  for (const eixo of eixosExtras) {
+    if (eixo.valores.length === 0) return [];
+    base = base.flatMap((b) =>
+      eixo.valores.map((valor) => ({
+        ...b,
+        extras: [...b.extras, { slug: eixo.slug, valor }],
+      })),
+    );
+  }
+  return base.map((b) => ({ ...b, chave: chaveSku(b.tamanho, b.cor, b.extras) }));
 }
 
 /** Quantidade inteira de 0 a 100.000, só dígitos; qualquer outra coisa (vazio, vírgula, sinal) vale null. */
@@ -118,8 +142,9 @@ export function skusDoFormulario(
   tamanhos: readonly string[],
   cores: readonly string[],
   linhas: Readonly<Record<string, LinhaEstoque>>,
+  eixosExtras: readonly { slug: string; valores: readonly string[] }[] = [],
 ): { skus: SkuNovo[]; pendentes: number } {
-  const todas = combinacoes(tamanhos, cores);
+  const todas = combinacoesComExtras(tamanhos, cores, eixosExtras);
   if (todas.length === 0) return { skus: [], pendentes: 1 };
   const skus: SkuNovo[] = [];
   let pendentes = 0;
@@ -131,7 +156,13 @@ export function skusDoFormulario(
       pendentes += 1;
       continue;
     }
-    skus.push({ tamanho: c.tamanho, cor: c.cor, estoque_inicial: inicial, estoque_minimo: minimo });
+    skus.push({
+      tamanho: c.tamanho,
+      cor: c.cor,
+      estoque_inicial: inicial,
+      estoque_minimo: minimo,
+      extras: c.extras,
+    });
   }
   return pendentes === 0 ? { skus, pendentes } : { skus: [], pendentes };
 }

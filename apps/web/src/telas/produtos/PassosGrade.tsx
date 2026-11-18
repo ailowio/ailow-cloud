@@ -167,36 +167,58 @@ export function PassoCores(props: {
   );
 }
 
-/** Passo de conferência: a grade tamanho × cor que vira uma peça (SKU) cada. Só leitura; voltar para mudar. */
+/** Passo de eixo extra (ex.: Taça): chips marca/desmarca, mesma metáfora de tamanhos. */
+export function PassoEixoExtra(props: {
+  nome: string;
+  disponiveis: readonly string[];
+  escolhidos: readonly string[];
+  aoAlternar: (valor: string) => void;
+}) {
+  return (
+    <Stack gap="lg" data-passo={`eixo-${props.nome}`}>
+      <Text size="sm" c="dimmed">
+        Toque em todos os valores de {props.nome.toLowerCase()} que esta peça tem.
+      </Text>
+      <SimpleGrid cols={4} spacing="xs" role="group" aria-label={props.nome}>
+        {props.disponiveis.map((v) => (
+          <Chip key={v} rotulo={v} marcado={props.escolhidos.includes(v)} aoTocar={() => props.aoAlternar(v)} />
+        ))}
+      </SimpleGrid>
+      <Text fw={600} role="status">
+        {props.escolhidos.length === 0
+          ? `Escolha ao menos um valor de ${props.nome.toLowerCase()}.`
+          : `${props.escolhidos.length} escolhido${props.escolhidos.length === 1 ? '' : 's'}`}
+      </Text>
+    </Stack>
+  );
+}
+
+/** Passo de conferência: a grade (tamanho × cor × extras) que vira uma peça (SKU) cada. Só leitura. */
 export function PassoGrade(props: { grade: Combinacao[]; tamanhos: string[]; cores: string[] }) {
   const total = props.grade.length;
+  const fatorExtra = props.tamanhos.length * props.cores.length > 0 ? Math.max(1, total / (props.tamanhos.length * props.cores.length)) : 1;
+  const dims =
+    fatorExtra > 1
+      ? `${props.tamanhos.length} × ${props.cores.length} × ${fatorExtra}`
+      : `${props.tamanhos.length} × ${props.cores.length}`;
   return (
     <Stack gap="md" data-passo="grade">
       <Text fw={600} role="status">
-        {total} {total === 1 ? 'variação' : 'variações'} ({props.tamanhos.length} × {props.cores.length})
+        {total} {total === 1 ? 'variação' : 'variações'} ({dims})
       </Text>
       <Text size="sm" c="dimmed">
-        Cada combinação de tamanho e cor é uma peça com código próprio. Para mudar, toque em Voltar.
+        Cada combinação é uma peça com código próprio. Para mudar, toque em Voltar.
       </Text>
       <Stack gap={6}>
-        {props.cores.map((cor) => (
-          <Group key={cor} gap={6} wrap="wrap" align="center">
-            <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
-              {cor}:
-            </Text>
-            {props.grade
-              .filter((g) => g.cor === cor)
-              .map((g) => (
-                <Text key={g.chave} component="span" px="xs" className="ailow-bloco" fz="sm" fw={600} style={{ borderRadius: 999 }}>
-                  {g.tamanho}
-                </Text>
-              ))}
-          </Group>
+        {props.grade.map((g) => (
+          <Text key={g.chave} component="span" px="xs" py={4} className="ailow-bloco" fz="sm" fw={600} style={{ borderRadius: 8 }}>
+            {[g.tamanho, g.cor, ...g.extras.map((e) => e.valor)].join(' · ')}
+          </Text>
         ))}
       </Stack>
       {total > MAX_SKUS_POR_PRODUTO && (
         <Alert color="red" icon={<IconAlertCircle />} role="alert">
-          O máximo é {MAX_SKUS_POR_PRODUTO} variações por produto. Volte e tire alguns tamanhos ou cores.
+          O máximo é {MAX_SKUS_POR_PRODUTO} variações por produto. Volte e tire alguns tamanhos, cores ou eixos.
         </Alert>
       )}
     </Stack>

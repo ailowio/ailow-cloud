@@ -7,3 +7,4 @@ export * from './vendas-calculos.js';
 export * from './compras-calculos.js';
 export * from './pessoas-calculos.js';
 export * from './opcoes-grade-padrao.js';
+export * from './eixos-grade-padrao.js';

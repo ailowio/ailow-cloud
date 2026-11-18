@@ -40,14 +40,41 @@ export const corSchema = z
   .max(30)
   .refine((c) => letrasDaCor(c) !== '', { error: 'a cor precisa ter ao menos uma letra ou número' });
 
+// Eixos extras (além de tamanho×cor): slug do eixo + valor curto. Sistema tamanho/cor ficam nos campos abaixo.
+export const skuExtraEixoSchema = z.strictObject({
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .refine((s) => s !== 'tamanho' && s !== 'cor', { error: 'tamanho e cor vão nos campos próprios' }),
+  valor: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{1,3}$/, { error: 'valor com 1 a 3 letras ou números' }),
+});
+export type SkuExtraEixo = z.infer<typeof skuExtraEixoSchema>;
+
 export const skuNovoSchema = z.object({
   tamanho: tamanhoSchema,
   cor: corSchema,
   estoque_inicial: estoqueSchema,
   // Obrigatório no cadastro (RF-PRO-05): 0 = não quero aviso.
   estoque_minimo: estoqueSchema,
+  extras: z.array(skuExtraEixoSchema).max(2).optional().default([]),
 });
 export type SkuNovo = z.infer<typeof skuNovoSchema>;
+
+/** Chave de unicidade da variação: tamanho + cor + extras (ordem do array). */
+export function chaveVariacaoSku(s: {
+  tamanho: string;
+  cor: string;
+  extras?: readonly { slug: string; valor: string }[];
+}): string {
+  const extras = (s.extras ?? []).map((e) => `${e.slug}:${e.valor}`).join('|');
+  return extras ? `${s.tamanho}|${chaveCor(s.cor)}|${extras}` : `${s.tamanho}|${chaveCor(s.cor)}`;
+}
 
 const atributoSchema = z.string().trim().min(1).max(40);
 
@@ -66,7 +93,7 @@ export const produtoNovoSchema = z
     preco_centavos: valorCentavosSchema,
     skus: z.array(skuNovoSchema).min(1, { error: 'escolha ao menos um tamanho e uma cor' }).max(MAX_SKUS_POR_PRODUTO),
   })
-  .refine((p) => new Set(p.skus.map((s) => `${s.tamanho}|${chaveCor(s.cor)}`)).size === p.skus.length, {
+  .refine((p) => new Set(p.skus.map((s) => chaveVariacaoSku(s))).size === p.skus.length, {
     error: 'tamanho e cor repetidos',
     path: ['skus'],
   })
@@ -144,6 +171,13 @@ export const movimentoNovoSchema = z
 export type MovimentoNovo = z.infer<typeof movimentoNovoSchema>;
 
 // ------------------------------------------------------------------ respostas
+export const skuEixoValorSchema = z.object({
+  slug: z.string(),
+  nome: z.string(),
+  valor: z.string(),
+});
+export type SkuEixoValor = z.infer<typeof skuEixoValorSchema>;
+
 export const skuSchema = z.object({
   id: z.uuid(),
   codigo: z.string(),
@@ -152,6 +186,8 @@ export const skuSchema = z.object({
   estoque: z.number().int().min(0),
   // Ausente para o Vendedor (RF-PRO-07 pede só produto, preço e estoque).
   estoque_minimo: z.number().int().min(0).optional(),
+  // Ordem = eixos da categoria; sempre inclui tamanho e cor quando presentes.
+  eixos: z.array(skuEixoValorSchema).optional(),
 });
 export type Sku = z.infer<typeof skuSchema>;
 

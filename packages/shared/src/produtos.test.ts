@@ -80,6 +80,21 @@ describe('código do SKU: PPPP-TT-CCC (P1 §4)', () => {
     expect(montarCodigoSku(9999, 'U', 'NUD')).toBe('9999-U-NUD');
   });
 
+  it('sem extras permanece PPPP-TT-CCC', () => {
+    expect(montarCodigoSku(42, '46', 'CHO')).toBe('0042-46-CHO');
+    expect(montarCodigoSku(42, '46', 'CHO', [])).toBe('0042-46-CHO');
+  });
+
+  it('anexa sufixos de eixos extras na ordem', () => {
+    expect(montarCodigoSku(42, '46', 'CHO', ['A'])).toBe('0042-46-CHO-A');
+    expect(montarCodigoSku(1, 'GG', 'PRE', ['A', '2'])).toBe('0001-GG-PRE-A-2');
+  });
+
+  it('recusa sufixo de eixo fora de 1 a 3 alfanuméricos maiúsculos', () => {
+    expect(() => montarCodigoSku(1, 'P', 'PRE', ['ab'])).toThrow();
+    expect(() => montarCodigoSku(1, 'P', 'PRE', ['AAAA'])).toThrow();
+  });
+
   it('recusa número fora de 1 a 9999', () => {
     expect(() => montarCodigoSku(0, 'P', 'PRE')).toThrow();
     expect(() => montarCodigoSku(10000, 'P', 'PRE')).toThrow();
@@ -88,6 +103,7 @@ describe('código do SKU: PPPP-TT-CCC (P1 §4)', () => {
 
   it('só gera maiúsculas, dígitos e hífen (cabe no modo alfanumérico do QR)', () => {
     expect(montarCodigoSku(7, 'G1', 'AZU')).toMatch(/^[0-9A-Z-]+$/);
+    expect(montarCodigoSku(7, 'G1', 'AZU', ['A'])).toMatch(/^[0-9A-Z-]+$/);
   });
 });
 
@@ -183,6 +199,22 @@ describe('SKU novo no cadastro do produto', () => {
   it('aceita estoque inicial 0 e mínimo 0', () => {
     expect(skuNovoSchema.safeParse(sku({ estoque_inicial: 0, estoque_minimo: 0 })).success).toBe(true);
   });
+
+  it('extras defaulta para [] e aceita slug+valor de eixo extra', () => {
+    expect(skuNovoSchema.parse(sku()).extras).toEqual([]);
+    expect(skuNovoSchema.parse(sku({ extras: [{ slug: 'taca', valor: 'a' }] })).extras).toEqual([
+      { slug: 'taca', valor: 'A' },
+    ]);
+  });
+
+  it.each([
+    ['slug tamanho (campo próprio)', { extras: [{ slug: 'tamanho', valor: 'P' }] }],
+    ['slug cor (campo próprio)', { extras: [{ slug: 'cor', valor: 'PRE' }] }],
+    ['valor com 4 caracteres', { extras: [{ slug: 'taca', valor: 'AAAA' }] }],
+    ['mais de 2 extras', { extras: [{ slug: 'a', valor: 'A' }, { slug: 'b', valor: 'B' }, { slug: 'c', valor: 'C' }] }],
+  ])('recusa extras: %s', (_nome, extra) => {
+    expect(skuNovoSchema.safeParse(sku(extra)).success).toBe(false);
+  });
 });
 
 describe('produto novo (RF-PRO-01)', () => {
@@ -220,6 +252,14 @@ describe('produto novo (RF-PRO-01)', () => {
 
   it('o mesmo tamanho em cores diferentes, e a mesma cor em tamanhos diferentes, são SKUs diferentes', () => {
     const skus = [sku(), sku({ tamanho: '48' }), sku({ cor: 'Preto' })];
+    expect(produtoNovoSchema.safeParse(produto({ skus })).success).toBe(true);
+  });
+
+  it('mesmo tamanho e cor com extras diferentes (ex.: taça) são SKUs distintos', () => {
+    const skus = [
+      sku({ extras: [{ slug: 'taca', valor: 'A' }] }),
+      sku({ extras: [{ slug: 'taca', valor: 'B' }] }),
+    ];
     expect(produtoNovoSchema.safeParse(produto({ skus })).success).toBe(true);
   });
 

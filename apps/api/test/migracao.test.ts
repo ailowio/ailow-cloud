@@ -23,7 +23,9 @@ describe('migrações', () => {
     });
 
   const TABELAS = [
+    'categoria_eixos',
     'categorias',
+    'eixos_grade',
     'empresas',
     'fornecedores',
     'itens_pedido_compra',
@@ -37,7 +39,9 @@ describe('migrações', () => {
     'pontos',
     'pontos_ajustes',
     'produtos',
+    'sku_valores',
     'skus',
+    'valores_eixo',
     'venda_sequencia',
     'vendas',
   ];
@@ -47,7 +51,7 @@ describe('migrações', () => {
     await c.connect();
     try {
       const r = await c.query(
-        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','lancamentos','produtos','skus','movimentos_estoque','vendas','itens_venda','pagamentos_venda','venda_sequencia','fornecedores','pedido_compra_sequencia','pedidos_compra','itens_pedido_compra','parcelas_pedido_compra','pontos','pontos_ajustes') ORDER BY 1",
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('empresas','categorias','categoria_eixos','eixos_grade','valores_eixo','sku_valores','lancamentos','produtos','skus','movimentos_estoque','vendas','itens_venda','pagamentos_venda','venda_sequencia','fornecedores','pedido_compra_sequencia','pedidos_compra','itens_pedido_compra','parcelas_pedido_compra','pontos','pontos_ajustes') ORDER BY 1",
       );
       return r.rows.map((x) => x.tablename);
     } finally {
