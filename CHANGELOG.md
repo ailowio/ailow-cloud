@@ -2,6 +2,22 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.6.0] - 2026-11-24
+
+Marca e topo (nota de voz 23/11, Onda 1 do plano `docs/planos/aprimoramentos-voz-2026-11-23/`). Sem mudança de OpenAPI nem migração.
+
+### Alterado
+- Nome do produto: **Ailow Cloud** no manifest, `<title>`, tela de carregamento e catálogo (D-A3); topo com wordmark "Ailow" / "Cloud" em 2 linhas ao lado do A.
+- Ícones do PWA e tela de abertura no mesmo fundo `#111214` (sem a moldura azulada); `scripts/gerar-icones.mjs` gera tudo a partir do `logo.svg`, sem dependência.
+- Selo de perfil (Dono/Vendedor) no baixo-centro do avatar, em tom neutro próprio (`--ailow-selo`); Trocar de usuário com `IconReplaceUser`; Sair com `IconDoorExit`.
+- Seta de voltar, divisor e título do módulo na mesma linha em todas as telas com voltar (título 22 px, quebra sem mover a seta).
+
+### Corrigido
+- Avatar do usuário aparecia cinza (placeholder do Mantine cobria a cor); agora usa `--ailow-acao` com texto AA.
+
+### Segurança
+- Imagem do web passa a `nginx-unprivileged:1.31.7-alpine3.24` (mainline): o 1.30.6 tinha 6 CVEs (4 CRITICAL) corrigidas no 1.30.7, ainda sem imagem publicada.
+
 ## [1.5.0] - 2026-11-17
 
 UX da Nova venda (nota de voz 17/11): cards com preço/estoque, paginação discreta, catálogo em 2 colunas, Finalizar em CTA. Sem mudança de OpenAPI nem migração.

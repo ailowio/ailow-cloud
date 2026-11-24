@@ -21,7 +21,9 @@ RUN npm run build -w @ailow/shared && npm run build -w @ailow/web
 
 # ---- runtime: nginx sem root, só arquivos estáticos + proxy da API ----
 # Esta imagem escuta na 8080 (não precisa de privilégio). Nada de Node, npm ou código-fonte aqui.
-FROM nginxinc/nginx-unprivileged:1.30.6-alpine3.24 AS runtime
+# 2026-11-24: mainline 1.31.7 em vez da stable 1.30.6 (CVE-2026-113425/121810/123007/123633/118899/123634, corrigidas no
+# nginx 1.30.7, que ainda não tem imagem publicada). Voltar para a stable quando sair 1.30.7+ e for mais conservador.
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine3.24 AS runtime
 # Patches de segurança do Alpine publicados depois da imagem base (gate SEC-12: o Trivy barra CRITICAL/HIGH com correção).
 # Custo: o build deixa de ser bit-a-bit reprodutível no tempo (pega o pacote corrigido do dia); aceito, a versão fica
 # registrada pelo digest da imagem publicada. Root só neste passo; volta ao usuário nginx (uid 101) logo depois.

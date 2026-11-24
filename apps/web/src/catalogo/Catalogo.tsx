@@ -73,7 +73,7 @@ export function Catalogo() {
           <Group justify="space-between">
             <Group gap="xs">
               <Box w={10} h={10} bg="marca.5" style={{ borderRadius: 3, boxShadow: '0 0 12px var(--ailow-marca)' }} />
-              <Title order={1} fz="xl">Ailow ERP</Title>
+              <Title order={1} fz="xl">Ailow Cloud</Title>
               <Badge variant="light" color="marca">Design System</Badge>
             </Group>
             <ActionIcon variant="default" size={48} onClick={toggleColorScheme} aria-label="Trocar tema claro/escuro">

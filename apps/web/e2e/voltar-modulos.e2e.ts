@@ -229,15 +229,16 @@ for (const tocou of [false, true]) {
       await page.goto(rota);
       await expect.poll(() => caminho(page), { message: `link direto ${rota}` }).toBe(rota);
       const h1 = page.getByRole('heading', { level: 1 });
-      // Enquanto a sessão carrega, o título é o do app ("Ailow ERP").
-      await expect(h1).not.toHaveText('Ailow ERP');
+      // Enquanto a sessão carrega, o título é o do app ("Ailow Cloud" desde a D-A3, 23/11).
+      await expect(h1).not.toHaveText('Ailow Cloud');
       const titulo = await h1.innerText();
       // O toque arma a reserva do Voltar (TravaVoltar); recarregar tem de manter a tela e o pai certo mesmo assim.
-      if (tocou) await page.mouse.click(180, 330);
+      // Toque neutro no título (não interativo): coordenada fixa caía num item da lista depois que o topo ficou compacto (M04).
+      if (tocou) await h1.click();
       await page.reload();
       await expect.poll(() => caminho(page), { message: `recarregar ${rota}` }).toBe(rota);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(titulo, { timeout: 15000 });
-      await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('Ailow ERP');
+      await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('Ailow Cloud');
 
       await page.getByRole('button', { name: `Voltar para ${rotuloPai}` }).click();
       await expect.poll(() => caminho(page), { message: `seta em ${rota} deve ir a ${pai}` }).toBe(pai);

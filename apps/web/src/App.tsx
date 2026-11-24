@@ -179,7 +179,7 @@ export function App() {
   let corpo: ReactNode;
   if (carga.fase === 'carregando') {
     corpo = (
-      <Moldura titulo="Ailow ERP">
+      <Moldura titulo="Ailow Cloud">
         <Stack align="center" py="xl" role="status" aria-label="Carregando">
           <Loader />
         </Stack>

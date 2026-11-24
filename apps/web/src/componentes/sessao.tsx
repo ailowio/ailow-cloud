@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { ActionIcon, Avatar, Badge, Box, Menu, Text } from '@mantine/core';
-import { IconLogout, IconUsers } from '@tabler/icons-react';
+import { IconDoorExit, IconReplaceUser } from '@tabler/icons-react';
 import type { Perfil } from '@ailow/shared';
 
 /** UXM-06: quem está logado e o que o menu do nome pode fazer. Só existe dentro da área com sessão. */
@@ -22,7 +22,7 @@ export function inicialDoNome(nome: string): string {
   return [...t][0]!.toLocaleUpperCase('pt-BR');
 }
 
-/** Troca de usuário na toolbar. Alvo 48 px. */
+/** Troca de usuário na toolbar: setas de ida e volta entre 2 pessoas (M03). Alvo 48 px. */
 export function BotaoTrocarUsuario() {
   const sessao = useContext(SessaoContexto);
   if (!sessao) return null;
@@ -33,13 +33,14 @@ export function BotaoTrocarUsuario() {
       aria-label="Trocar de usuário"
       onClick={sessao.aoTrocar}
     >
-      <IconUsers aria-hidden />
+      <IconReplaceUser aria-hidden />
     </ActionIcon>
   );
 }
 
 /**
- * Inicial do usuário + badge de perfil na borda (estilo notificação).
+ * Inicial do usuário + selo de perfil no baixo-centro do avatar, sobre a borda inferior (M03): cor própria
+ * (`--ailow-selo`, neutro forte, nunca a do avatar), inteiro dentro do topo de 64 px.
  * Toque abre o menu com o nome completo e Sair.
  */
 export function MenuUsuario() {
@@ -54,18 +55,26 @@ export function MenuUsuario() {
           <Badge
             className="ailow-menu-usuario__badge"
             variant="filled"
-            color="gray"
             size="xs"
-            px={6}
+            px={4}
             styles={{
-              root: { overflow: 'visible', maxWidth: 'none' },
-              label: { overflow: 'visible', textOverflow: 'clip', whiteSpace: 'nowrap' },
+              root: {
+                overflow: 'visible',
+                maxWidth: 'none',
+                background: 'var(--ailow-selo)',
+                color: 'var(--ailow-sobre-selo)',
+                boxShadow: '0 0 0 2px var(--ailow-topo)',
+              },
+              // Sem espaçamento extra entre letras: "VENDEDOR" cabe sem encostar no botão de Trocar em 360 px.
+              label: { overflow: 'visible', textOverflow: 'clip', whiteSpace: 'nowrap', letterSpacing: 0 },
             }}
             style={{
               position: 'absolute',
-              top: 0,
+              // 4 px abaixo do botão de 48 px: o selo cobre a borda inferior do avatar e termina 4 px antes do
+              // fim do topo (64 px = 8 + 48 + 8), sem encostar.
+              bottom: -4,
               left: '50%',
-              transform: 'translate(-50%, -50%)',
+              transform: 'translateX(-50%)',
               zIndex: 2,
               pointerEvents: 'none',
               lineHeight: 1.2,
@@ -85,7 +94,9 @@ export function MenuUsuario() {
               radius="xl"
               variant="filled"
               aria-hidden
-              style={{ background: 'var(--ailow-marca)', color: 'var(--ailow-sobre-acao)' }}
+              // O fundo vai no placeholder (é ele que aparece; no root ficava escondido sob o cinza padrão do
+              // Mantine, e o selo cinza parecia da mesma cor). Ação = marca com texto AA nos 2 temas.
+              styles={{ placeholder: { background: 'var(--ailow-acao)', color: 'var(--ailow-sobre-acao)' } }}
             >
               <Text fw={700} fz={18} lh={1}>
                 {inicial}
@@ -96,7 +107,7 @@ export function MenuUsuario() {
       </Menu.Target>
       <Menu.Dropdown>
         <Menu.Label style={{ overflowWrap: 'anywhere' }}>{sessao.nome}</Menu.Label>
-        <Menu.Item mih={48} color="red" leftSection={<IconLogout size={20} aria-hidden />} onClick={sessao.aoSair}>
+        <Menu.Item mih={48} color="red" leftSection={<IconDoorExit size={20} aria-hidden />} onClick={sessao.aoSair}>
           Sair
         </Menu.Item>
       </Menu.Dropdown>

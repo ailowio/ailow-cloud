@@ -25,6 +25,8 @@
   --ailow-marca-texto: #036171;           /* marca.8: texto e ícones na cor da marca */
   --ailow-secundario-texto: #1b37d6;
   --ailow-topo: #ffffff;
+  --ailow-selo: #2f3236;                  /* selo de perfil (M03): neutro forte, nunca a cor do avatar */
+  --ailow-sobre-selo: #ffffff;
 }
 
 :root[data-mantine-color-scheme='dark'] {
@@ -43,6 +45,8 @@
   --ailow-marca-texto: #07bdd5;
   --ailow-secundario-texto: #8aa0ff;
   --ailow-topo: #222325;
+  --ailow-selo: #c6c8cc;                  /* selo de perfil (M03): neutro claro sobre o topo escuro */
+  --ailow-sobre-selo: #1b1c1e;
 }
 
 body {

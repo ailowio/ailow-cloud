@@ -1,52 +1,169 @@
-// Gera os ícones do PWA (PNG) sem dependências: `node apps/web/scripts/gerar-icones.mjs`.
-// NOTA (2026-11-11): a marca oficial é `public/logo.png` (A ciano #07BDD5). Os ícones
-// em `public/icons/` foram regenerados a partir dela (fundo #0b1126). Este script ainda
-// desenha o placeholder antigo; rode-o só se precisar do fallback procedural.
-// O ícone "maskable" ocupa a área inteira e mantém o desenho na zona segura central (80%).
-import { mkdirSync, writeFileSync } from 'node:fs';
+// Gera os ícones do PWA a partir da marca oficial (public/logo.svg, intocada), sem dependências:
+//   node apps/web/scripts/gerar-icones.mjs
+// Saída: public/icons/{icon-192,icon-512,icon-maskable-512,apple-touch-icon}.png — o A ciano do logo
+// (a cor do próprio SVG) centrado num quadrado cheio #111214, o mesmo fundo do manifest e do
+// <meta name="theme-color"> (M01, plano aprimoramentos-voz-2026-11-23). Sem moldura nem cantos
+// transparentes: Android e iOS recortam o formato sozinhos.
+// Determinístico (mesma entrada = mesmos bytes). O resultado é commitado e conferido por
+// src/pwa/icones-fundo.test.ts. O sharp não está no lockfile: o SVG é rasterizado aqui mesmo
+// (os 5 paths usam só M/l/c/z; curvas achatadas em segmentos e preenchimento nonzero com
+// antisserrilhado por sub-linhas).
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 
-const saida = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
-mkdirSync(saida, { recursive: true });
+const FUNDO = '#111214';
 
-const AZUL = [0x24, 0x48, 0xff];
-const AZUL_ESCURO = [0x1b, 0x37, 0xd6];
-const BRANCO = [0xff, 0xff, 0xff];
-const LARANJA = [0xff, 0x70, 0x43];
+const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
+const logo = readFileSync(join(raiz, 'public', 'logo.svg'), 'utf8');
+const caminhos = [...logo.matchAll(/<path\b[^>]*\bd="([^"]+)"/g)].map((m) => m[1]);
+if (caminhos.length !== 5) throw new Error(`a logo oficial tem 5 paths; achei ${caminhos.length}`);
+const cores = new Set([...logo.matchAll(/<path\b[^>]*\bfill="(#[0-9a-f]{6})"/gi)].map((m) => m[1].toLowerCase()));
+if (cores.size !== 1) throw new Error(`esperava uma única cor nos paths do logo; achei ${[...cores].join(', ')}`);
+const [CIANO] = cores;
 
-// Distância de (px,py) ao segmento (ax,ay)-(bx,by).
-function distSegmento(px, py, ax, ay, bx, by) {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+/** Converte o atributo d em polígonos fechados (lista de [x, y]), achatando as cúbicas. */
+function poligonos(d) {
+  const tokens = d.match(/[MmLlHhVvCcZz]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/g) ?? [];
+  const saida = [];
+  let atual = [];
+  let cmd = '';
+  let x = 0;
+  let y = 0;
+  let i = 0;
+  const num = () => Number(tokens[i++]);
+  const fechar = () => {
+    if (atual.length > 2) saida.push(atual);
+    atual = [];
+  };
+  while (i < tokens.length) {
+    if (/[A-Za-z]/.test(tokens[i])) cmd = tokens[i++];
+    const rel = cmd === cmd.toLowerCase();
+    switch (cmd.toUpperCase()) {
+      case 'M': {
+        fechar();
+        const nx = num();
+        const ny = num();
+        x = rel ? x + nx : nx;
+        y = rel ? y + ny : ny;
+        atual.push([x, y]);
+        // Pares seguintes de um M são linhas.
+        cmd = rel ? 'l' : 'L';
+        break;
+      }
+      case 'L': {
+        const nx = num();
+        const ny = num();
+        x = rel ? x + nx : nx;
+        y = rel ? y + ny : ny;
+        atual.push([x, y]);
+        break;
+      }
+      case 'H':
+        x = rel ? x + num() : num();
+        atual.push([x, y]);
+        break;
+      case 'V':
+        y = rel ? y + num() : num();
+        atual.push([x, y]);
+        break;
+      case 'C': {
+        const v = [num(), num(), num(), num(), num(), num()];
+        const [x1, y1, x2, y2, x3, y3] = rel ? v.map((n, k) => n + (k % 2 ? y : x)) : v;
+        const PASSOS = 24;
+        for (let s = 1; s <= PASSOS; s++) {
+          const t = s / PASSOS;
+          const u = 1 - t;
+          atual.push([
+            u * u * u * x + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+            u * u * u * y + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+          ]);
+        }
+        x = x3;
+        y = y3;
+        break;
+      }
+      case 'Z': {
+        const inicio = atual[0];
+        fechar();
+        if (inicio) [x, y] = inicio;
+        break;
+      }
+      default:
+        throw new Error(`comando de path não suportado: ${cmd}`);
+    }
+  }
+  fechar();
+  return saida;
 }
 
-// Dentro de um quadrado arredondado de lado 1 com raio r.
-function dentroArredondado(x, y, r) {
-  const cx = Math.min(Math.max(x, r), 1 - r);
-  const cy = Math.min(Math.max(y, r), 1 - r);
-  return Math.hypot(x - cx, y - cy) <= r;
-}
+const formas = caminhos.map(poligonos);
+const pontos = formas.flat(2);
+const caixa = {
+  x0: Math.min(...pontos.map((p) => p[0])),
+  y0: Math.min(...pontos.map((p) => p[1])),
+  x1: Math.max(...pontos.map((p) => p[0])),
+  y1: Math.max(...pontos.map((p) => p[1])),
+};
 
-function cor(x, y, { arredondado, escala }) {
-  if (arredondado && !dentroArredondado(x, y, 0.22)) return null; // transparente
-  // Gradiente diagonal leve para dar volume.
-  const g = (x + y) / 2;
-  let c = AZUL.map((v, i) => Math.round(v + (AZUL_ESCURO[i] - v) * g));
-  // Coordenadas do desenho (encolhido para a zona segura no maskable).
-  const u = (x - 0.5) / escala + 0.5;
-  const v = (y - 0.5) / escala + 0.5;
-  const traco = 0.062;
-  const perna =
-    distSegmento(u, v, 0.5, 0.2, 0.28, 0.78) <= traco ||
-    distSegmento(u, v, 0.5, 0.2, 0.72, 0.78) <= traco ||
-    distSegmento(u, v, 0.36, 0.6, 0.64, 0.6) <= traco * 0.85;
-  if (perna) c = BRANCO;
-  if (Math.hypot(u - 0.79, v - 0.25) <= 0.065) c = LARANJA;
-  return c;
+/** Cobertura (0..1) de cada pixel: o A ocupa `fracao` do lado (maior dimensão), centrado. */
+function cobertura(lado, fracao) {
+  const escala = (lado * fracao) / Math.max(caixa.x1 - caixa.x0, caixa.y1 - caixa.y0);
+  const dx = (lado - (caixa.x1 - caixa.x0) * escala) / 2 - caixa.x0 * escala;
+  const dy = (lado - (caixa.y1 - caixa.y0) * escala) / 2 - caixa.y0 * escala;
+  // Arestas por forma (cada path é preenchido por si, nonzero; os paths se unem).
+  const arestas = formas.map((polis) =>
+    polis.flatMap((poli) =>
+      poli.map((p, k) => {
+        const q = poli[(k + 1) % poli.length];
+        return [p[0] * escala + dx, p[1] * escala + dy, q[0] * escala + dx, q[1] * escala + dy];
+      }),
+    ),
+  );
+  const SUB = 16;
+  const cob = new Float64Array(lado * lado);
+  for (let py = 0; py < lado; py++) {
+    for (let s = 0; s < SUB; s++) {
+      const sy = py + (s + 0.5) / SUB;
+      const vaos = [];
+      for (const lista of arestas) {
+        const cruzes = [];
+        for (const [ax, ay, bx, by] of lista) {
+          if ((ay <= sy && by > sy) || (by <= sy && ay > sy)) {
+            cruzes.push([ax + ((sy - ay) / (by - ay)) * (bx - ax), by > ay ? 1 : -1]);
+          }
+        }
+        cruzes.sort((a, b) => a[0] - b[0]);
+        let giro = 0;
+        for (let k = 0; k < cruzes.length; k++) {
+          const antes = giro;
+          giro += cruzes[k][1];
+          if (antes === 0 && giro !== 0) vaos.push([cruzes[k][0], null]);
+          else if (antes !== 0 && giro === 0) vaos[vaos.length - 1][1] = cruzes[k][0];
+        }
+      }
+      // União dos vãos de todos os paths.
+      vaos.sort((a, b) => a[0] - b[0]);
+      const unidos = [];
+      for (const v of vaos) {
+        const ult = unidos[unidos.length - 1];
+        if (ult && v[0] <= ult[1]) ult[1] = Math.max(ult[1], v[1]);
+        else unidos.push([v[0], v[1]]);
+      }
+      for (const [a0, b0] of unidos) {
+        const a = Math.max(0, a0);
+        const b = Math.min(lado, b0);
+        for (let px = Math.floor(a); px < Math.ceil(b); px++) {
+          const cobre = Math.min(b, px + 1) - Math.max(a, px);
+          if (cobre > 0) cob[py * lado + px] += cobre / SUB;
+        }
+      }
+    }
+  }
+  return cob;
 }
 
 const TABELA_CRC = Array.from({ length: 256 }, (_, n) => {
@@ -68,57 +185,42 @@ function bloco(tipo, dados) {
   return Buffer.concat([tam, corpo, crc]);
 }
 
-function png(tamanho, opcoes) {
-  const SS = 3; // supersampling 3x3 para bordas suaves
-  const linhas = [];
-  for (let py = 0; py < tamanho; py++) {
-    const linha = Buffer.alloc(1 + tamanho * 4); // filtro 0 + RGBA
-    for (let px = 0; px < tamanho; px++) {
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      let a = 0;
-      for (let sy = 0; sy < SS; sy++) {
-        for (let sx = 0; sx < SS; sx++) {
-          const c = cor((px + (sx + 0.5) / SS) / tamanho, (py + (sy + 0.5) / SS) / tamanho, opcoes);
-          if (c) {
-            r += c[0];
-            g += c[1];
-            b += c[2];
-            a += 1;
-          }
-        }
-      }
-      const o = 1 + px * 4;
-      if (a > 0) {
-        linha[o] = Math.round(r / a);
-        linha[o + 1] = Math.round(g / a);
-        linha[o + 2] = Math.round(b / a);
-      }
-      linha[o + 3] = Math.round((a / (SS * SS)) * 255);
+/** PNG RGB opaco: cada pixel mistura fundo e ciano pela cobertura. */
+function png(lado, fracao) {
+  const cob = cobertura(lado, fracao);
+  const f = rgb(FUNDO);
+  const c = rgb(CIANO);
+  const linhas = Buffer.alloc(lado * (1 + lado * 3));
+  for (let y = 0; y < lado; y++) {
+    const ini = y * (1 + lado * 3);
+    linhas[ini] = 0; // filtro 0
+    for (let x = 0; x < lado; x++) {
+      const t = Math.min(1, cob[y * lado + x]);
+      for (let k = 0; k < 3; k++) linhas[ini + 1 + x * 3 + k] = Math.round(f[k] + t * (c[k] - f[k]));
     }
-    linhas.push(linha);
   }
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(tamanho, 0);
-  ihdr.writeUInt32BE(tamanho, 4);
+  ihdr.writeUInt32BE(lado, 0);
+  ihdr.writeUInt32BE(lado, 4);
   ihdr[8] = 8; // 8 bits por canal
-  ihdr[9] = 6; // RGBA
+  ihdr[9] = 2; // RGB
   return Buffer.concat([
     Buffer.from('89504e470d0a1a0a', 'hex'),
     bloco('IHDR', ihdr),
-    bloco('IDAT', deflateSync(Buffer.concat(linhas), { level: 9 })),
+    bloco('IDAT', deflateSync(linhas, { level: 9 })),
     bloco('IEND', Buffer.alloc(0)),
   ]);
 }
 
+// Fração do lado ocupada pelo A (maior dimensão). Maskable: 0,5 do lado deixa a caixa inteira do A
+// dentro do círculo de 80% de diâmetro (zona segura); os demais seguem o ailow-index (0,66).
 const icones = [
-  ['icon-192.png', 192, { arredondado: true, escala: 1 }],
-  ['icon-512.png', 512, { arredondado: true, escala: 1 }],
-  ['icon-maskable-512.png', 512, { arredondado: false, escala: 0.78 }],
-  ['apple-touch-icon.png', 180, { arredondado: false, escala: 0.9 }],
+  ['icon-192.png', 192, 0.66],
+  ['icon-512.png', 512, 0.66],
+  ['icon-maskable-512.png', 512, 0.5],
+  ['apple-touch-icon.png', 180, 0.66],
 ];
-for (const [nome, tamanho, opcoes] of icones) {
-  writeFileSync(join(saida, nome), png(tamanho, opcoes));
-  console.log(`gerado ${nome} (${tamanho}x${tamanho})`);
+for (const [nome, lado, fracao] of icones) {
+  writeFileSync(join(raiz, 'public', 'icons', nome), png(lado, fracao));
+  console.log(`gerado ${nome} (${lado}x${lado}, fundo ${FUNDO}, A ${CIANO})`);
 }

@@ -36,6 +36,7 @@ export function Moldura(props: {
   children: ReactNode;
 }) {
   const versao = versaoDoApp();
+  const { titulo } = props;
   return (
     // UXM-01: a tela tem altura fixa; só o <main> rola (o topo fica parado).
     <Box className="ailow-tela" h="100dvh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -45,10 +46,16 @@ export function Moldura(props: {
           <Group justify="space-between" wrap="nowrap" h={64}>
             <Group gap="xs" wrap="nowrap">
               <Logo altura={36} alt="" empresa={props.logoEmpresa === true} />
-              {/* Wordmark curto; mesma cor da marca via --ailow-marca-texto. */}
-              <Text ff="var(--mantine-font-family-headings)" fw={600} fz={16} c="var(--ailow-marca-texto)">
-                Ailow
-              </Text>
+              {/* Wordmark em 2 linhas (D-A3), da altura do A (≈ 36 px): "Ailow" na cor da marca,
+                  "Cloud" em tom apagado (a marca crua dá só 2,1:1 sobre o branco). */}
+              <Stack data-wordmark gap={0} justify="center">
+                <Text ff="var(--mantine-font-family-headings)" fw={700} fz={17} lh={1.1} c="var(--ailow-marca-texto)">
+                  Ailow
+                </Text>
+                <Text ff="var(--mantine-font-family-headings)" fw={500} fz={15} lh={1.1} c="dimmed">
+                  Cloud
+                </Text>
+              </Stack>
             </Group>
             <Group gap="xs" wrap="nowrap">
               {/* Toolbar: inicial+badge (menu Sair) · trocar usuário · tema. */}
@@ -67,20 +74,38 @@ export function Moldura(props: {
       <Box component="main" id="conteudo" className="ailow-rolagem" tabIndex={-1}>
         <Container size={560} px="md" py="lg" w="100%">
           <Stack gap="lg">
-            {props.voltar && (
-              // UXM-03: só a seta (o mesmo passo para trás do botão Voltar do sistema); o destino vai no rótulo de acessibilidade.
-              <ActionIcon
-                variant="subtle"
-                size={48}
-                aria-label={`Voltar para ${props.voltar.rotulo}`}
-                onClick={props.voltar.aoVoltar}
-              >
-                <IconArrowLeft />
-              </ActionIcon>
-            )}
             <Stack gap={4}>
-              <Title order={1} fz={28} style={{ overflowWrap: 'anywhere' }}>{props.titulo}</Title>
-              {props.subtitulo && <Text c="dimmed">{props.subtitulo}</Text>}
+              {/* M04: com `voltar`, seta · divisor · título na mesma linha (ganha altura no celular). Alinhado ao topo:
+                  título de 1 linha fica centrado na seta (caixa de 48 px); título longo quebra sem empurrar a seta (D23). */}
+              <Group wrap="nowrap" gap="sm" align="flex-start" data-topo-modulo>
+                {props.voltar && (
+                  // UXM-03: só a seta (o mesmo passo para trás do botão Voltar do sistema); o destino vai no rótulo de acessibilidade.
+                  <ActionIcon
+                    variant="default"
+                    size={48}
+                    aria-label={`Voltar para ${props.voltar.rotulo}`}
+                    onClick={props.voltar.aoVoltar}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <IconArrowLeft />
+                  </ActionIcon>
+                )}
+                {props.voltar && (
+                  <Box
+                    data-divisor-voltar
+                    aria-hidden
+                    style={{ width: 1, height: 28, marginTop: 10, flexShrink: 0, background: 'var(--ailow-borda)' }}
+                  />
+                )}
+                <Box style={{ minHeight: props.voltar ? 48 : undefined, display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                  <Title order={1} fz={props.voltar ? 22 : 28} style={{ overflowWrap: 'anywhere' }}>{titulo}</Title>
+                </Box>
+              </Group>
+              {props.subtitulo && (
+                <Text c="dimmed" data-subtitulo>
+                  {props.subtitulo}
+                </Text>
+              )}
             </Stack>
             {props.children}
           </Stack>

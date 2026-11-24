@@ -5,12 +5,20 @@ import { inicialDoNome } from './sessao';
 const ler = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 
 describe('chrome da marca e sessão (itens 1–4)', () => {
-  it('wordmark da Moldura é só Ailow, menor e sem ERP', () => {
+  // D-A3 (Pedro, 23/11): o topo mostra "Ailow" / "Cloud" em 2 linhas ao lado do A; nunca "Ailow ERP".
+  it('wordmark da Moldura é Ailow/Cloud em 2 linhas, sem ERP', () => {
     const fonte = ler('../telas/Moldura.tsx');
-    expect(fonte).toMatch(/>\s*Ailow\s*</);
     expect(fonte).not.toMatch(/Ailow ERP/);
-    expect(fonte).toMatch(/fz=\{16\}/);
-    expect(fonte).toMatch(/fw=\{600\}/);
+    const ini = fonte.indexOf('data-wordmark');
+    expect(ini).toBeGreaterThan(-1);
+    const bloco = fonte.slice(ini, fonte.indexOf('</Stack>', ini));
+    // Linha 1: Ailow (fw 700, cor da marca); linha 2: Cloud (fw 500, tom apagado), nessa ordem.
+    expect(bloco).toMatch(/fw=\{700\}[^>]*>\s*Ailow\s*</);
+    expect(bloco).toMatch(/fw=\{500\}[^>]*>\s*Cloud\s*</);
+    expect(bloco.indexOf('Ailow')).toBeLessThan(bloco.indexOf('Cloud'));
+    expect(bloco).toContain('var(--ailow-marca-texto)');
+    expect(bloco).toContain('c="dimmed"');
+    expect(bloco).toContain('var(--mantine-font-family-headings)');
   });
 
   it('Logo da marca usa currentColor alinhado a --ailow-marca-texto', () => {
@@ -32,7 +40,8 @@ describe('chrome da marca e sessão (itens 1–4)', () => {
     expect(fonte).toContain('inicialDoNome');
     expect(fonte).toContain('Avatar');
     expect(fonte).toContain('ailow-menu-usuario__badge');
-    expect(fonte).toMatch(/translate\(-50%,\s*-50%\)/);
+    // M03/D-A3 (Pedro, 23/11): o selo de perfil sai do topo e fica no baixo-centro do avatar.
+    expect(fonte).toMatch(/bottom:[^,]+,\s*left:\s*'50%',\s*transform:\s*'translateX\(-50%\)'/);
     expect(fonte).toContain('Sair');
     // Trocar ficou no ícone da toolbar, não no dropdown.
     const dropdown = fonte.slice(fonte.indexOf('<Menu.Dropdown>'), fonte.indexOf('</Menu.Dropdown>'));
