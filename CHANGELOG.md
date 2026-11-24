@@ -15,6 +15,9 @@ Marca e topo (nota de voz 23/11, Onda 1 do plano `docs/planos/aprimoramentos-voz
 ### Corrigido
 - Avatar do usuário aparecia cinza (placeholder do Mantine cobria a cor); agora usa `--ailow-acao` com texto AA.
 
+### Segurança
+- Imagem do web passa a `nginx-unprivileged:1.31.7-alpine3.24` (mainline): o 1.30.6 tinha 6 CVEs (4 CRITICAL) corrigidas no 1.30.7, ainda sem imagem publicada.
+
 ## [1.5.0] - 2026-11-17
 
 UX da Nova venda (nota de voz 17/11): cards com preço/estoque, paginação discreta, catálogo em 2 colunas, Finalizar em CTA. Sem mudança de OpenAPI nem migração.
