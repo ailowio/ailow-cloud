@@ -119,8 +119,8 @@ Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Nã
 ```
 
 ### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
-- **Ondas 2 e 3:** mergeadas (PR #47, PR #48 `3b9272c`).
-- **Onda 4:** `fix/teclado-formularios` (`_wt-teclado`) — T01 commitada (viewport `resizes-content`, Finalizar sticky no Fechamento, 76 campos com `autoComplete` explícito); verify 935/556/265; `e2e.sh` 141/141; CHANGELOG 1.8.1. Falta push/PR (orquestrador pede ao Pedro).
-- **Próximo:** PR/merge Onda 4 → Onda 5 (F02) → Deploy aguardando Pedro.
-- **Pendente do Pedro:** teclado no celular (T01: rodapé à vista com teclado aberto; barra do Gboard/Chrome pode não sumir 100%); Approve do Deploy no fecho; P03: cor padrão para os 90 SKUs sem cor (`--cor-padrao`) e as 4 categorias fora do seed; carga só no dev.
-- **Conhecido:** `dev:parar` quebrado; Postgres via `pg_ctl`; `e2e.sh` usa contêiner `ailow-e2e-db` com nome fixo (2 worktrees ao mesmo tempo se derrubam) e deixa o `vite preview` órfão na `PORTA_WEB` a cada execução (L-0012: matar pelo dono da porta depois); `NumberInput` do Mantine força `inputMode="decimal"`.
+- **Ondas 2–4:** mergeadas (#47, #48, #49 `2b82f87`).
+- **Onda 5:** `feat/financeiro-visivel` — F01 (provas API) + F02 (linha "Entra no financeiro hoje"; N parcelas no receber; toasts → Financeiro); CHANGELOG 1.9.0; `e2e.sh` 143/143. Em PR/merge.
+- **Próximo após merge:** fecho — tag SemVer + `gh workflow run Deploy` aguardando Approve do Pedro (L-0027).
+- **Pendente do Pedro:** Approve do Deploy; validar teclado (T01) no celular; P03 cor padrão / categorias fora do seed (só dev).
+- **Conhecido:** `e2e.sh` deixa `vite preview` órfão (L-0012); vencimentos de parcelas no receber precisam ser distintos (contrato da API).

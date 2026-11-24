@@ -9,6 +9,7 @@ import { Valor } from '../../componentes';
 import { formatarData } from '../../lib/datas';
 import { fecharModal, useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
+import { textoEntraNoFinanceiroHoje } from './financeiro-hoje';
 import { ROTULOS_FORMA, mensagemVenda } from './rotulos';
 
 /** RF-VEN-07/08: comprovante no WhatsApp e na impressora; cancelar devolve o estoque e estorna o caixa. */
@@ -34,6 +35,8 @@ function Folha(props: { api: Api; venda: Venda; aoMudar: () => void; aoNova: () 
     })),
   });
   const dia = v.criado_em.slice(0, 10);
+  const linhaFinanceiro =
+    v.status === 'finalizada' ? textoEntraNoFinanceiroHoje(v.pagamentos) : null;
 
   async function cancelar() {
     if (motivo.trim().length < 3) return;
@@ -74,6 +77,11 @@ function Folha(props: { api: Api; venda: Venda; aoMudar: () => void; aoNova: () 
             {ROTULOS_FORMA[p.forma]} · <Valor centavos={p.valor_centavos} />
           </Text>
         ))}
+        {linhaFinanceiro && (
+          <Text data-financeiro-hoje style={{ overflowWrap: 'anywhere' }}>
+            {linhaFinanceiro}
+          </Text>
+        )}
       </Stack>
 
       <Stack gap="xs" className="nao-imprimir">

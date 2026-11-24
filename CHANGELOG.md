@@ -2,6 +2,15 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.9.0] - 2026-11-24
+
+Financeiro visível nos assistentes (nota de voz 23/11, Onda 5 / F01+F02). Sem migração nem OpenAPI novo.
+
+### Adicionado
+- Fechamento e comprovante da venda mostram **Entra no financeiro hoje: R$ X (forma)**; toast de sucesso aponta para o Financeiro.
+- Receber pedido: **N parcelas** (valor + vencimento distintos; soma = total via `parcelasFecham`), resumo **Gera N contas a pagar**; toast aponta para o Financeiro.
+- Provas de integração F01 (venda→entradas; compra→contas a pagar) e E2E F02 (3 parcelas, soma divergente, extrato do dia).
+
 ## [1.8.1] - 2026-11-24
 
 Teclado do celular nos formulários (nota de voz 23/11, Onda 4 / T01). Sem mudança de OpenAPI nem migração.
