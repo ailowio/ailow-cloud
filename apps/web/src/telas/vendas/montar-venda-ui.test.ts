@@ -9,15 +9,22 @@ describe('MontarVenda UI (V03)', () => {
     expect(fonte).toMatch(/POR_PAGINA_PADRAO\s*=\s*5/);
   });
 
-  it('1ª linha: Escanear · Novo produto (dono) · Catálogo; depois Gerenciar/Finalizar', () => {
+  it('1ª fileira Escanear · Novo produto (dono) · Catálogo; depois Gerenciar/Finalizar', () => {
     expect(fonte).toContain("id: 'novo-produto'");
     expect(fonte).toContain("rotulo: 'Novo produto'");
     expect(fonte).toContain('IconPlus');
-    expect(fonte).toMatch(/perfil\s*===\s*'dono'|props\.perfil/);
-    // Duas grades: 3 (ou 2 sem dono) + 2 — não mais uma única linha de 4
+    expect(fonte).toMatch(/perfil\s*===\s*'dono'/);
+    expect(fonte).toMatch(/densidade="compacta"/);
+    expect(fonte).toMatch(/cols=\{3\}/);
     expect(fonte).not.toMatch(/cols=\{4\}/);
-    expect(fonte).toMatch(/cols=\{dono \? 3 : 2\}|cols=\{3\}/);
-    expect(fonte).toMatch(/cols=\{2\}/);
+    const ids = [...fonte.matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(ids.filter((id) => ['escanear', 'novo-produto', 'catalogo', 'gerenciar', 'fechar'].includes(id as string))).toEqual([
+      'escanear',
+      'novo-produto',
+      'catalogo',
+      'gerenciar',
+      'fechar',
+    ]);
     expect(fonte).toContain('WizardCatalogo');
     expect(fonte).toMatch(/id:\s*'fechar'[\s\S]*?destaque:\s*true/);
   });

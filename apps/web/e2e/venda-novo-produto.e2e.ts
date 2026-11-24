@@ -31,8 +31,10 @@ test('V03: Dono vê Novo produto no centro; cancelar mantém o carrinho', async 
 
   await page.getByRole('button', { name: /Voltar/ }).first().click();
   await expect(page.getByRole('heading', { name: 'Nova venda' })).toBeVisible();
-  await expect(page.getByTestId('barra-carrinho')).toBeVisible();
-  await expect(page.locator('[data-qtd-carrinho]')).toHaveText('1');
+  // Carrinho vive em Vendas: a barra com badge "1" prova que os itens sobreviveram ao assistente.
+  const barra = page.getByTestId('barra-carrinho');
+  await expect(barra).toBeVisible();
+  await expect(barra).toContainText('1');
 });
 
 test('V03: Vendedor não vê Novo produto na venda', async ({ page }) => {

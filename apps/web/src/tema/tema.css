@@ -182,11 +182,13 @@ h1, h2, h3, h4 {
 }
 .ailow-acao-grade[data-destaque='true'] { color: var(--ailow-acao); }
 
-/* 4 ações numa linha (360 px): tile menor para caber sem segunda fileira. */
-[data-grade-acoes][data-cols='4'] .ailow-acao-grade { gap: 4px; padding: 2px 0; }
-[data-grade-acoes][data-cols='4'] .ailow-acao-tile {
-  width: 56px;
-  height: 56px;
+/* 4 ações numa linha, ou grade compacta (V03: 2 fileiras na venda): tile menor p/ não empurrar a paginação. */
+[data-grade-acoes][data-cols='4'] .ailow-acao-grade,
+[data-grade-acoes][data-densidade='compacta'] .ailow-acao-grade { gap: 4px; padding: 2px 0; }
+[data-grade-acoes][data-cols='4'] .ailow-acao-tile,
+[data-grade-acoes][data-densidade='compacta'] .ailow-acao-tile {
+  width: 52px;
+  height: 52px;
   border-radius: 16px;
 }
 

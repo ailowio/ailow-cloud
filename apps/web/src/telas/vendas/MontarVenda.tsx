@@ -161,14 +161,15 @@ export function MontarVenda(props: {
 
   if (lendo) return <Scanner aoCodigo={(c) => void aoCodigo(c)} aoFechar={() => setLendo(false)} />;
 
-  const acoesPrimeira = [
-    { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={28} stroke={1.75} />, aoTocar: () => setLendo(true) },
+  const icone = 24;
+  const acoes = [
+    { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={icone} stroke={1.75} />, aoTocar: () => setLendo(true) },
     ...(dono
       ? [
           {
             id: 'novo-produto',
             rotulo: 'Novo produto',
-            icone: <IconPlus size={28} stroke={1.75} />,
+            icone: <IconPlus size={icone} stroke={1.75} />,
             aoTocar: props.aoNovoProduto,
           },
         ]
@@ -177,34 +178,30 @@ export function MontarVenda(props: {
       id: 'catalogo',
       rotulo: 'Catálogo',
       descricao: 'Todos os produtos',
-      icone: <IconCategory size={28} stroke={1.75} />,
+      icone: <IconCategory size={icone} stroke={1.75} />,
       aoTocar: () => setCatalogo(true),
+    },
+    {
+      id: 'gerenciar',
+      rotulo: 'Gerenciar',
+      descricao: 'Gerenciar vendas (Relatório)',
+      icone: <IconReportAnalytics size={icone} stroke={1.75} />,
+      aoTocar: props.aoRelatorio,
+    },
+    {
+      id: 'fechar',
+      rotulo: 'Finalizar',
+      icone: <IconShoppingCartCheck size={icone} stroke={1.75} />,
+      aoTocar: props.aoFechar,
+      desabilitado: props.itens.length === 0,
+      destaque: true,
     },
   ];
 
   return (
-    <Stack gap="md">
-      <GradeAcoes cols={dono ? 3 : 2} acoes={acoesPrimeira} />
-      <GradeAcoes
-        cols={2}
-        acoes={[
-          {
-            id: 'gerenciar',
-            rotulo: 'Gerenciar',
-            descricao: 'Gerenciar vendas (Relatório)',
-            icone: <IconReportAnalytics size={28} stroke={1.75} />,
-            aoTocar: props.aoRelatorio,
-          },
-          {
-            id: 'fechar',
-            rotulo: 'Finalizar',
-            icone: <IconShoppingCartCheck size={28} stroke={1.75} />,
-            aoTocar: props.aoFechar,
-            desabilitado: props.itens.length === 0,
-            destaque: true,
-          },
-        ]}
-      />
+    <Stack gap="sm">
+      {/* V03: 1ª fileira Escanear · Novo produto · Catálogo; 2ª Gerenciar · Finalizar (cols=3 wrap). */}
+      <GradeAcoes cols={3} densidade="compacta" acoes={acoes} />
       <WizardCatalogo
         aberto={catalogo}
         api={props.api}
