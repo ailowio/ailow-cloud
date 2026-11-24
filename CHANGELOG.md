@@ -2,6 +2,19 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.8.1] - 2026-11-24
+
+Teclado do celular nos formulários (nota de voz 23/11, Onda 4 / T01). Sem mudança de OpenAPI nem migração.
+
+### Corrigido
+- Com o teclado aberto no Chrome do Android a tela encolhe junto (`interactive-widget=resizes-content` no viewport): o rodapé Voltar/Continuar dos assistentes fica à vista em vez de ficar atrás do teclado.
+- Fechamento da venda: **Finalizar** gruda no fim da área que rola enquanto o lugar dele está mais abaixo (some atrás do teclado antes).
+- Todos os campos de digitação dizem ao navegador se pode sugerir dado salvo: `off` nos dados de clientes, fornecedores, produtos, valores e buscas; `organization`/`street-address`/`tel` só nos dados da própria empresa; e-mail e senha mantêm `username`/`current-password`. PIN sem `one-time-code` (o teclado não oferece código de SMS).
+- "Valor da parcela" (receber pedido) abre o teclado numérico com vírgula.
+
+### Limite conhecido
+- A barra de sugestões do Gboard/Chrome (cartão, endereço) é do navegador e pode não sumir 100% mesmo com `autocomplete="off"`; validar no celular.
+
 ## [1.8.0] - 2026-11-24
 
 Produtos: catálogo, filtros e conversor do catálogo de teste (nota de voz 23/11, Onda 3). Sem migração. OpenAPI: 2 parâmetros opcionais novos em `GET /produtos` (aditivo; `info.version` segue 0.16.0).

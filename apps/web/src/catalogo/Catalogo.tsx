@@ -146,7 +146,7 @@ export function Catalogo() {
               passos={[
                 { titulo: 'Categoria', conteudo: <Text c="dimmed">Sutiã · Calcinha · Baby doll · Modelador</Text> },
                 { titulo: 'Tamanhos', conteudo: <Text c="dimmed">Marque os tamanhos que você tem.</Text> },
-                { titulo: 'Preço', conteudo: <TextInput label="Preço de venda" placeholder="89,00" inputMode="decimal" size="lg" /> },
+                { titulo: 'Preço', conteudo: <TextInput label="Preço de venda" placeholder="89,00" inputMode="decimal" autoComplete="off" size="lg" /> },
               ]}
             />
           </Secao>

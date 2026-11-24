@@ -196,6 +196,7 @@ function Assistente(props: {
             required
             size="lg"
             maxLength={120}
+            autoComplete="off"
             placeholder={t.exemplo}
             value={r.descricao}
             onChange={(e) => mudar({ descricao: e.currentTarget.value })}

@@ -168,7 +168,7 @@ function FormCategoria(props: {
   return (
     <Modal opened onClose={props.aoFechar} title={categoria ? 'Editar categoria' : TEXTOS[tipo].nova} centered closeButtonProps={fecharModal}>
       <Stack gap="md">
-        <TextInput label="Nome" required size="lg" maxLength={60} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
+        <TextInput label="Nome" required size="lg" maxLength={60} autoComplete="off" value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
         {tipo === 'produto' && (
           <TagsInput
             label="Atributos"
@@ -177,6 +177,7 @@ function FormCategoria(props: {
             size="lg"
             maxTags={20}
             splitChars={[',']}
+            autoComplete="off"
             value={atributos}
             onChange={setAtributos}
           />

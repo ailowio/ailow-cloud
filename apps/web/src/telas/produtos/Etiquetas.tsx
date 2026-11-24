@@ -253,6 +253,7 @@ function CartaoEtiquetas(props: { produto: Produto; quantidades: Quantidades; ao
                 // Acima do máximo vira 999 (mudarQuantidade) e o resumo avisa; "strict" só recusava a tecla, calado.
                 clampBehavior="none"
                 aria-label={`Etiquetas de ${rotulo}`}
+                autoComplete="off"
                 value={n}
                 onChange={(v) => props.aoMudar(mudarQuantidade(q, s.id, typeof v === 'number' ? v : Number(v)))}
                 styles={{ input: { textAlign: 'center', paddingInline: 4 } }}

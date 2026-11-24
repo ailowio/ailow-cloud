@@ -184,6 +184,7 @@ function AjusteForm(props: { api: Api; skuId: string; estoque: number; acaoInici
         label="Motivo"
         size="lg"
         maxLength={200}
+        autoComplete="off"
         placeholder="Diga o que aconteceu"
         value={motivo}
         onChange={(e) => setMotivo(e.currentTarget.value)}

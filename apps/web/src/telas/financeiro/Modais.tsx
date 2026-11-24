@@ -137,6 +137,7 @@ export function EstornarModal(props: {
           autosize
           minRows={2}
           maxLength={200}
+          autoComplete="off"
           placeholder="Ex.: cobrado em duplicidade"
           value={motivo}
           onChange={(e) => setMotivo(e.currentTarget.value)}

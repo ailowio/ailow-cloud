@@ -4,13 +4,6 @@
 
 Arquivo (ler só sob demanda): `diario/ARQUIVO-planejamento.md`.
 
-### V03 + fecho Onda 2 · 2026-11-24 — Composer · orquestrador
-Feito: Novo produto no centro (só Dono); assistente embutido; grade `densidade=compacta` (paginação ok). CHANGELOG 1.7.0. Commits V01–V03 + fix compacta.
-Números: e2e.sh r1 134/135 (uxm-pessoas light intermitente); r2 **135/135**.
-Decisões: montar-venda-ui + grade-popup atualizados (V03).
-Pendências: PR/merge Onda 2 → Onda 3.
-Verificação: e2e.sh 135/135.
-
 ### P02 — Produtos: Lista | Catálogo + Filtros · 2026-11-24 — Opus (subagente) · orquestrador
 Feito: `api.produtos` aceita `{ q, depois, categoria_id, cor }` (a forma `(q, depois)` segue valendo). Barra Lista|Catálogo (preferência local) + Filtros (modal: categoria e cor exata, D-A7) + chips com "limpar"; filtro remonta a lista e vai à API na 1ª página, no "Carregar mais" e na busca. Catálogo = tile `Opcao` + ícones do WizardCatalogo, toque abre o DetalheProduto. `Produtos.tsx` 308→262 linhas (CartaoProduto e AbaixoDoMinimo em arquivos próprios).
 Números: web 542→552 (10 novos); verify 910/552/265. E2E `produtos-filtros` 3/3; canários (filtro fora da 1ª carga; tile sem quebra) reprovaram.
@@ -25,3 +18,11 @@ Números (arquivos locais, só contagens): 29 produtos / 110 SKUs → padrão: 1
 Decisões: SKU sem cor é rejeitado; `--cor-padrao` é opt-in (🚦 Pedro escolhe). Seed não rodado (nem dev nem produção).
 Pendências: 🚦 Pedro: cor padrão? categorias fora do seed? seed ler o JSON (`--saida`) e carga no dev; `e2e.sh` usa contêiner `ailow-e2e-db` fixo (colide entre worktrees); `vite preview` órfão de `_wt-inicio-venda` na 4174 (L-0012).
 Verificação: verify 935/552/265; `e2e.sh` 138/138 (portas 4184/3014/15444 por causa do órfão).
+
+### T01 — Teclado menor e Continuar à vista · 2026-11-24 — agente (sessão única) · orquestrador
+Feito: viewport `interactive-widget=resizes-content` (MDN + blog Chrome 108: padrão `resizes-visual`; Chrome Android, não iOS). Fechamento: Finalizar em `.ailow-rodape-fixo` (sticky). 37 campos ganharam `autoComplete` (76 no total, todos explícitos); PIN `oneTimeCode={false}`; "Valor da parcela" `inputMode=decimal`. CHANGELOG 1.8.1.
+Decisões (PR): token só no dado da própria empresa/usuário — Empresa `organization`/`street-address` (novos), `tel`; Entrar `username`/`current-password`. O resto `off` (clientes, fornecedores, vendedores, produto, valores, buscas, motivos, filtros). Lista campo a campo no corpo do commit.
+Números: web 552→556 (`teclado-campos.test.ts` 4); E2E `teclado-360x400` 3/3 (vermelho antes só no Fechamento: Finalizar y=774, área até 371). verify 935/556/265; `e2e.sh` **141/141**.
+Limites: `NumberInput` do Mantine 9.7.3 força `inputMode="decimal"`; barra do Gboard/Chrome pode não sumir com `off`; 🚦 Pedro valida no celular.
+Pendências: `e2e.sh` deixa `vite preview` órfão a cada execução (o `kill` do Git Bash não mata o node.exe; L-0012).
+Verificação: capturas `_scratch/onda4-capturas/` (Fechamento 640/400 claro/escuro; Nova despesa 400); `scrollWidth ≤ clientWidth`.

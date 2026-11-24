@@ -103,6 +103,16 @@ h1, h2, h3, h4 {
   border-radius: 0 0 var(--mantine-radius-md) var(--mantine-radius-md);
 }
 
+/* Ação principal de tela comprida fora do assistente (Fechamento da venda): gruda no fim da área que rola enquanto
+   o lugar dela está mais abaixo; com o teclado aberto (T01) continua à vista. */
+.ailow-rodape-fixo {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-block: 8px;
+  background: var(--mantine-color-body);
+}
+
 /* Barra do carrinho na venda: preenchimento marca (docs/design/barra-carrinho.html var. A). */
 .ailow-barra-carrinho {
   margin: 0 -16px -16px;

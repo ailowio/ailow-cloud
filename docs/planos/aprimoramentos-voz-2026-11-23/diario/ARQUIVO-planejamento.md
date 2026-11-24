@@ -1,5 +1,12 @@
 # Diário arquivado — entradas antigas, intactas
 
+### V03 + fecho Onda 2 · 2026-11-24 — Composer · orquestrador
+Feito: Novo produto no centro (só Dono); assistente embutido; grade `densidade=compacta` (paginação ok). CHANGELOG 1.7.0. Commits V01–V03 + fix compacta.
+Números: e2e.sh r1 134/135 (uxm-pessoas light intermitente); r2 **135/135**.
+Decisões: montar-venda-ui + grade-popup atualizados (V03).
+Pendências: PR/merge Onda 2 → Onda 3.
+Verificação: e2e.sh 135/135.
+
 ### V02 — card peça + selo · 2026-11-24 — Composer · orquestrador
 Feito: stepper à direita do preço; tom ok/baixo/zerado (teal/âmbar/red). Capturas `onda2-capturas/v02-*`.
 Números: verify 894/542/265. Commit `225a3a9`.

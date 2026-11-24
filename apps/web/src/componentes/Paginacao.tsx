@@ -69,6 +69,7 @@ export function Paginacao(props: {
           size="xs"
           label="Por página"
           aria-label="Itens por página"
+          autoComplete="off"
           data={props.porPagina.opcoes.map((n) => ({ value: String(n), label: String(n) }))}
           value={String(props.porPagina.valor)}
           onChange={(e) => {

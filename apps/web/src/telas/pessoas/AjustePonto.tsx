@@ -40,11 +40,12 @@ function Campos(props: {
   return (
     <>
       <CampoData label="Dia" max={props.hoje} value={props.data} onChange={props.aoData} />
-      <TextInput label="Hora (de São Paulo)" type="time" size="lg" value={props.hora} onChange={(e) => props.aoHora(e.currentTarget.value)} />
+      <TextInput label="Hora (de São Paulo)" type="time" size="lg" autoComplete="off" value={props.hora} onChange={(e) => props.aoHora(e.currentTarget.value)} />
       <TextInput
         label="Motivo (fica guardado no histórico)"
         size="lg"
         maxLength={MOTIVO_AJUSTE_MAX}
+        autoComplete="off"
         value={props.motivo}
         onChange={(e) => props.aoMotivo(e.currentTarget.value)}
       />

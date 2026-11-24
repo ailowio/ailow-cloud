@@ -168,7 +168,7 @@ function Assistente(props: {
             onChange={(v) => mudar({ tipo: v as 'entrada' | 'saida' })}
           />
           <CampoData label="Dia" required max={hojeEmSaoPaulo()} value={r.data} onChange={(data) => mudar({ data })} />
-          <TextInput label="Hora (de São Paulo)" required type="time" size="lg" value={r.hora} onChange={(e) => mudar({ hora: e.currentTarget.value })} />
+          <TextInput label="Hora (de São Paulo)" required type="time" size="lg" autoComplete="off" value={r.hora} onChange={(e) => mudar({ hora: e.currentTarget.value })} />
         </Stack>
       )}
 
@@ -178,6 +178,7 @@ function Assistente(props: {
           required
           size="lg"
           maxLength={MOTIVO_AJUSTE_MAX}
+          autoComplete="off"
           placeholder="Ex.: Esqueceu de bater a entrada"
           value={r.motivo}
           onChange={(e) => mudar({ motivo: e.currentTarget.value })}
