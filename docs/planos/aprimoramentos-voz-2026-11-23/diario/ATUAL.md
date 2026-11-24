@@ -4,12 +4,6 @@
 
 Arquivo (ler só sob demanda): `diario/ARQUIVO-planejamento.md`.
 
-### V01 — toque longo no bloco · 2026-11-24 — Composer · orquestrador
-Feito: listeners no bloco; PointerSensor delay 500 / tolerance 5 (D-A1); E2E inicio-dnd + venda-toques.
-Números: verify 894/540/265. Commit `44e01e7`.
-Pendências: V02→V03; fechar Onda 2.
-Verificação: verify + Playwright verde.
-
 ### V02 — card peça + selo · 2026-11-24 — Composer · orquestrador
 Feito: stepper à direita do preço; tom ok/baixo/zerado (teal/âmbar/red). Capturas `onda2-capturas/v02-*`.
 Números: verify 894/542/265. Commit `225a3a9`.
@@ -22,3 +16,10 @@ Números: e2e.sh r1 134/135 (uxm-pessoas light intermitente); r2 **135/135**.
 Decisões: montar-venda-ui + grade-popup atualizados (V03).
 Pendências: PR/merge Onda 2 → Onda 3.
 Verificação: e2e.sh 135/135.
+
+### P02 — Produtos: Lista | Catálogo + Filtros · 2026-11-24 — Opus (subagente) · orquestrador
+Feito: `api.produtos` aceita `{ q, depois, categoria_id, cor }` (a forma `(q, depois)` segue valendo). Barra Lista|Catálogo (preferência local) + Filtros (modal: categoria e cor exata, D-A7) + chips com "limpar"; filtro remonta a lista e vai à API na 1ª página, no "Carregar mais" e na busca. Catálogo = tile `Opcao` + ícones do WizardCatalogo, toque abre o DetalheProduto. `Produtos.tsx` 308→262 linhas (CartaoProduto e AbaixoDoMinimo em arquivos próprios).
+Números: web 542→552 (10 novos); verify 910/552/265. E2E `produtos-filtros` 3/3; canários (filtro fora da 1ª carga; tile sem quebra) reprovaram.
+Decisões: opções de categoria/cor = cadastro (só Dono lê) ∪ o que está nos produtos (Vendedor). Tile `Opcao` passou a quebrar o preço abaixo de nome longo (afeta também a venda).
+Pendências: corrida do Modal com Voltar < ~400 ms após abrir (router em transição); selo "3 EM ESTOQ…" cortado no tile de 2 colunas (já na venda); P03.
+Verificação: capturas `_scratch/onda3-capturas/p02-*`; produtos-crud, grade-popup, paginacao-360, venda-toques, navegacao verdes.

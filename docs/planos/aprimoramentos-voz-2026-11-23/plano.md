@@ -119,7 +119,8 @@ Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Nã
 ```
 
 ### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
-- **Onda 2:** `feat/ux-inicio-venda` — V01–V03 + CHANGELOG 1.7.0; `e2e.sh` rodada1 134/135 (uxm-pessoas light intermitente); rodada2 **135/135**. Push/PR/merge em curso.
-- **Próximo:** Onda 3 (rebase `_wt-produtos` + P02→P03) → 4 → 5 → Deploy aguardando Pedro.
+- **Onda 2:** mergeada (PR #47, `59647ea`).
+- **Onda 3:** `feat/produtos-catalogo-filtros` (`_wt-produtos`) — P01 + P02 commitadas; verify 910/552/265; `produtos-filtros.e2e` 3/3 no dev. Falta P03 (🚦 carga do Marcos, só dev) e o fecho (e2e.sh, CHANGELOG, push/PR).
+- **Próximo:** P03 → fecho Onda 3 → 4 → 5 → Deploy aguardando Pedro.
 - **Pendente do Pedro:** teclado no celular (T01); Approve do Deploy no fecho.
 - **Conhecido:** `dev:parar` quebrado; Postgres via `pg_ctl`.

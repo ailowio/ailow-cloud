@@ -1,11 +1,11 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Badge, Group, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
-import { IconAlertTriangle, IconChevronRight, IconListDetails, IconPlus, IconQrcode, IconSearch } from '@tabler/icons-react';
+import { Stack, Text, TextInput } from '@mantine/core';
+import { IconAlertTriangle, IconListDetails, IconPlus, IconQrcode, IconSearch } from '@tabler/icons-react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import type { Perfil, Produto } from '@ailow/shared';
 import { useSairDoAssistente, useVoltar } from '../../componentes/navegacao';
-import type { Api } from '../../api/endpoints';
-import { EstadoVazio, Valor } from '../../componentes';
+import type { Api, ConsultaProdutos } from '../../api/endpoints';
+import { EstadoVazio } from '../../componentes';
 import { GradeAcoes } from '../../componentes/GradeAcoes';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { AVISO_CORTE, avisoDeCorte, mesclarBusca } from '../../lib/busca-servidor';
@@ -14,12 +14,16 @@ import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { useMaisPaginas } from '../../lib/useMaisPaginas';
 import { CarregarMais } from '../../componentes/CarregarMais';
 import { Moldura } from '../Moldura';
+import { AbaixoDoMinimo } from './AbaixoDoMinimo';
 import { PRODUTOS_POR_PAGINA, camposDoProduto } from './busca-produto';
+import { CartaoProduto } from './CartaoProduto';
+import { CatalogoProdutos } from './CatalogoProdutos';
 import { DetalheProduto } from './DetalheProduto';
 import { Etiquetas } from './Etiquetas';
+import { type FiltrosProdutos, consultaDosFiltros, quantosFiltros } from './filtros-produtos';
+import { BarraProdutos, type VisaoProdutos, useVisaoProdutos } from './FiltrosProdutos';
 import { NovoProduto } from './NovoProduto';
 import { type SkuAberto, SkuFolha } from './SkuFolha';
-import { linhaDoAlerta, rotuloPorte, tituloDoAlerta } from './rotulos';
 
 const SEM_PRODUTOS: Produto[] = [];
 
@@ -89,6 +93,9 @@ function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: (
   const [texto, setTexto] = useState(props.buscaInicial);
   const [busca, setBusca] = useState(props.buscaInicial);
   const [aba, setAba] = useState<Aba>('todos');
+  // P02: filtros e visão ficam aqui em cima, para trocar Lista/Catálogo sem perder os filtros.
+  const [filtros, setFiltros] = useState<FiltrosProdutos>({});
+  const [visao, setVisao] = useVisaoProdutos();
   // Folha aberta e contador que força a lista a buscar de novo depois de mexer no estoque.
   const [aberto, setAberto] = useState<SkuAberto | null>(null);
   const [rodada, setRodada] = useState(0);
@@ -126,7 +133,18 @@ function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: (
             value={texto}
             onChange={(e) => setTexto(e.currentTarget.value)}
           />
-          <ListaProdutos key={rodada} api={props.api} dono={props.dono} busca={busca} aoNovo={props.aoNovo} />
+          <BarraProdutos api={props.api} visao={visao} aoMudarVisao={setVisao} filtros={filtros} aoMudarFiltros={setFiltros} />
+          {/* Filtro novo = lista nova: a 1ª página, o "Carregar mais" e a busca no servidor vêm já filtrados. */}
+          <ListaProdutos
+            key={`${rodada}|${filtros.categoria?.id ?? ''}|${filtros.cor ?? ''}`}
+            api={props.api}
+            dono={props.dono}
+            busca={busca}
+            consulta={consultaDosFiltros(filtros)}
+            filtrada={quantosFiltros(filtros) > 0}
+            visao={visao}
+            aoNovo={props.aoNovo}
+          />
         </>
       ) : (
         <AbaixoDoMinimo key={rodada} api={props.api} aoAbrir={setAberto} />
@@ -145,14 +163,22 @@ function Lista(props: { api: Api; dono: boolean; buscaInicial: string; aoNovo: (
   );
 }
 
-function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: () => void }) {
+function ListaProdutos(props: {
+  api: Api;
+  dono: boolean;
+  busca: string;
+  consulta: ConsultaProdutos;
+  filtrada: boolean;
+  visao: VisaoProdutos;
+  aoNovo: () => void;
+}) {
   // Lista inteira carregada uma vez (o servidor limita em 200); busca ampla e paginação no cliente.
   // `recarregar` busca de novo sem desmontar a lista, para o pop-up do produto continuar aberto depois de editar.
-  const { carga, recarregar, tentarDeNovo } = useCarregar(() => props.api.produtos().then((r) => ({ ...r, itens: r.produtos })));
+  const { carga, recarregar, tentarDeNovo } = useCarregar(() => props.api.produtos(props.consulta).then((r) => ({ ...r, itens: r.produtos })));
   const [abertoId, setAbertoId] = useState<string | null>(null);
   // ADR 016: "Carregar mais" traz as próximas páginas do servidor (recarregar volta à 1ª página).
   const mais = useMaisPaginas(carga.fase === 'pronto' ? carga.dados : null, (depois) =>
-    props.api.produtos(undefined, depois).then((r) => ({ itens: r.produtos, proximo: r.proximo })),
+    props.api.produtos({ ...props.consulta, depois }).then((r) => ({ itens: r.produtos, proximo: r.proximo })),
   );
   const todos = carga.fase === 'pronto' ? mais.todos : SEM_PRODUTOS;
   const cortada = carga.fase === 'pronto' && mais.proximo !== null;
@@ -161,7 +187,7 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
     cortada,
     props.busca,
     async (q) => {
-      const r = await props.api.produtos(q);
+      const r = await props.api.produtos({ ...props.consulta, q });
       return { itens: r.produtos, truncado: r.truncado };
     },
     carga,
@@ -195,6 +221,8 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
   if (produtos.length === 0) {
     if (props.busca !== '') {
       conteudo = <EstadoVazio titulo="Nada encontrado" texto="Tente outro pedaço do nome, o código da peça ou o preço (ex.: 89,90)." />;
+    } else if (props.filtrada) {
+      conteudo = <EstadoVazio titulo="Nada encontrado" texto="Nenhum produto com esses filtros. Toque em Limpar filtros para ver todos." />;
     } else if (props.dono) {
       conteudo = (
         <EstadoVazio
@@ -210,9 +238,11 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
   } else {
     conteudo = (
       <Stack gap="sm">
-        {produtos.map((p) => (
-          <CartaoProduto key={p.id} produto={p} dono={props.dono} aoAbrir={() => setAbertoId(p.id)} />
-        ))}
+        {props.visao === 'catalogo' ? (
+          <CatalogoProdutos produtos={produtos} aoAbrir={setAbertoId} />
+        ) : (
+          produtos.map((p) => <CartaoProduto key={p.id} produto={p} dono={props.dono} aoAbrir={() => setAbertoId(p.id)} />)
+        )}
         {truncado && <Text size="sm" c="dimmed" data-aviso-corte>{AVISO_CORTE}</Text>}
         {/* "Carregar mais" acima da paginação sticky: se ficar embaixo, o rodapé cobre o botão e o toque não chega. */}
         {props.busca === '' && (
@@ -228,81 +258,5 @@ function ListaProdutos(props: { api: Api; dono: boolean; busca: string; aoNovo: 
       {conteudo}
       {detalhe}
     </>
-  );
-}
-
-/** Tocar no cartão abre o pop-up de detalhe do produto (UXM-10); as variações ficam lá. */
-function CartaoProduto(props: { produto: Produto; dono: boolean; aoAbrir: () => void }) {
-  const { produto: p } = props;
-  const pecas = p.skus.reduce((soma, s) => soma + s.estoque, 0);
-
-  return (
-    <UnstyledButton className="ailow-cartao" onClick={props.aoAbrir} aria-haspopup="dialog" p="md" w="100%" mih={48} ta="left">
-      <Group wrap="nowrap" align="flex-start" gap="sm">
-        <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-          <Text fw={650} fz="lg" style={{ overflowWrap: 'anywhere' }}>
-            {p.nome}
-          </Text>
-          <Text size="sm" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
-            {p.categoria_nome} · {rotuloPorte(p.porte)} · nº {String(p.numero).padStart(4, '0')}
-          </Text>
-          <Group gap="sm">
-            <Text fz="lg">
-              <Valor centavos={p.preco_centavos} destaque />
-            </Text>
-            {props.dono && p.custo_centavos !== undefined && (
-              <Text size="sm" c="dimmed">
-                custo <Valor centavos={p.custo_centavos} />
-              </Text>
-            )}
-          </Group>
-          <Text size="sm">
-            {pecas} {pecas === 1 ? 'peça' : 'peças'} · {p.skus.length} {p.skus.length === 1 ? 'variação' : 'variações'}
-          </Text>
-        </Stack>
-        <IconChevronRight aria-hidden />
-      </Group>
-    </UnstyledButton>
-  );
-}
-
-function AbaixoDoMinimo(props: { api: Api; aoAbrir: (s: SkuAberto) => void }) {
-  const { carga, tentarDeNovo } = useCarregar(() => props.api.alertasEstoque());
-  if (carga.fase === 'carregando') return <Carregando />;
-  if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
-  const { total, itens } = carga.dados;
-  if (total === 0) {
-    return <EstadoVazio titulo="Tudo certo" texto="Nenhuma peça está abaixo do mínimo que você definiu." />;
-  }
-  return (
-    <Stack gap="sm">
-      <Group gap="xs">
-        <Badge color="red" size="lg">
-          {tituloDoAlerta(total)}
-        </Badge>
-      </Group>
-      {itens.map((i) => (
-        <UnstyledButton
-          key={i.sku_id}
-          className="ailow-bloco"
-          mih={56}
-          p="sm"
-          w="100%"
-          onClick={() =>
-            props.aoAbrir({ id: i.sku_id, codigo: i.codigo, produto: i.produto, tamanho: i.tamanho, cor: i.cor, estoque: i.estoque, estoque_minimo: i.estoque_minimo })
-          }
-        >
-          <Stack gap={2}>
-            <Text fw={600} style={{ overflowWrap: 'anywhere' }}>
-              {linhaDoAlerta(i)}
-            </Text>
-            <Text size="xs" c="dimmed" ff="monospace">
-              {i.codigo}
-            </Text>
-          </Stack>
-        </UnstyledButton>
-      ))}
-      {total > itens.length && <Text size="sm" c="dimmed">Mostrando os {itens.length} mais urgentes de {total}.</Text>}
-    </Stack>
   );
 }

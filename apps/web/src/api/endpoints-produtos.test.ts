@@ -49,6 +49,18 @@ describe('endpoints de Produtos', () => {
     expect(chamadas[0]?.url).toBe('/produtos');
   });
 
+  it('P02: filtros por categoria e cor vão na query, combinados com a busca e o cursor', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { produtos: [], truncado: false, proximo: null } });
+    await api.produtos({ q: ' renda ', depois: 'abc', categoria_id: 'c1', cor: 'Azul marinho' });
+    expect(chamadas[0]?.url).toBe('/produtos?q=renda&depois=abc&categoria_id=c1&cor=Azul%20marinho');
+  });
+
+  it('P02: filtro vazio não entra na query', async () => {
+    const { api, chamadas } = apiComEspiao({ corpo: { produtos: [], truncado: false, proximo: null } });
+    await api.produtos({ categoria_id: undefined, cor: '' });
+    expect(chamadas[0]?.url).toBe('/produtos');
+  });
+
   it('criar produto: POST com o corpo do contrato', async () => {
     const { api, chamadas } = apiComEspiao({ status: 201, corpo: { id: 'x', numero: 1, skus: [] } });
     await api.criarProduto(produto);

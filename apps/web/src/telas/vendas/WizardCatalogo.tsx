@@ -36,7 +36,7 @@ import {
 
 type CargaLista<T> = { fase: 'carregando' } | { fase: 'pronto'; dados: T } | { fase: 'erro' };
 
-const ICONES: Record<ChaveIconeCategoria, ReactNode> = {
+export const ICONES: Record<ChaveIconeCategoria, ReactNode> = {
   sutia: <IconHanger size={22} stroke={1.75} aria-hidden />,
   calcinha: <IconShirt size={22} stroke={1.75} aria-hidden />,
   bebida: <IconBottle size={22} stroke={1.75} aria-hidden />,
@@ -61,7 +61,7 @@ function pecaDe(produto: Produto, sku: Produto['skus'][number]): Omit<ItemVenda,
   };
 }
 
-function Opcao(props: {
+export function Opcao(props: {
   rotulo: string;
   detalhe?: string;
   amostra?: string | null;
@@ -103,8 +103,9 @@ function Opcao(props: {
           />
         )}
         <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
-          <Group gap={4} wrap="nowrap" justify="space-between" align="flex-start">
-            <Text fw={650} style={{ overflowWrap: 'anywhere', flex: 1 }}>
+          {/* Nome longo num tile de 2 colunas (360 px): o preço desce para a linha de baixo em vez de espremer o nome. */}
+          <Group gap={4} wrap="wrap" justify="space-between" align="flex-start">
+            <Text fw={650} style={{ overflowWrap: 'anywhere', flex: '1 1 auto' }}>
               {props.rotulo}
             </Text>
             {props.precoCentavos !== undefined && (

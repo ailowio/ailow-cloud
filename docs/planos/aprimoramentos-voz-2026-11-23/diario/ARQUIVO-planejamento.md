@@ -1,5 +1,11 @@
 # Diário arquivado — entradas antigas, intactas
 
+### V01 — toque longo no bloco · 2026-11-24 — Composer · orquestrador
+Feito: listeners no bloco; PointerSensor delay 500 / tolerance 5 (D-A1); E2E inicio-dnd + venda-toques.
+Números: verify 894/540/265. Commit `44e01e7`.
+Pendências: V02→V03; fechar Onda 2.
+Verificação: verify + Playwright verde.
+
 ### M05 — tema index + avatar ciano — 2026-11-24 — Composer · sessão Cursor
 Feito: `tema.css` alinhado ao ailow-index (D-A5): body/superfície/borda/topo; `superficie-2` #292d32 / #f2f2ef. Avatar `--ailow-marca` + `--ailow-sobre-marca` #111214 (D-A6). Plano: D-A5/D-A6/D-A7; CHANGELOG 1.6.1. Commit `d0a75d9`.
 Números: paleta+selo 6 vermelhos → 47 verdes; verify 894/539/265; contraste AA mantido.
