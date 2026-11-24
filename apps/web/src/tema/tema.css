@@ -279,16 +279,17 @@ h1, h2, h3, h4 {
 }
 
 /* Handle de reordenar da home: 6 pontos discretos; alvo grande, tinta leve. */
+/* Alça de reordenar: oculta no toque; aparece no foco do bloco (teclado). */
 .ailow-reordenar {
-  opacity: 0.28;
+  opacity: 0;
   color: var(--mantine-color-dimmed);
 }
-.ailow-reordenar:hover,
+.ailow-modulo-dnd:focus-within .ailow-reordenar,
 .ailow-reordenar:focus-visible {
   opacity: 0.65;
 }
-.ailow-reordenar:active {
-  opacity: 0.85;
+.ailow-modulo-dnd:active .ailow-reordenar {
+  opacity: 0.4;
 }
 
 @media (prefers-reduced-motion: reduce) {

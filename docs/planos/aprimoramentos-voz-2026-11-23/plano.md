@@ -119,8 +119,8 @@ Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Nã
 ```
 
 ### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
-- **Worktrees:** `D:\apps\_wt-tema` = `feat/ux-tema-index` (M05 / Onda 1.1, sobre `origin/main` 40c76a7); `D:\apps\_wt-produtos` = `feat/produtos-catalogo-filtros` (P01 `0d2a61a`); `D:\apps\_wt-financeiro` = `feat/financeiro-visivel` (F01 `b7f45ed`). Onda 1 (`feat/ux-marca-topo`) já mergeada (#45).
-- **M05 feita (`d0a75d9`):** tema = ailow-index (D-A5); avatar ciano + letra `#111214` (D-A6); D-A5/D-A6/D-A7 registradas. CHANGELOG 1.6.1; `e2e.sh` 130/130 (2ª rodada; 1ª teve 1 intermitente em cadastros-wizard light). Aguardando push/PR (Pedro).
-- **Próximo (prompts em `D:\apps\_scratch\prompts-cursor-aprimoramentos-voz.md`):** Onda 2 (V01→V03) → Onda 3 (P02; P03 com arquivos do Marcos em `acervo/marcant/catalogo-teste/`) → Onda 4 (T01) → Onda 5 (F02). Uma onda por vez (portas do dev).
-- **Pendente do Pedro:** push/PR da M05; validação do teclado no celular (T01); merge/deploy de cada onda.
-- **Conhecido:** `npm run dev:parar` quebrado na `main` (aspa faltando); pare o Postgres com `node_modules\@embedded-postgres\windows-x64\native\bin\pg_ctl.exe`.
+- **Worktree ativa:** `D:\apps\_wt-inicio-venda` = `feat/ux-inicio-venda` (Onda 2; base `origin/main` 3a97e9c). Também: `_wt-produtos` (P01 `0d2a61a`), `_wt-financeiro` (F01 `b7f45ed`).
+- **V01 feita:** toque longo 500 ms / 5 px no bloco inteiro (D-A1); E2E `inicio-dnd` + `venda-toques` verdes; verify 894/540/265.
+- **Próximo:** V02 (CartaoPecaVenda + selo verde) → V03 → fechar Onda 2 (e2e.sh, CHANGELOG 1.7.0, PR/merge). Depois Onda 3→5 + Deploy aguardando Pedro.
+- **Pendente do Pedro:** validação do teclado no celular (T01); Approve do Deploy no fecho.
+- **Conhecido:** `npm run dev:parar` quebrado; Postgres via `pg_ctl … -D .dev-data\pg -m fast`. Dev sobe nesta worktree (portas 3000/5173/54329).

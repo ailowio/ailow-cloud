@@ -14,13 +14,6 @@ Verificação: 1–3 linhas + commit/PR.
 
 Arquivo (ler só sob demanda): `diario/ARQUIVO-planejamento.md`.
 
-### F01 + M02 — 2026-11-23 — Sonnet (F01) / Opus (M02) · orquestrador Opus 5.5
-Feito: F01 (`feat/financeiro-visivel` b7f45ed): sem lacuna no código; 5 testes de integração novos provam venda em 2 formas → 2 entradas pagas no relatório, cancelamento zera, receber 3 parcelas → 3 contas a pagar, atomicidade do receber, RN-10. M02: "Ailow Cloud" no manifest, `<title>`, App, catálogo, sw (comentário); topo com wordmark Ailow/Cloud em 2 linhas; asserções D-A3 alteradas (chrome-marca, pwa.test) + `nome-app.test.ts`.
-Números: F01 mutação (categoria/paga) reprovou 3 testes. M02 verify 894/518/265 verdes.
-Falha: o subagente da M02 caiu por erro de rede antes do verify; orquestrador revisou o diff, viu os screenshots 360 (claro/escuro), parou dev:db/dev:api órfãos (portas livres), rodou verify e commitou. Vermelho→verde da M02 não registrado.
-Pendências: M03 → M04; P02 depois da Onda 1 (portas); decisão do fundo escuro do tema.
-Verificação: verify exit 0; screenshots `m02-topo-*.png` na scratchpad.
-
 ### M03 + M04 — 2026-11-24 — Opus (subagentes) · orquestrador Opus 5.5
 Feito: M03 (53961fd): selo de perfil no baixo-centro do avatar, neutro forte (`--ailow-selo`), Trocar = `IconReplaceUser`, Sair = `IconDoorExit`; corrigiu o avatar que saía cinza (placeholder do Mantine) para `--ailow-acao`. M04: seta (default, 48 px) · divisor · h1 22 px na mesma linha em todas as telas com `voltar`; título longo quebra sem mover a seta; Entrar usa `IconReplaceUser`.
 Números: M03 contraste do selo 12,9:1 / 10,2:1; M04 verify 894/533/265.
@@ -34,3 +27,10 @@ Números: paleta+selo 6 vermelhos → 47 verdes; verify 894/539/265; contraste A
 Decisões: D-A5, D-A6; D-A7 só registrada (P01 já exato). Asserção avatar `--ailow-acao` → marca (D-A6).
 Pendências: push/PR (Pedro); Onda 2.
 Verificação: screenshots `_scratch/m05-capturas/`; e2e.sh rodada1 129/130 (cadastros-wizard light intermitente, igual Onda 1); rodada2 **130/130**.
+
+### V01 — toque longo no bloco · 2026-11-24 — Composer · orquestrador
+Feito: `Inicio.tsx` — listeners no bloco inteiro; `PointerSensor` `{ delay: 500, tolerance: 5 }` (D-A1; doc @dnd-kit/core 6.x); `role="group"` no wrapper (evita 2 botões "Vendas"); alça visual só no `:focus-within`; click bloqueado após arraste. E2E `inicio-dnd.e2e.ts` (100 ms abre / 600 ms reordena+persiste / 200 ms canário). Sem `TouchSensor` à parte (Pointer cobre touch).
+Números: unit 2 vermelhos → 3 verdes; e2e inicio-dnd 3/3 + venda-toques 1/1; verify 894/540/265.
+Decisões: D-A1 aplicada; asserção `inicio-dnd-ui` atualizada.
+Pendências: V02 → V03; fechar Onda 2 (e2e.sh, CHANGELOG 1.7.0, PR).
+Verificação: verify exit 0; Playwright local verde.
