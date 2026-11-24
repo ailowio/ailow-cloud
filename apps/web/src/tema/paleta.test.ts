@@ -51,6 +51,7 @@ describe('paleta única derivada do A da logo (UXM-08)', () => {
         ['--ailow-secundario-texto', '--mantine-color-body', 4.5],
         ['--ailow-secundario-texto', '--ailow-superficie', 4.5],
         ['--ailow-sobre-acao', '--ailow-acao', 4.5],
+        ['--ailow-sobre-marca', '--ailow-marca', 4.5],
         ['--ailow-acao', '--mantine-color-body', 3],
         ['--ailow-acao', '--ailow-superficie', 3],
       ];
@@ -62,6 +63,31 @@ describe('paleta única derivada do A da logo (UXM-08)', () => {
       }
     });
   }
+
+  // M05 / D-A5 (Pedro, 24/11): fundo e superfícies iguais ao ailow-index (tokens.css).
+  it('tema escuro = fundo #111214, superfície #1c1e21, borda #4a5057; topo = superfície', () => {
+    const t = tokens('dark');
+    expect(hexNormalizado(t['--mantine-color-body'] as string)).toBe('#111214');
+    expect(hexNormalizado(t['--ailow-superficie'] as string)).toBe('#1c1e21');
+    expect(hexNormalizado(t['--ailow-borda'] as string)).toBe('#4a5057');
+    expect(hexNormalizado(t['--ailow-topo'] as string)).toBe(hexNormalizado(t['--ailow-superficie'] as string));
+    expect(hexNormalizado(t['--ailow-superficie-2'] as string)).toBe('#292d32');
+  });
+
+  it('tema claro = fundo #eeeeeb, superfície #ffffff, borda #c9c9c4; topo = superfície', () => {
+    const t = tokens('light');
+    expect(hexNormalizado(t['--mantine-color-body'] as string)).toBe('#eeeeeb');
+    expect(hexNormalizado(t['--ailow-superficie'] as string)).toBe('#ffffff');
+    expect(hexNormalizado(t['--ailow-borda'] as string)).toBe('#c9c9c4');
+    expect(hexNormalizado(t['--ailow-topo'] as string)).toBe(hexNormalizado(t['--ailow-superficie'] as string));
+    expect(hexNormalizado(t['--ailow-superficie-2'] as string)).toBe('#f2f2ef');
+  });
+
+  it('--ailow-sobre-marca é #111214 nos dois temas (letra do avatar sobre a marca)', () => {
+    for (const esquema of ['light', 'dark'] as const) {
+      expect(hexNormalizado(tokens(esquema)['--ailow-sobre-marca'] as string)).toBe('#111214');
+    }
+  });
 
   it('tema escuro é cinza chumbo: fundo e superfícies com saturação HSL <= 15% (e não preto puro)', () => {
     const t = tokens('dark');

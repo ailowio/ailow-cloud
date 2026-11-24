@@ -2,6 +2,14 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.6.1] - 2026-11-24
+
+Tema alinhado ao ailow-index e avatar na marca (nota de voz 23/11, Onda 1.1 / M05). Sem mudança de OpenAPI nem migração.
+
+### Alterado
+- Fundo e superfícies iguais ao ailow-index (D-A5): escuro `#111214` / `#1c1e21` / `#4a5057`; claro `#eeeeeb` / `#ffffff` / `#c9c9c4`; `--ailow-topo` = superfície; `--ailow-superficie-2` um degrau entre superfície e borda.
+- Avatar do usuário em azul ciano da marca (`--ailow-marca`) com letra `#111214` (`--ailow-sobre-marca`) nos 2 temas (D-A6; asserção do avatar em `selo-perfil` atualizada).
+
 ## [1.6.0] - 2026-11-24
 
 Marca e topo (nota de voz 23/11, Onda 1 do plano `docs/planos/aprimoramentos-voz-2026-11-23/`). Sem mudança de OpenAPI nem migração.

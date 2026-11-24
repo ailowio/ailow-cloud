@@ -39,8 +39,8 @@ export function BotaoTrocarUsuario() {
 }
 
 /**
- * Inicial do usuário + selo de perfil no baixo-centro do avatar, sobre a borda inferior (M03): cor própria
- * (`--ailow-selo`, neutro forte, nunca a do avatar), inteiro dentro do topo de 64 px.
+ * Inicial do usuário + selo de perfil no baixo-centro do avatar, sobre a borda inferior (M03/M05): avatar na
+ * marca (`--ailow-marca`); selo com cor própria (`--ailow-selo`, neutro forte), inteiro dentro do topo de 64 px.
  * Toque abre o menu com o nome completo e Sair.
  */
 export function MenuUsuario() {
@@ -94,9 +94,9 @@ export function MenuUsuario() {
               radius="xl"
               variant="filled"
               aria-hidden
-              // O fundo vai no placeholder (é ele que aparece; no root ficava escondido sob o cinza padrão do
-              // Mantine, e o selo cinza parecia da mesma cor). Ação = marca com texto AA nos 2 temas.
-              styles={{ placeholder: { background: 'var(--ailow-acao)', color: 'var(--ailow-sobre-acao)' } }}
+              // M05/D-A6: placeholder na marca (#07bdd5) com letra escura (--ailow-sobre-marca) nos 2 temas.
+              // (Antes usava --ailow-acao; no claro o avatar ficava teal escuro, não o ciano da marca.)
+              styles={{ placeholder: { background: 'var(--ailow-marca)', color: 'var(--ailow-sobre-marca)' } }}
             >
               <Text fw={700} fz={18} lh={1}>
                 {inicial}

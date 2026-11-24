@@ -7,46 +7,49 @@
 :root {
   --ailow-marca: #07bdd5;                 /* cor do A da logo, idêntica nos dois temas (logo, ícones no escuro) */
   --ailow-secundario: #2448ff;            /* apoio: avisos informativos, links secundários */
+  --ailow-sobre-marca: #111214;           /* M05/D-A6: letra do avatar sobre a marca (AA nos 2 temas) */
 }
 
 :root[data-mantine-color-scheme='light'] {
-  --mantine-color-body: #eff1f2;          /* fundo da página: cinza frio bem claro */
+  /* M05/D-A5: fundo = ailow-index (--estudio / --branco / --borda) */
+  --mantine-color-body: #eeeeeb;
   --mantine-color-text: var(--ailow-texto);
   --mantine-color-dimmed: var(--ailow-apagado);
   --ailow-texto: #16181a;
   --ailow-apagado: #565c62;
   --ailow-superficie: #ffffff;            /* cartões e blocos */
-  --ailow-superficie-2: #f6f7f8;          /* campos, áreas internas */
-  --ailow-borda: #dcdfe2;
+  --ailow-superficie-2: #f2f2ef;          /* um degrau entre superfície e borda */
+  --ailow-borda: #c9c9c4;
   --ailow-sombra: 0 1px 2px rgb(20 22 24 / 6%), 0 4px 14px rgb(20 22 24 / 6%);
   --ailow-brilho: 0 6px 20px rgb(4 126 144 / 30%);
   --ailow-acao: #047e90;                  /* marca.7: botões, seleção, barra (a marca crua dá só 2,1:1 sobre branco) */
   --ailow-sobre-acao: #ffffff;
   --ailow-marca-texto: #036171;           /* marca.8: texto e ícones na cor da marca */
   --ailow-secundario-texto: #1b37d6;
-  --ailow-topo: #ffffff;
+  --ailow-topo: #ffffff;                  /* = superfície */
   --ailow-selo: #2f3236;                  /* selo de perfil (M03): neutro forte, nunca a cor do avatar */
   --ailow-sobre-selo: #ffffff;
 }
 
 :root[data-mantine-color-scheme='dark'] {
-  --mantine-color-body: #1b1c1e;          /* cinza chumbo, não preto */
+  /* M05/D-A5: fundo = ailow-index (--grafite / --grafite-800 / --linha) */
+  --mantine-color-body: #111214;
   --mantine-color-text: var(--ailow-texto);
   --mantine-color-dimmed: var(--ailow-apagado);
   --ailow-texto: #ececed;
   --ailow-apagado: #a3a7ad;
-  --ailow-superficie: #26282b;
-  --ailow-superficie-2: #2f3236;
-  --ailow-borda: #44474c;
+  --ailow-superficie: #1c1e21;
+  --ailow-superficie-2: #292d32;          /* um degrau entre superfície e borda */
+  --ailow-borda: #4a5057;
   --ailow-sombra: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px rgb(0 0 0 / 35%);
   --ailow-brilho: 0 0 0 1px rgb(7 189 213 / 60%), 0 8px 28px rgb(7 189 213 / 30%);
   --ailow-acao: #07bdd5;                  /* a própria cor da marca */
   --ailow-sobre-acao: #06161a;
   --ailow-marca-texto: #07bdd5;
   --ailow-secundario-texto: #8aa0ff;
-  --ailow-topo: #222325;
+  --ailow-topo: #1c1e21;                  /* = superfície */
   --ailow-selo: #c6c8cc;                  /* selo de perfil (M03): neutro claro sobre o topo escuro */
-  --ailow-sobre-selo: #1b1c1e;
+  --ailow-sobre-selo: #111214;
 }
 
 body {
