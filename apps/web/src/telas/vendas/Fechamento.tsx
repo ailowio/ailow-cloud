@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { Box, Button, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import type { FormaPagamento, VendaFinalizar } from '@ailow/shared';
 import { calcularFechamento, normalizarCelular, totaisDaVenda } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
@@ -128,10 +128,10 @@ export function Fechamento(props: {
         ))}
       </Stack>
       {modo === 'percentual' && (
-        <TextInput size="lg" label="Percentual" inputMode="numeric" value={percentual} onChange={(e) => setPercentual(e.currentTarget.value)} />
+        <TextInput size="lg" label="Percentual" inputMode="numeric" autoComplete="off" value={percentual} onChange={(e) => setPercentual(e.currentTarget.value)} />
       )}
       {modo === 'valor' && (
-        <TextInput size="lg" label="Desconto em reais" placeholder="10,00" inputMode="decimal" value={descontoTexto} onChange={(e) => setDescontoTexto(e.currentTarget.value)} />
+        <TextInput size="lg" label="Desconto em reais" placeholder="10,00" inputMode="decimal" autoComplete="off" value={descontoTexto} onChange={(e) => setDescontoTexto(e.currentTarget.value)} />
       )}
       {desconto === null && <Text c="red">Desconto inválido. Use um percentual de 0 a 100 ou um valor em reais.</Text>}
       {conta && !conta.ok && conta.erro === 'desconto_acima_do_subtotal' && (
@@ -147,6 +147,7 @@ export function Fechamento(props: {
         description="Em branco, usa o que falta. Preencha para dividir."
         placeholder="40,00"
         inputMode="decimal"
+        autoComplete="off"
         value={parcial}
         onChange={(e) => setParcial(e.currentTarget.value)}
       />
@@ -173,9 +174,11 @@ export function Fechamento(props: {
           Total <Valor centavos={total} destaque />
         </Text>
       )}
-      <Button h={48} loading={pendente} disabled={!pode} onClick={() => void rodar(finalizar, 'Venda finalizada')}>
-        Finalizar
-      </Button>
+      <Box className="ailow-rodape-fixo" data-rodape-fixo>
+        <Button h={48} fullWidth loading={pendente} disabled={!pode} onClick={() => void rodar(finalizar, 'Venda finalizada')}>
+          Finalizar
+        </Button>
+      </Box>
       <Button h={48} variant="default" onClick={props.aoVoltar}>
         Voltar ao carrinho
       </Button>

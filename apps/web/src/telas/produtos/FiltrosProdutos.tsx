@@ -135,6 +135,7 @@ function ModalFiltros(props: {
           <NativeSelect
             size="lg"
             label="Categoria"
+            autoComplete="off"
             value={categoriaId}
             onChange={(e) => setCategoriaId(e.currentTarget.value)}
             data={[{ value: '', label: 'Todas' }, ...carga.dados.categorias.map((c) => ({ value: c.id, label: c.nome }))]}
@@ -142,6 +143,7 @@ function ModalFiltros(props: {
           <NativeSelect
             size="lg"
             label="Cor"
+            autoComplete="off"
             value={cor}
             onChange={(e) => setCor(e.currentTarget.value)}
             data={[{ value: '', label: 'Todas' }, ...carga.dados.cores]}

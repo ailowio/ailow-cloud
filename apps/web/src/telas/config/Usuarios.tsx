@@ -94,12 +94,12 @@ function NovoVendedor(props: { aberto: boolean; api: Api; aoFechar: () => void; 
   return (
     <Modal opened={props.aberto} onClose={props.aoFechar} title="Novo vendedor" centered closeButtonProps={fecharModal}>
       <Stack gap="md">
-        <TextInput label="Nome" required size="lg" maxLength={120} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
+        <TextInput label="Nome" required size="lg" maxLength={120} autoComplete="off" value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
         <Stack gap={6}>
           <Text component="label" size="sm" fw={500} id="rotulo-pin-novo">
             PIN de 4 dígitos
           </Text>
-          <PinInput length={4} type="number" mask inputMode="numeric" size="lg" aria-labelledby="rotulo-pin-novo" value={pin} onChange={setPin} />
+          <PinInput length={4} type="number" mask inputMode="numeric" oneTimeCode={false} size="lg" aria-labelledby="rotulo-pin-novo" value={pin} onChange={setPin} />
           <Text size="xs" c="dimmed">
             O vendedor usa este PIN para abrir o app.
           </Text>
@@ -190,7 +190,7 @@ function OpcoesUsuario(props: {
         {modo === 'nome' && (
           <>
             {/* Mesmo limite da API (120); o nome salvo é o digitado sem espaços nas pontas. */}
-            <TextInput label="Nome" required size="lg" maxLength={120} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
+            <TextInput label="Nome" required size="lg" maxLength={120} autoComplete="off" value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
             <Button
               loading={pendente}
               disabled={!nome.trim() || nome.trim() === alvo.nome}
@@ -215,7 +215,7 @@ function OpcoesUsuario(props: {
         {modo === 'pin' && (
           <>
             <Text>Novo PIN de {alvo.nome}. As sessões abertas dele serão encerradas.</Text>
-            <PinInput length={4} type="number" mask inputMode="numeric" size="lg" aria-label="Novo PIN de 4 dígitos" value={pin} onChange={setPin} />
+            <PinInput length={4} type="number" mask inputMode="numeric" oneTimeCode={false} size="lg" aria-label="Novo PIN de 4 dígitos" value={pin} onChange={setPin} />
             <Button loading={pendente} disabled={pin.length !== 4} onClick={() => void executar(() => api.redefinirPin(alvo.id, pin), 'PIN redefinido')}>
               Salvar PIN
             </Button>
@@ -226,7 +226,7 @@ function OpcoesUsuario(props: {
           <>
             <PasswordInput label="Sua senha" autoComplete="current-password" size="lg" value={senha} onChange={(e) => setSenha(e.currentTarget.value)} />
             <Text size="sm">Novo PIN de 4 dígitos</Text>
-            <PinInput length={4} type="number" mask inputMode="numeric" size="lg" aria-label="Novo PIN de 4 dígitos" value={pin} onChange={setPin} />
+            <PinInput length={4} type="number" mask inputMode="numeric" oneTimeCode={false} size="lg" aria-label="Novo PIN de 4 dígitos" value={pin} onChange={setPin} />
             <Button loading={pendente} disabled={pin.length !== 4 || !senha} onClick={() => void executar(() => api.definirMeuPin(senha, pin), 'PIN trocado')}>
               Salvar PIN
             </Button>

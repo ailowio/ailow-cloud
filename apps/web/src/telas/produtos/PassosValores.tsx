@@ -18,6 +18,7 @@ export function PassoCusto(props: {
         label="Fornecedor (opcional)"
         size="lg"
         maxLength={80}
+        autoComplete="off"
         placeholder="Ex.: Fina Paixão"
         value={props.fornecedor}
         onChange={(e) => props.aoMudarFornecedor(e.currentTarget.value)}

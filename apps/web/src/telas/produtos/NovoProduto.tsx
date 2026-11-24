@@ -367,6 +367,7 @@ function Assistente(props: {
             required
             size="lg"
             maxLength={80}
+            autoComplete="off"
             placeholder="Ex.: Tomara que caia Essência"
             value={nome}
             onChange={(e) => setNome(e.currentTarget.value)}

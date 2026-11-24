@@ -161,7 +161,7 @@ function FormDados(props: {
           )}
         </Group>
       </Stack>
-      <TextInput label="Nome da empresa" required size="lg" maxLength={120} value={r.nome} onChange={(e) => mudar({ nome: e.currentTarget.value })} />
+      <TextInput label="Nome da empresa" required size="lg" maxLength={120} autoComplete="organization" value={r.nome} onChange={(e) => mudar({ nome: e.currentTarget.value })} />
         </Stack>
       )}
 
@@ -178,7 +178,7 @@ function FormDados(props: {
             value={r.telefone}
             onChange={(e) => mudar({ telefone: e.currentTarget.value })}
           />
-          <TextInput label="Endereço" size="lg" maxLength={200} value={r.endereco} onChange={(e) => mudar({ endereco: e.currentTarget.value })} />
+          <TextInput label="Endereço" size="lg" maxLength={200} autoComplete="street-address" value={r.endereco} onChange={(e) => mudar({ endereco: e.currentTarget.value })} />
         </Stack>
       )}
 
@@ -193,6 +193,7 @@ function FormDados(props: {
           allowNegative={false}
           suffix=" min"
           inputMode="numeric"
+          autoComplete="off"
           value={r.minutos}
           onChange={(minutos) => mudar({ minutos })}
         />
@@ -248,6 +249,7 @@ function FormMarkup(props: { atual: DadosEmpresa; api: Api; aoSalvar: () => Prom
         allowNegative={false}
         suffix=" %"
         inputMode="decimal"
+        autoComplete="off"
         value={percentual}
         onChange={setPercentual}
       />

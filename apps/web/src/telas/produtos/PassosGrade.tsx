@@ -81,6 +81,7 @@ export function PassoTamanhos(props: {
           label="Outro tamanho"
           size="lg"
           maxLength={3}
+          autoComplete="off"
           placeholder="Ex.: G1"
           style={{ flex: 1 }}
           value={outro}
@@ -141,6 +142,7 @@ export function PassoCores(props: {
           label="Outra cor"
           size="lg"
           maxLength={30}
+          autoComplete="off"
           placeholder="Ex.: Rosa chá"
           style={{ flex: 1 }}
           value={outra}

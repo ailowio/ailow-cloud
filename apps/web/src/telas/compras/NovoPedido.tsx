@@ -212,6 +212,7 @@ function Assistente(props: {
                 max={999}
                 allowDecimal={false}
                 inputMode="numeric"
+                autoComplete="off"
                 value={l.quantidade}
                 onChange={(v) => mudarLinha(l.sku_id, { quantidade: typeof v === 'number' ? v : 1 })}
               />

@@ -139,12 +139,13 @@ function FormOpcao(props: { api: Api; tipo: TipoOpcaoGrade; opcao: OpcaoGrade | 
             required
             size="lg"
             maxLength={3}
+            autoComplete="off"
             value={nome}
             onChange={(e) => setNome(e.currentTarget.value.toUpperCase())}
           />
         ) : (
           <>
-            <TextInput label="Cor" required size="lg" maxLength={30} value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
+            <TextInput label="Cor" required size="lg" maxLength={30} autoComplete="off" value={nome} onChange={(e) => setNome(e.currentTarget.value)} />
             <ColorInput
               label="Amostra (opcional)"
               description="A bolinha que aparece no botão da cor."
@@ -153,6 +154,7 @@ function FormOpcao(props: { api: Api; tipo: TipoOpcaoGrade; opcao: OpcaoGrade | 
               swatches={AMOSTRAS}
               swatchesPerRow={8}
               withEyeDropper={false}
+              autoComplete="off"
               value={amostra}
               onChange={setAmostra}
             />

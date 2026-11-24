@@ -202,7 +202,7 @@ function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMuda
           <Text size="sm" c="dimmed">
             Uma parcela no total do pedido (pode marcar como pago depois no Financeiro).
           </Text>
-          <TextInput label="Valor da parcela" size="lg" value={parcelaTexto} onChange={(e) => setParcelaTexto(e.currentTarget.value)} />
+          <TextInput label="Valor da parcela" size="lg" inputMode="decimal" autoComplete="off" value={parcelaTexto} onChange={(e) => setParcelaTexto(e.currentTarget.value)} />
           <CampoData label="Vencimento" value={vencimento} onChange={setVencimento} />
           <Button h={48} loading={pendente} disabled={pendente} onClick={() => void confirmarRecebimento()}>
             Confirmar recebimento

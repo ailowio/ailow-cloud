@@ -119,8 +119,8 @@ Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Nã
 ```
 
 ### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
-- **Onda 2:** mergeada (PR #47, `59647ea`).
-- **Onda 3:** `feat/produtos-catalogo-filtros` (`_wt-produtos`) — P01 + P02 + P03 (`69b94d5`, conversor CSV) commitadas; verify 935/552/265; `e2e.sh` 138/138; CHANGELOG 1.8.0. Falta push/PR (orquestrador pede ao Pedro).
-- **Próximo:** PR/merge Onda 3 → 4 → 5 → Deploy aguardando Pedro.
-- **Pendente do Pedro:** teclado no celular (T01); Approve do Deploy no fecho; P03: cor padrão para os 90 SKUs sem cor (`--cor-padrao`) e as 4 categorias fora do seed; carga só no dev (seed ainda não lê o JSON do conversor).
-- **Conhecido:** `dev:parar` quebrado; Postgres via `pg_ctl`; `e2e.sh` usa contêiner `ailow-e2e-db` com nome fixo (2 worktrees ao mesmo tempo se derrubam); `vite preview` órfão de `_wt-inicio-venda` na 4174 (L-0012) — e2e rodou em `PORTA_WEB=4184 PORTA_API=3014 PORTA_PG=15444`.
+- **Ondas 2 e 3:** mergeadas (PR #47, PR #48 `3b9272c`).
+- **Onda 4:** `fix/teclado-formularios` (`_wt-teclado`) — T01 commitada (viewport `resizes-content`, Finalizar sticky no Fechamento, 76 campos com `autoComplete` explícito); verify 935/556/265; `e2e.sh` 141/141; CHANGELOG 1.8.1. Falta push/PR (orquestrador pede ao Pedro).
+- **Próximo:** PR/merge Onda 4 → Onda 5 (F02) → Deploy aguardando Pedro.
+- **Pendente do Pedro:** teclado no celular (T01: rodapé à vista com teclado aberto; barra do Gboard/Chrome pode não sumir 100%); Approve do Deploy no fecho; P03: cor padrão para os 90 SKUs sem cor (`--cor-padrao`) e as 4 categorias fora do seed; carga só no dev.
+- **Conhecido:** `dev:parar` quebrado; Postgres via `pg_ctl`; `e2e.sh` usa contêiner `ailow-e2e-db` com nome fixo (2 worktrees ao mesmo tempo se derrubam) e deixa o `vite preview` órfão na `PORTA_WEB` a cada execução (L-0012: matar pelo dono da porta depois); `NumberInput` do Mantine força `inputMode="decimal"`.

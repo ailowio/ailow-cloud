@@ -46,6 +46,7 @@ export function ListaEixosGrade({ api }: { api: Api }) {
         <TextInput
           label="Novo eixo"
           placeholder="Taça"
+          autoComplete="off"
           value={nome}
           onChange={(ev) => setNome(ev.currentTarget.value)}
           style={{ flex: 1 }}
@@ -95,6 +96,7 @@ function LinhaEixo({ eixo, api, aoMudar }: { eixo: EixoGrade; api: Api; aoMudar:
         <TextInput
           label="Novo valor"
           placeholder="A"
+          autoComplete="off"
           value={valor}
           onChange={(ev) => setValor(ev.currentTarget.value)}
           style={{ flex: 1 }}
