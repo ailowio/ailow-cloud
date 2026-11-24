@@ -29,8 +29,8 @@ Pendências: fechamento da Onda 1 (e2e.sh, CHANGELOG, push/PR com ok do Pedro); 
 Verificação: `topo-modulo.e2e` + `navegacao` + `uxm-pessoas` verdes no dev; `voltar-modulos` 19/21 (2 por dado do dev).
 
 ### M05 — tema index + avatar ciano — 2026-11-24 — Composer · sessão Cursor
-Feito: `tema.css` alinhado ao ailow-index (D-A5): body/superfície/borda/topo; `superficie-2` #292d32 / #f2f2ef. Avatar `--ailow-marca` + `--ailow-sobre-marca` #111214 (D-A6). Plano: D-A5/D-A6/D-A7; CHANGELOG 1.6.1.
-Números: paleta+selo 6 vermelhos → 47 verdes; contraste AA mantido (ajuste de token de texto não necessário).
-Decisões aplicadas: D-A5, D-A6; D-A7 só registrada (P01 já exato). Asserção avatar `--ailow-acao` → marca (autorizada).
-Pendências: e2e.sh + push/PR (Pedro); Onda 2.
-Verificação: screenshots 360×640 em `_scratch/m05-capturas/`; E2E paleta/selo-perfil/topo-modulo.
+Feito: `tema.css` alinhado ao ailow-index (D-A5): body/superfície/borda/topo; `superficie-2` #292d32 / #f2f2ef. Avatar `--ailow-marca` + `--ailow-sobre-marca` #111214 (D-A6). Plano: D-A5/D-A6/D-A7; CHANGELOG 1.6.1. Commit `d0a75d9`.
+Números: paleta+selo 6 vermelhos → 47 verdes; verify 894/539/265; contraste AA mantido.
+Decisões: D-A5, D-A6; D-A7 só registrada (P01 já exato). Asserção avatar `--ailow-acao` → marca (D-A6).
+Pendências: push/PR (Pedro); Onda 2.
+Verificação: screenshots `_scratch/m05-capturas/`; e2e.sh rodada1 129/130 (cadastros-wizard light intermitente, igual Onda 1); rodada2 **130/130**.
