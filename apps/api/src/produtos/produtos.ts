@@ -246,8 +246,11 @@ export async function listarProdutos(
   perfil: Perfil,
   q: string | undefined,
   depois: Cursor | null = null,
+  filtros: { categoriaId?: string | undefined; cor?: string | undefined } = {},
 ): Promise<{ produtos: Produto[]; truncado: boolean; proximo: string | null }> {
   const dono = perfil === 'dono';
+  // P01: cor = a mesma chave de chaveCor() (sem acento, minúscula, espaços colapsados), comparada no SKU.
+  const corChave = filtros.cor === undefined ? null : chaveCor(filtros.cor);
   const busca = q?.trim() ?? '';
   const preco = busca === '' ? null : faixaDePreco(busca);
   const porNome = `%${comoTexto(semAcento(busca).toLowerCase())}%`;
@@ -264,9 +267,23 @@ export async function listarProdutos(
              OR EXISTS (SELECT 1 FROM skus k WHERE k.produto_id = p.id AND k.codigo LIKE $3 ESCAPE '\\')
              OR ($4::int IS NOT NULL AND p.preco_centavos BETWEEN $4::int AND $5::int))
         AND ($6::text IS NULL OR (lower(p.nome), p.numero) > ($6::text, $7::int))
+        AND ($8::uuid IS NULL OR p.categoria_id = $8::uuid)
+        AND ($9::text IS NULL
+             OR EXISTS (SELECT 1 FROM skus kc WHERE kc.produto_id = p.id
+                           AND btrim(regexp_replace(ailow_busca(kc.cor), '\\s+', ' ', 'g')) = $9::text))
       ORDER BY lower(p.nome), p.numero
       LIMIT ${LIMITE_PRODUTOS_NA_LISTA + 1}`,
-    [busca, porNome, porCodigo, preco?.min ?? null, preco?.max ?? null, depois?.[0] ?? null, depois?.[1] ?? null],
+    [
+      busca,
+      porNome,
+      porCodigo,
+      preco?.min ?? null,
+      preco?.max ?? null,
+      depois?.[0] ?? null,
+      depois?.[1] ?? null,
+      filtros.categoriaId ?? null,
+      corChave,
+    ],
   );
   const truncado = produtos.rowCount !== null && produtos.rowCount > LIMITE_PRODUTOS_NA_LISTA;
   const pagina = produtos.rows.slice(0, LIMITE_PRODUTOS_NA_LISTA);

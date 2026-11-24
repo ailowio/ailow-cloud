@@ -2,6 +2,18 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.8.0] - 2026-11-24
+
+Produtos: catálogo, filtros e conversor do catálogo de teste (nota de voz 23/11, Onda 3). Sem migração. OpenAPI: 2 parâmetros opcionais novos em `GET /produtos` (aditivo; `info.version` segue 0.16.0).
+
+### Adicionado
+- `GET /produtos` aceita `categoria_id` e `cor` (cor exata, sem acento/maiúsculas — D-A7), combináveis com `q` e o cursor `depois`.
+- Produtos: alternância **Lista | Catálogo** (preferência local) e **Filtros** (categoria e cor) com chips e "Limpar filtros"; no catálogo, tocar abre o detalhe.
+- `apps/api/scripts/converter-marcant-csv.ts` (só local/dev): converte os CSV do catálogo de teste para o formato do `seed-marcant-via-api.mjs` (preço em centavos, cor sem "(simulado)", "A DEFINIR" vazio) e relata linhas do arquivo, importadas e rejeitadas com motivo. Não envia nada à API; `--cor-padrao` é opt-in.
+
+### Alterado
+- Tile do catálogo (Produtos e venda): nome longo empurra o preço para a linha de baixo em vez de quebrar letra a letra.
+
 ## [1.7.0] - 2026-11-24
 
 Início e Nova venda (nota de voz 23/11, Onda 2). Sem mudança de OpenAPI nem migração.

@@ -56,6 +56,12 @@ export type UsuarioAdminItem = QuemUsaItem & { ativo: boolean };
 // O tipo só vale na criação (a API não deixa trocá-lo depois); sem tipo, é categoria de produto.
 export type CategoriaCorpo = Pick<Categoria, 'nome' | 'atributos'> & { tipo?: TipoCategoria };
 export type CategoriaAlterar = Pick<Categoria, 'nome' | 'atributos' | 'ativa'>;
+export interface ConsultaProdutos {
+  q?: string | undefined;
+  depois?: string | undefined;
+  categoria_id?: string | undefined;
+  cor?: string | undefined;
+}
 // O celular segue como a pessoa digitou (máscara, +55); a API devolve só os dígitos.
 export interface ClienteCorpo {
   nome: string;
@@ -119,8 +125,19 @@ export function criarApi(c: Cliente) {
       p<Relatorio>('GET', `/financeiro/relatorio?periodo=${periodo}&data=${data}`),
     // --- produtos e estoque (S07). Listar é do Dono e do Vendedor (sem custo); o resto é só do Dono.
     // ADR 016: `depois` = o `proximo` da página anterior (cursor opaco); sem ele, a primeira página.
-    produtos: (q?: string, depois?: string) =>
-      p<{ produtos: Produto[]; truncado: boolean; proximo: string | null }>('GET', comConsulta('/produtos', [['q', q?.trim()], ['depois', depois]])),
+    // P02: também aceita `{ q, depois, categoria_id, cor }` (filtros da P01, combináveis com a busca e o cursor).
+    produtos: (filtro?: string | ConsultaProdutos, depois?: string) => {
+      const f = typeof filtro === 'object' ? filtro : { q: filtro, depois };
+      return p<{ produtos: Produto[]; truncado: boolean; proximo: string | null }>(
+        'GET',
+        comConsulta('/produtos', [
+          ['q', f.q?.trim()],
+          ['depois', f.depois],
+          ['categoria_id', f.categoria_id],
+          ['cor', f.cor],
+        ]),
+      );
+    },
     sugestoesVenda: () => p<{ produtos: Produto[] }>('GET', '/produtos/sugestoes-venda'),
     preferenciasUi: () => p<PreferenciasUi>('GET', '/preferencias-ui'),
     salvarPreferenciasUi: (corpo: PreferenciaUiPut) => p<PreferenciasUi>('PUT', '/preferencias-ui', corpo),
