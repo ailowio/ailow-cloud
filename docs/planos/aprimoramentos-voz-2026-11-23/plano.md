@@ -115,7 +115,8 @@ Pronto quando: <copiar>. Não fazer: <copiar>.
 Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Não escreva no diário.
 ```
 
-### Estado de retomada — 2026-11-23 (sobrescrever a cada sessão)
-- **Git:** `main` em `b10fa46` (PR #44 mergeado); working tree só com diferenças de CRLF (não commitar).
-- **Próximo:** Onda 1 (M01) + P01 em paralelo, após o "ok" do Pedro neste plano.
-- **Pendente do Pedro:** caminho dos arquivos do Marcos (P03); validação do teclado no celular (T01); merge/deploy de cada onda.
+### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
+- **Worktrees (base `b10fa46`):** `D:\apps\_wt-marca-topo` = `feat/ux-marca-topo` (plano + M01–M04 prontas, só local); `D:\apps\_wt-produtos` = `feat/produtos-catalogo-filtros` (P01 `0d2a61a`); `D:\apps\_wt-financeiro` = `feat/financeiro-visivel` (F01 `b7f45ed`). Nenhum push.
+- **Próximo:** fechamento da Onda 1 (`bash scripts/e2e.sh` na worktree, CHANGELOG minor, pedir push+PR ao Pedro) → Onda 2 (V01, V02, V03) → P02 → T01 → F02. Sessões de UI uma de cada vez (portas do dev).
+- **Pendente do Pedro:** caminho dos arquivos do Marcos (P03); fundo escuro do tema (#1b1c1e → #111214?); avatar `--ailow-acao` vs `--ailow-marca`; cor exata vs "contém" no filtro; validação do teclado no celular (T01); merge/deploy de cada onda.
+- **Conhecido:** `npm run dev:parar` quebrado na `main` (aspa faltando); pare o Postgres com `node_modules\@embedded-postgres\windows-x64\native\bin\pg_ctl.exe`.

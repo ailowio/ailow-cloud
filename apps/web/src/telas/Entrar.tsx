@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button, PasswordInput, Stack, TextInput } from '@mantine/core';
-import { IconInfoCircle, IconUsers } from '@tabler/icons-react';
+import { IconInfoCircle, IconReplaceUser } from '@tabler/icons-react';
 import { ErroApi } from '../api/cliente';
 import { avisarErro } from '../lib/avisos';
 import { mensagemEntrar } from '../acesso/mensagens';
@@ -58,7 +58,7 @@ export function Entrar(props: {
           />
           <Button type="submit" loading={enviando} disabled={!email || !senha}>Entrar</Button>
           {props.aoTrocarUsuario && (
-            <Button type="button" variant="subtle" h={48} leftSection={<IconUsers size={20} aria-hidden />} onClick={props.aoTrocarUsuario}>
+            <Button type="button" variant="subtle" h={48} leftSection={<IconReplaceUser size={20} aria-hidden />} onClick={props.aoTrocarUsuario}>
               Trocar de usuário
             </Button>
           )}
