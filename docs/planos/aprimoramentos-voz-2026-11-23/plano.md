@@ -119,8 +119,7 @@ Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Nã
 ```
 
 ### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
-- **Worktree ativa:** `D:\apps\_wt-inicio-venda` = `feat/ux-inicio-venda` (Onda 2; base `origin/main` 3a97e9c). Também: `_wt-produtos` (P01), `_wt-financeiro` (F01).
-- **V01+V02 feitas:** D-A1 toque longo; card com stepper à direita do preço + selo ok/baixo/zerado. Capturas `onda2-capturas/v02-*`.
-- **Próximo:** V03 (Novo produto no meio) → fechar Onda 2 (e2e.sh, CHANGELOG 1.7.0, PR/merge) → Onda 3→5 + Deploy aguardando Pedro.
+- **Worktree ativa:** `D:\apps\_wt-inicio-venda` = `feat/ux-inicio-venda` (Onda 2 V01–V03 feitas; base `origin/main` 3a97e9c). Também: `_wt-produtos` (P01), `_wt-financeiro` (F01).
+- **Onda 2 pronta p/ fechar:** V01 D-A1; V02 stepper+selo; V03 Novo produto embutido (carrinho intacto). Próximo: e2e.sh → CHANGELOG 1.7.0 → PR/merge → Onda 3.
 - **Pendente do Pedro:** teclado no celular (T01); Approve do Deploy no fecho.
-- **Conhecido:** `dev:parar` quebrado; Postgres via `pg_ctl`. Dev nesta worktree (3000/5173/54329).
+- **Conhecido:** `dev:parar` quebrado; Postgres via `pg_ctl`.

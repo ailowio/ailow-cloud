@@ -5,6 +5,7 @@ import type { Api } from '../../api/endpoints';
 import { useVoltar } from '../../componentes/navegacao';
 import { avisarErro } from '../../lib/avisos';
 import { Moldura } from '../Moldura';
+import { NovoProduto } from '../produtos/NovoProduto';
 import type { ItemVenda } from './carrinho';
 import { Comprovante } from './Comprovante';
 import { Fechamento } from './Fechamento';
@@ -31,6 +32,24 @@ export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }
   const [vendaId, setVendaId] = useState<string | null>(null);
   // "Refazer venda" (ADR 014): o cliente da venda cancelada já vem preenchido no fechamento da nova.
   const [celularInicial, setCelularInicial] = useState<string | null>(null);
+  // V03: assistente embutido — o carrinho (`itens`) fica neste estado; não navega para /produtos.
+  const [criandoProduto, setCriandoProduto] = useState(false);
+  const [buscaAposNovo, setBuscaAposNovo] = useState<string | undefined>(undefined);
+
+  if (criandoProduto && props.perfil === 'dono') {
+    return (
+      <Moldura titulo="Novo produto" voltar={{ rotulo: 'Venda', aoVoltar: () => setCriandoProduto(false) }}>
+        <NovoProduto
+          api={props.api}
+          aoCancelar={() => setCriandoProduto(false)}
+          aoTerminar={(codigo) => {
+            setCriandoProduto(false);
+            setBuscaAposNovo(codigo ?? '');
+          }}
+        />
+      </Moldura>
+    );
+  }
 
   if (passo === 'relatorio') {
     return (
@@ -100,11 +119,14 @@ export function Vendas(props: { api: Api; perfil: Perfil; aoVoltar: () => void }
     <Moldura titulo="Nova venda" subtitulo="Escaneie a etiqueta ou busque a peça." voltar={{ rotulo: 'Início', aoVoltar: props.aoVoltar }}>
       <MontarVenda
         api={props.api}
+        perfil={props.perfil}
         itens={itens}
         aoMudar={setItens}
         aoFechar={() => navigate('/vendas/fechar')}
         aoCarrinho={() => navigate('/vendas/carrinho')}
         aoRelatorio={() => navigate('/vendas/relatorio')}
+        aoNovoProduto={() => setCriandoProduto(true)}
+        buscaInicial={buscaAposNovo}
       />
     </Moldura>
   );
