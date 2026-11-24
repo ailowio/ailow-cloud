@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const fonte = () => readFileSync(new URL('./Inicio.tsx', import.meta.url), 'utf8');
 const css = () => readFileSync(new URL('../tema/tema.css', import.meta.url), 'utf8');
 
-describe('home DnD — grip discreto e pouso suave', () => {
+describe('home DnD — toque longo no bloco (D-A1)', () => {
   it('transição de pouso dura ≥250ms com easing suave', () => {
     const s = fonte();
     const m = s.match(/TRANSICAO_POUSO_MODULO\s*=\s*'([^']+)'/);
@@ -16,12 +16,27 @@ describe('home DnD — grip discreto e pouso suave', () => {
     expect(ms).toBeGreaterThanOrEqual(250);
   });
 
-  it('handle usa ícone pequeno, classe discreta e DragOverlay', () => {
+  it('PointerSensor usa delay 500 ms e tolerância 5 px (D-A1)', () => {
     const s = fonte();
+    expect(s).toMatch(/TOQUE_LONGO_MS\s*=\s*500/);
+    expect(s).toMatch(/TOLERANCIA_ARRASTE_PX\s*=\s*5/);
+    expect(s).toMatch(
+      /PointerSensor[\s\S]*activationConstraint:\s*\{\s*delay:\s*TOQUE_LONGO_MS\s*,\s*tolerance:\s*TOLERANCIA_ARRASTE_PX\s*\}/,
+    );
+    expect(s).toContain('KeyboardSensor');
+  });
+
+  it('listeners do sortable ficam no bloco inteiro; alça só visual no foco', () => {
+    const s = fonte();
+    // listeners no Box do módulo (data-modulo), não só no ActionIcon da alça
+    expect(s).toMatch(/data-modulo=\{props\.id\}[\s\S]{0,400}\{\.\.\.listeners\}/);
     expect(s).toContain('ailow-reordenar');
     expect(s).toMatch(/IconGripVertical\s+size=\{14\}/);
     expect(s).toContain('DragOverlay');
     expect(s).toContain('dropAnimation');
-    expect(css()).toMatch(/\.ailow-reordenar\s*\{[^}]*opacity:\s*0\.2[0-9]/);
+    expect(s).toMatch(/WebkitTouchCallout:\s*'none'|webkit-touch-callout:\s*none/);
+    expect(s).toMatch(/userSelect:\s*'none'|user-select:\s*none/);
+    expect(css()).toMatch(/\.ailow-reordenar\s*\{[^}]*opacity:\s*0/);
+    expect(css()).toMatch(/\.ailow-modulo-dnd:focus-within\s+\.ailow-reordenar|\.ailow-reordenar:focus-visible/);
   });
 });

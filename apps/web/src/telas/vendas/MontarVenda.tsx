@@ -1,7 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Stack, Text, TextInput } from '@mantine/core';
-import { IconAlertCircle, IconCamera, IconCategory, IconReportAnalytics, IconShoppingCartCheck } from '@tabler/icons-react';
-import { chaveCor, type Produto } from '@ailow/shared';
+import {
+  IconAlertCircle,
+  IconCamera,
+  IconCategory,
+  IconPlus,
+  IconReportAnalytics,
+  IconShoppingCartCheck,
+} from '@tabler/icons-react';
+import { chaveCor, type Perfil, type Produto } from '@ailow/shared';
 import type { Api } from '../../api/endpoints';
 import { GradeAcoes } from '../../componentes/GradeAcoes';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
@@ -51,22 +58,39 @@ function amostraDe(cor: string, mapa: Map<string, string | null>): string | null
 /** RF-VEN-02/03/04: escanear ou buscar; carrinho em barra sticky (lista completa em /vendas/carrinho). */
 export function MontarVenda(props: {
   api: Api;
+  perfil: Perfil;
   itens: ItemVenda[];
   aoMudar: (itens: ItemVenda[]) => void;
   aoFechar: () => void;
   aoCarrinho: () => void;
   aoRelatorio: () => void;
+  /** V03: só Dono — abre o assistente embutido em Vendas (carrinho intacto). */
+  aoNovoProduto: () => void;
+  /** Código a buscar depois de criar um produto a partir da venda. */
+  buscaInicial?: string;
 }) {
-  const [busca, setBusca] = useState('');
+  const [busca, setBusca] = useState(props.buscaInicial ?? '');
   const [lendo, setLendo] = useState(false);
   const [catalogo, setCatalogo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
   const consulta = useTextoComEspera(busca, 250);
+  const dono = props.perfil === 'dono';
 
-  const { carga } = useCarregar(() => props.api.produtos());
+  useEffect(() => {
+    if (props.buscaInicial !== undefined) setBusca(props.buscaInicial);
+  }, [props.buscaInicial]);
+
+  const { carga, recarregar } = useCarregar(() => props.api.produtos());
   const sugestoes = useCarregar(() => props.api.sugestoesVenda());
   const grade = useCarregar(() => props.api.opcoesGrade());
+
+  useEffect(() => {
+    if (props.buscaInicial !== undefined) {
+      void recarregar();
+      void sugestoes.recarregar();
+    }
+  }, [props.buscaInicial, recarregar, sugestoes.recarregar]);
   const mapaAmostra = useMemo(() => {
     const m = new Map<string, string | null>();
     if (grade.carga.fase !== 'pronto') return m;
@@ -137,36 +161,47 @@ export function MontarVenda(props: {
 
   if (lendo) return <Scanner aoCodigo={(c) => void aoCodigo(c)} aoFechar={() => setLendo(false)} />;
 
+  const icone = 24;
+  const acoes = [
+    { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={icone} stroke={1.75} />, aoTocar: () => setLendo(true) },
+    ...(dono
+      ? [
+          {
+            id: 'novo-produto',
+            rotulo: 'Novo produto',
+            icone: <IconPlus size={icone} stroke={1.75} />,
+            aoTocar: props.aoNovoProduto,
+          },
+        ]
+      : []),
+    {
+      id: 'catalogo',
+      rotulo: 'Catálogo',
+      descricao: 'Todos os produtos',
+      icone: <IconCategory size={icone} stroke={1.75} />,
+      aoTocar: () => setCatalogo(true),
+    },
+    {
+      id: 'gerenciar',
+      rotulo: 'Gerenciar',
+      descricao: 'Gerenciar vendas (Relatório)',
+      icone: <IconReportAnalytics size={icone} stroke={1.75} />,
+      aoTocar: props.aoRelatorio,
+    },
+    {
+      id: 'fechar',
+      rotulo: 'Finalizar',
+      icone: <IconShoppingCartCheck size={icone} stroke={1.75} />,
+      aoTocar: props.aoFechar,
+      desabilitado: props.itens.length === 0,
+      destaque: true,
+    },
+  ];
+
   return (
-    <Stack gap="md">
-      <GradeAcoes
-        cols={4}
-        acoes={[
-          { id: 'escanear', rotulo: 'Escanear', icone: <IconCamera size={28} stroke={1.75} />, aoTocar: () => setLendo(true) },
-          {
-            id: 'catalogo',
-            rotulo: 'Catálogo',
-            descricao: 'Todos os produtos',
-            icone: <IconCategory size={28} stroke={1.75} />,
-            aoTocar: () => setCatalogo(true),
-          },
-          {
-            id: 'gerenciar',
-            rotulo: 'Gerenciar',
-            descricao: 'Gerenciar vendas (Relatório)',
-            icone: <IconReportAnalytics size={28} stroke={1.75} />,
-            aoTocar: props.aoRelatorio,
-          },
-          {
-            id: 'fechar',
-            rotulo: 'Finalizar',
-            icone: <IconShoppingCartCheck size={28} stroke={1.75} />,
-            aoTocar: props.aoFechar,
-            desabilitado: props.itens.length === 0,
-            destaque: true,
-          },
-        ]}
-      />
+    <Stack gap="sm">
+      {/* V03: 1ª fileira Escanear · Novo produto · Catálogo; 2ª Gerenciar · Finalizar (cols=3 wrap). */}
+      <GradeAcoes cols={3} densidade="compacta" acoes={acoes} />
       <WizardCatalogo
         aberto={catalogo}
         api={props.api}

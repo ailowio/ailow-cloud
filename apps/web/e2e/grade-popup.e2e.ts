@@ -167,16 +167,15 @@ test('Vendas: grade de ações com ícones; cada toque leva à tela certa', asyn
   const grade = page.locator('[data-grade-acoes]');
   await expect(grade).toBeVisible();
   const botoes = grade.getByRole('button');
-  expect(await botoes.count()).toBe(4);
-  const caixas = [
-    await caixa(botoes.nth(0)),
-    await caixa(botoes.nth(1)),
-    await caixa(botoes.nth(2)),
-    await caixa(botoes.nth(3)),
-  ];
-  expect(caixas.every((c) => Math.abs(c.y - caixas[0]!.y) < 4), '4 ações na mesma linha').toBe(true);
+  // V03: 5 ações (Novo produto no centro da 1ª fileira); wrap em 3+2.
+  expect(await botoes.count()).toBe(5);
+  const caixas = await Promise.all([0, 1, 2, 3, 4].map((i) => caixa(botoes.nth(i))));
+  expect(caixas.slice(0, 3).every((c) => Math.abs(c.y - caixas[0]!.y) < 4), '1ª fileira: 3 ações').toBe(true);
+  expect(caixas.slice(3).every((c) => Math.abs(c.y - caixas[3]!.y) < 4), '2ª fileira: 2 ações').toBe(true);
+  expect(caixas[3]!.y).toBeGreaterThan(caixas[0]!.y + 20);
   expect(caixas.every((c) => c.width >= 48 && c.height >= 48)).toBe(true);
-  expect(await grade.locator('svg').count(), 'um ícone por ação').toBeGreaterThanOrEqual(4);
+  expect(await grade.locator('svg').count(), 'um ícone por ação').toBeGreaterThanOrEqual(5);
+  await expect(grade.getByRole('button', { name: 'Novo produto' })).toBeVisible();
   await expect(grade.getByRole('button', { name: 'Todos os produtos' })).toBeVisible();
 
   // Finalizar começa desligado (carrinho vazio) e liga com uma peça.

@@ -16,12 +16,21 @@ export interface AcaoDaGrade {
 
 /**
  * UXM-10: menu como grade de ícones, estilo home do iPhone.
- * Padrão 3 colunas (RNF-05); vendas usa 4 numa linha (tiles um pouco menores) para não empurrar a paginação.
+ * Padrão 3 colunas (RNF-05); `densidade="compacta"` (V03: 2 fileiras na venda) usa tile menor para não empurrar a paginação.
  */
-export function GradeAcoes({ acoes, cols = 3 }: { acoes: AcaoDaGrade[]; cols?: 2 | 3 | 4 }) {
+export function GradeAcoes({
+  acoes,
+  cols = 3,
+  densidade = 'normal',
+}: {
+  acoes: AcaoDaGrade[];
+  cols?: 2 | 3 | 4;
+  densidade?: 'normal' | 'compacta';
+}) {
+  const compacta = densidade === 'compacta' || cols === 4;
   return (
-    <Box data-grade-acoes="" data-cols={cols}>
-      <SimpleGrid cols={cols} spacing={cols === 4 ? 6 : 'sm'}>
+    <Box data-grade-acoes="" data-cols={cols} data-densidade={densidade}>
+      <SimpleGrid cols={cols} spacing={compacta ? 6 : 'sm'}>
         {acoes.map((a) => (
           <UnstyledButton
             key={a.id}
@@ -35,7 +44,7 @@ export function GradeAcoes({ acoes, cols = 3 }: { acoes: AcaoDaGrade[]; cols?: 2
             <Box className="ailow-acao-tile" aria-hidden>
               {a.icone}
             </Box>
-            <Text fw={600} fz={cols === 4 ? 12 : 13} lh={1.25} ta="center" lang="pt-BR" aria-hidden style={{ hyphens: 'auto', overflowWrap: 'break-word' }}>
+            <Text fw={600} fz={compacta ? 12 : 13} lh={1.25} ta="center" lang="pt-BR" aria-hidden style={{ hyphens: 'auto', overflowWrap: 'break-word' }}>
               {a.rotulo}
             </Text>
           </UnstyledButton>

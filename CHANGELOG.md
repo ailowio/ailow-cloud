@@ -2,6 +2,15 @@
 
 Formato [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versionamento [SemVer](https://semver.org/lang/pt-BR/). A primeira versão publicada foi a `v1.0.0` (S14).
 
+## [1.7.0] - 2026-11-24
+
+Início e Nova venda (nota de voz 23/11, Onda 2). Sem mudança de OpenAPI nem migração.
+
+### Alterado
+- Tela inicial: arrastar módulo pelo bloco inteiro com toque longo 500 ms / tolerância 5 px (D-A1); toque curto continua abrindo o módulo.
+- Card da peça na venda: preço e stepper (−/qtd/+) na coluna direita; selo de estoque com tom ok (teal), baixo (âmbar) ou zerado (vermelho).
+- Nova venda (Dono): ação **Novo produto** no centro da 1ª linha (Escanear · Novo produto · Catálogo); assistente embutido mantém o carrinho.
+
 ## [1.6.1] - 2026-11-24
 
 Tema alinhado ao ailow-index e avatar na marca (nota de voz 23/11, Onda 1.1 / M05). Sem mudança de OpenAPI nem migração.

@@ -31,7 +31,7 @@ import {
   IconTruckDelivery,
   IconUsers,
 } from '@tabler/icons-react';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AlertaEstoque, UsuarioPublico } from '@ailow/shared';
 import { modulosPara, ordenarModulos, type Modulo } from '../acesso/modulos';
 import type { Api } from '../api/endpoints';
@@ -50,6 +50,10 @@ const ICONES: Record<Modulo['id'], React.ReactNode> = {
 };
 
 const ITENS_NO_AVISO = 3;
+
+/** D-A1: toque longo no bloco inteiro antes de arrastar (@dnd-kit/core PointerSensor). */
+export const TOQUE_LONGO_MS = 500;
+export const TOLERANCIA_ARRASTE_PX = 5;
 
 /** Pouso suave após soltar (evita o "snap" seco do layout). */
 export const TRANSICAO_POUSO_MODULO = 'transform 320ms cubic-bezier(0.22, 1, 0.36, 1)';
@@ -84,9 +88,9 @@ function useAlertasDeEstoque(api: Api | undefined, dono: boolean): Alertas | nul
 }
 
 /**
- * Handle de arraste separado do BlocoAcao.
- * O aria-label NÃO pode conter o rótulo do módulo: o Playwright casa `name: 'Vendas'` por substring
- * e o handle "Reordenar Vendas" virava um segundo botão (E2E strict mode / timeout).
+ * Bloco inteiro é a área de arraste (D-A1): toque longo 500 ms / 5 px.
+ * Alça visual só no foco (teclado); aria-label sem o rótulo do módulo (Playwright substring).
+ * Depois de arrastar, o click não abre o módulo.
  */
 function ModuloArrastavel(props: {
   id: Modulo['id'];
@@ -94,33 +98,51 @@ function ModuloArrastavel(props: {
   arrastando: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({ id: props.id });
+  const bloqueiaClick = useRef(false);
+  useEffect(() => {
+    if (isDragging) bloqueiaClick.current = true;
+  }, [isDragging]);
+
   return (
     <Box
       ref={setNodeRef}
       pos="relative"
       data-modulo={props.id}
+      className="ailow-modulo-dnd"
+      {...attributes}
+      {...listeners}
+      role="group"
+      onClickCapture={(e) => {
+        if (bloqueiaClick.current || isDragging) {
+          e.preventDefault();
+          e.stopPropagation();
+          bloqueiaClick.current = false;
+        }
+      }}
       style={{
         transform: CSS.Transform.toString(transform),
         transition: isDragging ? undefined : TRANSICAO_POUSO_MODULO,
         opacity: isDragging ? 0.35 : 1,
         zIndex: isDragging ? 2 : undefined,
+        cursor: props.arrastando || isDragging ? 'grabbing' : 'grab',
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
       }}
     >
       <ActionIcon
-        {...attributes}
-        {...listeners}
         className="ailow-reordenar"
         variant="transparent"
         size={44}
         aria-label="Arrastar para reordenar"
         data-reordenar={props.id}
+        tabIndex={-1}
         style={{
           position: 'absolute',
           top: 2,
           right: 2,
           zIndex: 1,
-          cursor: props.arrastando || isDragging ? 'grabbing' : 'grab',
-          touchAction: 'none',
+          pointerEvents: 'none',
         }}
       >
         <IconGripVertical size={14} stroke={1.5} aria-hidden />
@@ -177,8 +199,12 @@ export function Inicio(props: {
     };
   }, [base, props.api]);
 
+  // PointerSensor cobre mouse + touch (pointer events); TouchSensor à parte dobraria o ativador.
+  // Delay+tolerance: doc @dnd-kit/core 6.x DelayConstraint.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: TOQUE_LONGO_MS, tolerance: TOLERANCIA_ARRASTE_PX },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
