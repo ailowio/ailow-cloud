@@ -233,7 +233,8 @@ for (const tocou of [false, true]) {
       await expect(h1).not.toHaveText('Ailow Cloud');
       const titulo = await h1.innerText();
       // O toque arma a reserva do Voltar (TravaVoltar); recarregar tem de manter a tela e o pai certo mesmo assim.
-      if (tocou) await page.mouse.click(180, 330);
+      // Toque neutro no título (não interativo): coordenada fixa caía num item da lista depois que o topo ficou compacto (M04).
+      if (tocou) await h1.click();
       await page.reload();
       await expect.poll(() => caminho(page), { message: `recarregar ${rota}` }).toBe(rota);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(titulo, { timeout: 15000 });
