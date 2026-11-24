@@ -97,10 +97,10 @@ export async function registrarRotasProdutos(app: FastifyInstance, deps: Deps, g
     },
     async (request, reply) => {
       const s = sessaoDe(request);
-      const { q, depois } = request.query;
+      const { q, depois, categoria_id, cor } = request.query;
       const cursor = depois === undefined ? null : lerCursor(depois, 'numero');
       if (depois !== undefined && cursor === null) return reply.code(400).send({ erro: 'cursor_invalido' });
-      return withEmpresa(pool, s.empresaId, (c) => listarProdutos(c, s.perfil, q, cursor));
+      return withEmpresa(pool, s.empresaId, (c) => listarProdutos(c, s.perfil, q, cursor, { categoriaId: categoria_id, cor }));
     },
   );
 

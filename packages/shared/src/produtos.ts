@@ -213,7 +213,13 @@ export type Produto = z.infer<typeof produtoSchema>;
 export const cursorSchema = z.string().regex(/^[A-Za-z0-9_-]{1,500}$/, { error: 'cursor inválido' });
 export const paginaSchema = { proximo: cursorSchema.nullable() };
 
-export const produtosQuerySchema = z.object({ q: z.string().trim().max(80).optional(), depois: cursorSchema.optional() });
+// P01: filtros opcionais, combináveis com `q` e com o cursor. `cor` casa o SKU ignorando acento, caixa e espaços repetidos.
+export const produtosQuerySchema = z.object({
+  q: z.string().trim().max(80).optional(),
+  depois: cursorSchema.optional(),
+  categoria_id: z.uuid().optional(),
+  cor: z.string().trim().min(1).max(40).optional(),
+});
 export const produtosResponseSchema = z.object({ produtos: z.array(produtoSchema), truncado: z.boolean(), ...paginaSchema });
 
 /** Até 5 peças para a montagem da venda (busca vazia): mais vendidas → recentes → alfabéticas. */
