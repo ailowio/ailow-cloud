@@ -16,9 +16,9 @@ Números: verify 894/542/265. Commit `225a3a9`.
 Pendências: V03; fechar Onda 2.
 Verificação: verify + medição 360×640 ok.
 
-### V03 — Novo produto no meio · 2026-11-24 — Composer · orquestrador
-Feito: 1ª linha Escanear · Novo produto (só Dono) · Catálogo; 2ª Gerenciar/Finalizar. Assistente embutido em `Vendas` (`criandoProduto`) — carrinho `itens` intacto (sem estado global). E2E `venda-novo-produto` (dono+vendedor) + venda-toques.
-Números: verify 894/542/265.
-Decisões: asserção `montar-venda-ui` atualizada (V03).
-Pendências: e2e.sh + CHANGELOG 1.7.0 + PR/merge Onda 2.
-Verificação: verify exit 0; Playwright V03 2/2 + toques 1/1.
+### V03 + fecho Onda 2 · 2026-11-24 — Composer · orquestrador
+Feito: Novo produto no centro (só Dono); assistente embutido; grade `densidade=compacta` (paginação ok). CHANGELOG 1.7.0. Commits V01–V03 + fix compacta.
+Números: e2e.sh r1 134/135 (uxm-pessoas light intermitente); r2 **135/135**.
+Decisões: montar-venda-ui + grade-popup atualizados (V03).
+Pendências: PR/merge Onda 2 → Onda 3.
+Verificação: e2e.sh 135/135.
