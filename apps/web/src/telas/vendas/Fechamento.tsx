@@ -7,6 +7,7 @@ import { Valor } from '../../componentes';
 import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
 import { useAcao } from '../config/comum';
 import type { ItemVenda } from './carrinho';
+import { textoEntraNoFinanceiroHoje } from './financeiro-hoje';
 import { FORMAS, ROTULOS_FORMA, mensagemVenda } from './rotulos';
 
 type Desconto =
@@ -99,6 +100,11 @@ export function Fechamento(props: {
     props.aoFinalizar(venda.id);
   }
 
+  const linhaFinanceiro =
+    falta === 0
+      ? textoEntraNoFinanceiroHoje(pagamentos.map((p) => ({ forma: p.forma, valor_centavos: p.valor })))
+      : null;
+
   return (
     <Stack gap="md">
       <TextInput size="lg" label="Celular do cliente" placeholder="(11) 91234-5678" inputMode="tel" autoFocus autoComplete="off" value={celular} onChange={(e) => setCelular(e.currentTarget.value)} />
@@ -174,8 +180,19 @@ export function Fechamento(props: {
           Total <Valor centavos={total} destaque />
         </Text>
       )}
+      {linhaFinanceiro && (
+        <Text data-financeiro-hoje style={{ overflowWrap: 'anywhere' }}>
+          {linhaFinanceiro}
+        </Text>
+      )}
       <Box className="ailow-rodape-fixo" data-rodape-fixo>
-        <Button h={48} fullWidth loading={pendente} disabled={!pode} onClick={() => void rodar(finalizar, 'Venda finalizada')}>
+        <Button
+          h={48}
+          fullWidth
+          loading={pendente}
+          disabled={!pode}
+          onClick={() => void rodar(finalizar, 'Venda finalizada · veja no Financeiro')}
+        >
           Finalizar
         </Button>
       </Box>

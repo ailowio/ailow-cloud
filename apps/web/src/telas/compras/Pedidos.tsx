@@ -7,16 +7,14 @@ import type { StatusPedido } from '@ailow/shared';
 import { linkPedidoWhatsApp, textoDoPedido } from '@ailow/shared/puro';
 import type { Api } from '../../api/endpoints';
 import { EstadoVazio, Valor } from '../../componentes';
-import { CampoData } from '../../componentes/CampoData';
 import { Paginacao, usePaginacao } from '../../componentes/Paginacao';
 import { filtrarPorBusca } from '../../lib/busca';
 import { ITENS_POR_PAGINA, camposDoPedido } from '../../lib/campos-busca-listas';
 import { useTextoComEspera } from '../../lib/useBuscaNoServidor';
-import { centavosParaTexto, reaisParaCentavos } from '../../lib/dinheiro';
-import { hojeEmSaoPaulo } from '../../lib/datas';
 import { useAcao } from '../config/comum';
 import { Carregando, ErroCarregar, useCarregar } from '../estados';
 import { NovoPedido } from './NovoPedido';
+import { ReceberPedido } from './ReceberPedido';
 import { ROTULO_STATUS, mensagemCompras } from './rotulos';
 
 type PedidoDaLista = Awaited<ReturnType<Api['pedidosCompra']>>['pedidos'][number];
@@ -120,8 +118,6 @@ function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMuda
   const { carga, tentarDeNovo } = useCarregar(() => props.api.pedidoCompra(props.id));
   const { pendente, rodar } = useAcao(mensagemCompras);
   const [receber, setReceber] = useState(false);
-  const [parcelaTexto, setParcelaTexto] = useState('');
-  const [vencimento, setVencimento] = useState(() => hojeEmSaoPaulo());
 
   if (carga.fase === 'carregando') return <Carregando linhas={3} />;
   if (carga.fase === 'erro') return <ErroCarregar mensagem={carga.mensagem} aoTentar={tentarDeNovo} />;
@@ -145,19 +141,6 @@ function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMuda
       itens: ped.itens.map((i) => ({ codigo: i.codigo, cor: i.cor, quantidade: i.quantidade })),
     });
     window.open(linkPedidoWhatsApp(ped.fornecedor.whatsapp, texto), '_blank', 'noopener,noreferrer');
-  }
-
-  async function confirmarRecebimento() {
-    const valor = reaisParaCentavos(parcelaTexto);
-    if (valor === null || valor !== ped.total_centavos) return;
-    const ok = await rodar(
-      () => props.api.receberPedidoCompra(props.id, { parcelas: [{ valor_centavos: valor, vencimento }] }),
-      'Pedido recebido: estoque e contas a pagar atualizados',
-    );
-    if (ok) {
-      setReceber(false);
-      props.aoMudar();
-    }
   }
 
   return (
@@ -186,31 +169,29 @@ function FichaPedido(props: { api: Api; id: string; aoVoltar: () => void; aoMuda
           <Button h={48} variant="default" onClick={reabrirWhatsApp}>
             Abrir WhatsApp de novo
           </Button>
-          <Button
-            h={48}
-            onClick={() => {
-              setParcelaTexto(centavosParaTexto(ped.total_centavos));
-              setReceber(true);
-            }}
-          >
+          <Button h={48} onClick={() => setReceber(true)}>
             Receber pedido
           </Button>
         </>
       )}
       {ped.status === 'enviado' && receber && (
-        <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Uma parcela no total do pedido (pode marcar como pago depois no Financeiro).
-          </Text>
-          <TextInput label="Valor da parcela" size="lg" inputMode="decimal" autoComplete="off" value={parcelaTexto} onChange={(e) => setParcelaTexto(e.currentTarget.value)} />
-          <CampoData label="Vencimento" value={vencimento} onChange={setVencimento} />
-          <Button h={48} loading={pendente} disabled={pendente} onClick={() => void confirmarRecebimento()}>
-            Confirmar recebimento
-          </Button>
-          <Button h={48} variant="default" disabled={pendente} onClick={() => setReceber(false)}>
-            Cancelar
-          </Button>
-        </Stack>
+        <ReceberPedido
+          totalCentavos={ped.total_centavos}
+          pendente={pendente}
+          aoCancelar={() => setReceber(false)}
+          aoConfirmar={async (parcelas) => {
+            const n = parcelas.length;
+            const ok = await rodar(
+              () => props.api.receberPedidoCompra(props.id, { parcelas }),
+              `Pedido recebido · ${n} ${n === 1 ? 'conta' : 'contas'} a pagar no Financeiro`,
+            );
+            if (ok) {
+              setReceber(false);
+              props.aoMudar();
+            }
+            return ok;
+          }}
+        />
       )}
     </Stack>
   );
