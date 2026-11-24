@@ -1,5 +1,11 @@
 # Diário arquivado — entradas antigas, intactas
 
+### V02 — card peça + selo · 2026-11-24 — Composer · orquestrador
+Feito: stepper à direita do preço; tom ok/baixo/zerado (teal/âmbar/red). Capturas `onda2-capturas/v02-*`.
+Números: verify 894/542/265. Commit `225a3a9`.
+Pendências: V03; fechar Onda 2.
+Verificação: verify + medição 360×640 ok.
+
 ### V01 — toque longo no bloco · 2026-11-24 — Composer · orquestrador
 Feito: listeners no bloco; PointerSensor delay 500 / tolerance 5 (D-A1); E2E inicio-dnd + venda-toques.
 Números: verify 894/540/265. Commit `44e01e7`.
