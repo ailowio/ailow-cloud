@@ -40,7 +40,8 @@ describe('chrome da marca e sessão (itens 1–4)', () => {
     expect(fonte).toContain('inicialDoNome');
     expect(fonte).toContain('Avatar');
     expect(fonte).toContain('ailow-menu-usuario__badge');
-    expect(fonte).toMatch(/translate\(-50%,\s*-50%\)/);
+    // M03/D-A3 (Pedro, 23/11): o selo de perfil sai do topo e fica no baixo-centro do avatar.
+    expect(fonte).toMatch(/bottom:[^,]+,\s*left:\s*'50%',\s*transform:\s*'translateX\(-50%\)'/);
     expect(fonte).toContain('Sair');
     // Trocar ficou no ícone da toolbar, não no dropdown.
     const dropdown = fonte.slice(fonte.indexOf('<Menu.Dropdown>'), fonte.indexOf('</Menu.Dropdown>'));
