@@ -61,3 +61,8 @@ Decisões: opções de categoria/cor = cadastro (só Dono lê) ∪ o que está n
 Pendências: corrida do Modal com Voltar < ~400 ms após abrir (router em transição); selo "3 EM ESTOQ…" cortado no tile de 2 colunas (já na venda); P03.
 Verificação: capturas `_scratch/onda3-capturas/p02-*`; produtos-crud, grade-popup, paginacao-360, venda-toques, navegacao verdes.
 
+
+### P03 + fecho Onda 3 · 2026-11-24 — Composer · orquestrador
+P01 (nota): 16 testes de integração em `produtos-filtros.test.ts`; verify verde no agente anterior (`71e97e8`).
+Feito: converter-marcant-csv + CHANGELOG 1.8.0. Commit `69b94d5`. PR #48.
+Verificação: e2e.sh 138/138.
