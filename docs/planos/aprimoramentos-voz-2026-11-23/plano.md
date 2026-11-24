@@ -5,12 +5,15 @@
 > App: `D:\apps\ailow-cloud` · **tier B** · harness `D:\apps\harness\PROTOCOLO.md`. Plano-mestre do v1: `docs/plano-execucao.md` (não é alterado por este plano).
 > **Papéis:** Opus 5.5 = orquestrador (planeja, delega, revisa diff, mede, faz o fechamento de cada onda). Cada sessão = **1 subagente** com o modelo indicado.
 
-## Decisões do Pedro (23/11, registradas; valem como decisão humana p/ as asserções citadas)
+## Decisões do Pedro (23/11 + 24/11, registradas; valem como decisão humana p/ as asserções citadas)
 - **D-A1** Toque longo para arrastar na tela inicial: **500 ms**, tolerância 5 px (constante única).
 - **D-A2** Financeiro: **manter D10** (venda = entrada já recebida, 1 lançamento por forma); a tarefa é **provar** venda→entrada e compra recebida→contas a pagar e **mostrar** isso nos assistentes. Venda a prazo: fora de escopo.
 - **D-A3** Nome do app vira **"Ailow Cloud"** em tudo (manifest, `<title>`, topo, tela inicial, catálogo público). Topo: "Ailow" / "Cloud" em 2 linhas.
 - **D-A4** Entrega: **1 branch + 1 PR por onda**; cada sessão = 1 commit (commit local autorizado; push/PR o orquestrador pede ao Pedro ao fechar a onda). Merge e deploy: Pedro.
-- Asserções de teste existentes que **podem** mudar (e só elas, citando a decisão no commit): `chrome-marca.test.ts` (wordmark, posição do badge) e `pwa.test.ts` (nome) ← D-A3/M03; `inicio-dnd-ui.test.ts` (alça) ← D-A1; `cartao-peca-venda-ui.test.ts`, `selo-estoque-venda.test.ts` (cor/posição) ← V02. Qualquer outra ⇒ PARAR e relatar.
+- **D-A5** (24/11) Fundo do tema = o do ailow-index (`ailow-index/src/styles/tokens.css`): escuro `--fundo #111214`, `--superficie #1c1e21`, `--borda/--linha #4a5057`; claro `--fundo #eeeeeb`, `--superficie #ffffff`, `--borda #c9c9c4`. No Cloud: `--mantine-color-body`, `--ailow-superficie`, `--ailow-superficie-2` (um degrau entre superfície e borda), `--ailow-borda`, `--ailow-topo` = superfície.
+- **D-A6** (24/11) Avatar do usuário em **azul ciano** da marca (`--ailow-marca` #07bdd5) nos 2 temas, com letra escura (#111214 / `--ailow-sobre-marca`) para AA.
+- **D-A7** (24/11) Filtro de cor em Produtos: **exato** (já implementado na P01). Arquivos do Marcos (P03): `ailow-cloud/acervo/marcant/catalogo-teste/` (gitignored; NUNCA versionar nem citar trechos em arquivo versionado): `marcant_produtos_mapeados.csv` (29 produtos), `marcant_skus_teste.csv` (110 SKUs), `marcant_catalogo_erp_teste.xlsx`. Separador `;`. Dados SIMULADOS (ambiente = HOMOLOGACAO, fonte = "FICTÍCIO — TESTE"): carregar só no dev / tenant de teste.
+- Asserções de teste existentes que **podem** mudar (e só elas, citando a decisão no commit): `chrome-marca.test.ts` (wordmark, posição do badge) e `pwa.test.ts` (nome) ← D-A3/M03; `selo-perfil.test.ts` / `selo-perfil.e2e.ts` (avatar `--ailow-acao` → `--ailow-marca`) ← D-A6/M05; `inicio-dnd-ui.test.ts` (alça) ← D-A1; `cartao-peca-venda-ui.test.ts`, `selo-estoque-venda.test.ts` (cor/posição) ← V02. Qualquer outra ⇒ PARAR e relatar.
 
 ## Contrato de toda sessão (subagente)
 1. **Abrir em camadas:** este Contrato + o bloco da sessão (`### XNN`) + Estado de retomada + última entrada do diário + `D:\apps\harness\aprendizado\licoes-ativas.md`. Declarar o gate (tipo, tier B, IDs, critérios).
@@ -116,8 +119,8 @@ Ao terminar: 1 commit + relatório (arquivos, testes, evidência, dúvidas). Nã
 ```
 
 ### Estado de retomada — 2026-11-24 (sobrescrever a cada sessão)
-- **Worktrees (base `b10fa46`):** `D:\apps\_wt-marca-topo` = `feat/ux-marca-topo` (plano + M01–M04 prontas, só local); `D:\apps\_wt-produtos` = `feat/produtos-catalogo-filtros` (P01 `0d2a61a`); `D:\apps\_wt-financeiro` = `feat/financeiro-visivel` (F01 `b7f45ed`). Nenhum push.
-- **Onda 1 fechada (2026-11-24):** CHANGELOG 1.6.0; `scripts/e2e.sh` 2 rodadas = 129/130 cada, falhas diferentes (`uxm-pessoas` 3 colunas no escuro; `busca-paginacao` Produtos "Anterior" timeout), cada uma passou na outra rodada → intermitentes, investigar; PR aberto (merge/deploy: Pedro).
-- **Próximo (no Cursor, prompts em `D:\apps\_scratch\prompts-cursor-aprimoramentos-voz.md`):** Onda 2 (V01, V02, V03) → Onda 3 (P02; P03 com arquivos do Marcos) → Onda 4 (T01) → Onda 5 (F02). Uma onda por vez (portas do dev).
-- **Pendente do Pedro:** caminho dos arquivos do Marcos (P03); fundo escuro do tema (#1b1c1e → #111214?); avatar `--ailow-acao` vs `--ailow-marca`; cor exata vs "contém" no filtro; validação do teclado no celular (T01); merge/deploy de cada onda.
+- **Worktrees:** `D:\apps\_wt-tema` = `feat/ux-tema-index` (M05 / Onda 1.1, sobre `origin/main` 40c76a7); `D:\apps\_wt-produtos` = `feat/produtos-catalogo-filtros` (P01 `0d2a61a`); `D:\apps\_wt-financeiro` = `feat/financeiro-visivel` (F01 `b7f45ed`). Onda 1 (`feat/ux-marca-topo`) já mergeada (#45).
+- **M05 feita:** tema = ailow-index (D-A5); avatar ciano + letra `#111214` (D-A6); D-A5/D-A6/D-A7 registradas. CHANGELOG 1.6.1; fechar com `e2e.sh` + push/PR (Pedro).
+- **Próximo (prompts em `D:\apps\_scratch\prompts-cursor-aprimoramentos-voz.md`):** Onda 2 (V01→V03) → Onda 3 (P02; P03 com arquivos do Marcos em `acervo/marcant/catalogo-teste/`) → Onda 4 (T01) → Onda 5 (F02). Uma onda por vez (portas do dev).
+- **Pendente do Pedro:** push/PR da M05; validação do teclado no celular (T01); merge/deploy de cada onda.
 - **Conhecido:** `npm run dev:parar` quebrado na `main` (aspa faltando); pare o Postgres com `node_modules\@embedded-postgres\windows-x64\native\bin\pg_ctl.exe`.

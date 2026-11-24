@@ -54,6 +54,16 @@ describe('selo de perfil, Trocar e Sair (M03)', () => {
     expect(bloco).not.toMatch(/color="gray"/);
   });
 
+  // M05 / D-A6 (Pedro, 24/11): avatar em azul ciano da marca nos 2 temas; a asserção antiga (--ailow-acao) muda aqui.
+  it('o placeholder do avatar usa --ailow-marca com letra --ailow-sobre-marca (não --ailow-acao)', () => {
+    const ini = sessao.indexOf('<Avatar');
+    const avatar = sessao.slice(ini, sessao.indexOf('</Avatar>', ini));
+    expect(avatar).toContain("background: 'var(--ailow-marca)'");
+    expect(avatar).toContain("color: 'var(--ailow-sobre-marca)'");
+    expect(avatar).not.toContain('var(--ailow-acao)');
+    expect(avatar).not.toContain('var(--ailow-sobre-acao)');
+  });
+
   it('os ícones escolhidos existem no @tabler/icons-react instalado', () => {
     expect(IconReplaceUser).toBeDefined();
     expect(IconDoorExit).toBeDefined();
