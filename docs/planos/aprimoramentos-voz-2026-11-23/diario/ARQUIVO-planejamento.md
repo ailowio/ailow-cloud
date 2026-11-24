@@ -1,5 +1,12 @@
 # Diário arquivado — entradas antigas, intactas
 
+### M03 + M04 — 2026-11-24 — Opus (subagentes) · orquestrador Opus 5.5
+Feito: M03 (53961fd): selo de perfil no baixo-centro do avatar, neutro forte (`--ailow-selo`), Trocar = `IconReplaceUser`, Sair = `IconDoorExit`; corrigiu o avatar que saía cinza (placeholder do Mantine) para `--ailow-acao`. M04: seta (default, 48 px) · divisor · h1 22 px na mesma linha em todas as telas com `voltar`; título longo quebra sem mover a seta; Entrar usa `IconReplaceUser`.
+Números: M03 contraste do selo 12,9:1 / 10,2:1; M04 verify 894/533/265.
+Falha: subagente da M04 parou no limite de uso do Opus depois dos testes vermelhos; o orquestrador implementou o `Moldura.tsx`, rodou os E2E e fechou. `voltar-modulos.e2e` tinha "Ailow ERP" como título de carregamento (resto da M02/D-A3): trocado para "Ailow Cloud". 2 casos de assistente (novo produto/pedido) falham só no dev desta worktree por falta de categoria/fornecedor no seed (L-0025): confirmar no `scripts/e2e.sh`.
+Pendências: fechamento da Onda 1 (e2e.sh, CHANGELOG, push/PR com ok do Pedro); decisões: fundo escuro do tema, cor do avatar, cor exata no filtro.
+Verificação: `topo-modulo.e2e` + `navegacao` + `uxm-pessoas` verdes no dev; `voltar-modulos` 19/21 (2 por dado do dev).
+
 ### F01 + M02 — 2026-11-23 — Sonnet (F01) / Opus (M02) · orquestrador Opus 5.5
 Feito: F01 (`feat/financeiro-visivel` b7f45ed): sem lacuna no código; 5 testes de integração novos provam venda em 2 formas → 2 entradas pagas no relatório, cancelamento zera, receber 3 parcelas → 3 contas a pagar, atomicidade do receber, RN-10. M02: "Ailow Cloud" no manifest, `<title>`, App, catálogo, sw (comentário); topo com wordmark Ailow/Cloud em 2 linhas; asserções D-A3 alteradas (chrome-marca, pwa.test) + `nome-app.test.ts`.
 Números: F01 mutação (categoria/paga) reprovou 3 testes. M02 verify 894/518/265 verdes.

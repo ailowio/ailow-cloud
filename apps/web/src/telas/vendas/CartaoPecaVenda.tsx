@@ -1,7 +1,12 @@
 import { ActionIcon, Badge, Box, Group, Stack, Text, UnstyledButton } from '@mantine/core';
 import { IconAlertTriangle } from '@tabler/icons-react';
 import { Valor } from '../../componentes';
-import { estoqueBaixo, rotuloEstoqueVenda } from './selo-estoque-venda';
+import {
+  corBadgeEstoque,
+  estoqueBaixo,
+  rotuloEstoqueVenda,
+  tomEstoqueVenda,
+} from './selo-estoque-venda';
 
 export type PecaDoCard = {
   skuId: string;
@@ -14,8 +19,8 @@ export type PecaDoCard = {
 };
 
 /**
- * Card de peça na Nova venda: preço, estoque e stepper quando já está no carrinho.
- * O toque no corpo acrescenta +1; −/+ ajustam a quantidade sem disparar o toque.
+ * Card de peça na Nova venda (V02): coluna direita = preço + stepper (−/qtd/+);
+ * selo ok (teal), baixo (âmbar) ou zerado (vermelho).
  */
 export function CartaoPecaVenda(props: {
   peca: PecaDoCard;
@@ -25,6 +30,7 @@ export function CartaoPecaVenda(props: {
   aoMudarQtd: (delta: number) => void;
 }) {
   const { peca, amostra, qtdNoCarrinho, aoTocar, aoMudarQtd } = props;
+  const tom = tomEstoqueVenda(peca.estoque, peca.estoqueMinimo);
   const baixo = estoqueBaixo(peca.estoque, peca.estoqueMinimo);
   const rotuloEstoque = rotuloEstoqueVenda(peca.estoque, peca.estoqueMinimo);
 
@@ -52,63 +58,64 @@ export function CartaoPecaVenda(props: {
           />
         )}
         <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
-          <Group gap={6} wrap="nowrap" align="flex-start" justify="space-between">
-            <Text fw={650} style={{ overflowWrap: 'anywhere', flex: 1 }}>
-              {peca.nome}
-            </Text>
-            <Text fw={700} style={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-              <Valor centavos={peca.precoCentavos} destaque />
-            </Text>
-          </Group>
+          <Text fw={650} style={{ overflowWrap: 'anywhere' }}>
+            {peca.nome}
+          </Text>
           <Text size="sm" c="dimmed">
             {peca.detalhe} · {peca.codigo}
           </Text>
-          <Group gap={6} wrap="wrap" align="center">
-            <Badge
-              data-estoque
-              color={baixo ? 'ambar' : 'gray'}
-              variant="light"
-              leftSection={
-                baixo ? <IconAlertTriangle size={12} aria-hidden data-alerta-estoque /> : undefined
-              }
+          <Badge
+            data-estoque
+            data-tom={tom}
+            color={corBadgeEstoque(tom)}
+            variant="light"
+            style={{ alignSelf: 'flex-start' }}
+            leftSection={
+              baixo ? <IconAlertTriangle size={12} aria-hidden data-alerta-estoque /> : undefined
+            }
+          >
+            {rotuloEstoque}
+          </Badge>
+        </Stack>
+        <Stack gap={6} align="flex-end" style={{ flexShrink: 0 }}>
+          <Text fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <Valor centavos={peca.precoCentavos} destaque />
+          </Text>
+          {qtdNoCarrinho > 0 && (
+            <Group
+              gap={4}
+              wrap="nowrap"
+              data-stepper-qtd
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
-              {rotuloEstoque}
-            </Badge>
-            {qtdNoCarrinho > 0 && (
-              <Group
-                gap={4}
-                wrap="nowrap"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
+              <ActionIcon
+                variant="default"
+                size={40}
+                aria-label={`Menos ${peca.nome}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  aoMudarQtd(-1);
+                }}
               >
-                <ActionIcon
-                  variant="default"
-                  size={40}
-                  aria-label={`Menos ${peca.nome}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    aoMudarQtd(-1);
-                  }}
-                >
-                  −
-                </ActionIcon>
-                <Text w={28} ta="center" fw={700} data-qtd-carrinho>
-                  {qtdNoCarrinho}
-                </Text>
-                <ActionIcon
-                  variant="default"
-                  size={40}
-                  aria-label={`Mais ${peca.nome}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    aoMudarQtd(1);
-                  }}
-                >
-                  +
-                </ActionIcon>
-              </Group>
-            )}
-          </Group>
+                −
+              </ActionIcon>
+              <Text w={28} ta="center" fw={700} data-qtd-carrinho>
+                {qtdNoCarrinho}
+              </Text>
+              <ActionIcon
+                variant="default"
+                size={40}
+                aria-label={`Mais ${peca.nome}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  aoMudarQtd(1);
+                }}
+              >
+                +
+              </ActionIcon>
+            </Group>
+          )}
         </Stack>
       </Group>
     </UnstyledButton>
