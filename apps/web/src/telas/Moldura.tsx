@@ -45,10 +45,16 @@ export function Moldura(props: {
           <Group justify="space-between" wrap="nowrap" h={64}>
             <Group gap="xs" wrap="nowrap">
               <Logo altura={36} alt="" empresa={props.logoEmpresa === true} />
-              {/* Wordmark curto; mesma cor da marca via --ailow-marca-texto. */}
-              <Text ff="var(--mantine-font-family-headings)" fw={600} fz={16} c="var(--ailow-marca-texto)">
-                Ailow
-              </Text>
+              {/* Wordmark em 2 linhas (D-A3), da altura do A (≈ 36 px): "Ailow" na cor da marca,
+                  "Cloud" em tom apagado (a marca crua dá só 2,1:1 sobre o branco). */}
+              <Stack data-wordmark gap={0} justify="center">
+                <Text ff="var(--mantine-font-family-headings)" fw={700} fz={17} lh={1.1} c="var(--ailow-marca-texto)">
+                  Ailow
+                </Text>
+                <Text ff="var(--mantine-font-family-headings)" fw={500} fz={15} lh={1.1} c="dimmed">
+                  Cloud
+                </Text>
+              </Stack>
             </Group>
             <Group gap="xs" wrap="nowrap">
               {/* Toolbar: inicial+badge (menu Sair) · trocar usuário · tema. */}

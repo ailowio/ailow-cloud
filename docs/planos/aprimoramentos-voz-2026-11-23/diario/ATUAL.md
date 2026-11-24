@@ -25,3 +25,10 @@ Números: P01 16 testes novos (14 vermelhos → 16 verdes), API 910 testes; M01 
 Decisões p/ Pedro: cor exata vs "contém" (P01); ícones "any" viraram quadrado cheio; o corpo do tema escuro segue #1b1c1e (só a abertura ficou #111214).
 Pendências: M02 a seguir; P02 depois (UI serial: portas do dev).
 Verificação: diff revisado pelo orquestrador (SQL parametrizado, sem migração; PNG conferidos visualmente).
+
+### F01 + M02 — 2026-11-23 — Sonnet (F01) / Opus (M02) · orquestrador Opus 5.5
+Feito: F01 (`feat/financeiro-visivel` b7f45ed): sem lacuna no código; 5 testes de integração novos provam venda em 2 formas → 2 entradas pagas no relatório, cancelamento zera, receber 3 parcelas → 3 contas a pagar, atomicidade do receber, RN-10. M02: "Ailow Cloud" no manifest, `<title>`, App, catálogo, sw (comentário); topo com wordmark Ailow/Cloud em 2 linhas; asserções D-A3 alteradas (chrome-marca, pwa.test) + `nome-app.test.ts`.
+Números: F01 mutação (categoria/paga) reprovou 3 testes. M02 verify 894/518/265 verdes.
+Falha: o subagente da M02 caiu por erro de rede antes do verify; orquestrador revisou o diff, viu os screenshots 360 (claro/escuro), parou dev:db/dev:api órfãos (portas livres), rodou verify e commitou. Vermelho→verde da M02 não registrado.
+Pendências: M03 → M04; P02 depois da Onda 1 (portas); decisão do fundo escuro do tema.
+Verificação: verify exit 0; screenshots `m02-topo-*.png` na scratchpad.
